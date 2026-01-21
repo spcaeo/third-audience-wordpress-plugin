@@ -59,6 +59,43 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 	</div>
 
+	<!-- Cache Warmup Section -->
+	<div class="ta-warmup-section">
+		<h3><span class="dashicons dashicons-performance"></span> <?php esc_html_e( 'Cache Warmup', 'third-audience' ); ?></h3>
+		<p class="description"><?php esc_html_e( 'Pre-generate markdown cache for all published posts to ensure fast response times for AI bots.', 'third-audience' ); ?></p>
+
+		<div class="ta-warmup-stats">
+			<div class="ta-warmup-stat">
+				<span class="label"><?php esc_html_e( 'Cache Coverage:', 'third-audience' ); ?></span>
+				<span class="value" id="ta-warmup-coverage">--</span>
+			</div>
+			<div class="ta-warmup-stat">
+				<span class="label"><?php esc_html_e( 'Uncached Posts:', 'third-audience' ); ?></span>
+				<span class="value" id="ta-warmup-uncached">--</span>
+			</div>
+		</div>
+
+		<div class="ta-warmup-controls">
+			<button id="ta-warmup-all-btn" class="button button-primary">
+				<span class="dashicons dashicons-update"></span>
+				<?php esc_html_e( 'Warm All Cache', 'third-audience' ); ?>
+			</button>
+			<button id="ta-warmup-cancel-btn" class="button" style="display:none;">
+				<?php esc_html_e( 'Cancel', 'third-audience' ); ?>
+			</button>
+		</div>
+
+		<div id="ta-warmup-progress" class="ta-warmup-progress" style="display:none;">
+			<div class="progress-bar">
+				<div class="progress-fill" style="width: 0%"></div>
+			</div>
+			<div class="progress-text">
+				<span id="ta-warmup-status"><?php esc_html_e( 'Starting...', 'third-audience' ); ?></span>
+				<span id="ta-warmup-percentage">0%</span>
+			</div>
+		</div>
+	</div>
+
 	<!-- Bulk Actions -->
 	<div class="ta-bulk-actions-bar">
 		<div>

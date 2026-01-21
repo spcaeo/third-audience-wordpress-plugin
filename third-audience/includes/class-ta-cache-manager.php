@@ -1013,4 +1013,131 @@ class TA_Cache_Manager implements TA_Cacheable {
 			'post_id' => 0,
 		);
 	}
+
+	/**
+	 * Get uncached posts that need warmup.
+	 *
+	 * @since 1.6.0
+	 * @param array $args Query arguments (post_type, category, date_range, etc.).
+	 * @return array Array of post IDs that need caching.
+	 */
+	public function get_uncached_posts( $args = array() ) {
+		$defaults = array(
+			'post_type'   => get_option( 'ta_enabled_post_types', array( 'post', 'page' ) ),
+			'post_status' => 'publish',
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		);
+
+		$query_args = wp_parse_args( $args, $defaults );
+
+		// Get all published posts.
+		$all_posts = get_posts( $query_args );
+
+		// Filter out posts that already have cache.
+		$uncached = array();
+		foreach ( $all_posts as $post_id ) {
+			$url       = get_permalink( $post_id );
+			$cache_key = $this->generate_key( $url );
+
+			if ( ! $this->has( $cache_key ) ) {
+				$uncached[] = $post_id;
+			}
+		}
+
+		return $uncached;
+	}
+
+	/**
+	 * Get warmup statistics.
+	 *
+	 * @since 1.6.0
+	 * @return array Statistics with cached, uncached, total counts and percentage.
+	 */
+	public function get_warmup_stats() {
+		$enabled_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
+
+		$total_posts = 0;
+		foreach ( $enabled_types as $post_type ) {
+			$count = wp_count_posts( $post_type );
+			$total_posts += isset( $count->publish ) ? $count->publish : 0;
+		}
+
+		$uncached_posts = count( $this->get_uncached_posts() );
+		$cached_posts   = $total_posts - $uncached_posts;
+		$percentage     = $total_posts > 0 ? round( ( $cached_posts / $total_posts ) * 100 ) : 0;
+
+		return array(
+			'total'      => $total_posts,
+			'cached'     => $cached_posts,
+			'uncached'   => $uncached_posts,
+			'percentage' => $percentage,
+		);
+	}
+
+	/**
+	 * Warm cache in batches with progress tracking.
+	 *
+	 * @since 1.6.0
+	 * @param array $args Warmup arguments (batch_size, offset, post_types, etc.).
+	 * @return array Results with processed, warmed, skipped, failed counts.
+	 */
+	public function warm_cache_batch( $args = array() ) {
+		$defaults = array(
+			'batch_size' => 10,
+			'offset'     => 0,
+			'post_type'  => get_option( 'ta_enabled_post_types', array( 'post', 'page' ) ),
+		);
+
+		$args = wp_parse_args( $args, $defaults );
+
+		// Get uncached posts for this batch.
+		$uncached_posts = $this->get_uncached_posts( array(
+			'post_type'   => $args['post_type'],
+			'numberposts' => $args['batch_size'],
+			'offset'      => $args['offset'],
+		) );
+
+		$results = array(
+			'processed' => count( $uncached_posts ),
+			'warmed'    => 0,
+			'skipped'   => 0,
+			'failed'    => 0,
+		);
+
+		if ( empty( $uncached_posts ) ) {
+			return $results;
+		}
+
+		$converter = new TA_Local_Converter();
+
+		foreach ( $uncached_posts as $post_id ) {
+			$url       = get_permalink( $post_id );
+			$cache_key = $this->generate_key( $url );
+
+			// Double-check if already cached (race condition protection).
+			if ( $this->has( $cache_key ) ) {
+				$results['skipped']++;
+				continue;
+			}
+
+			// Fetch and cache.
+			$markdown = $this->fetch_and_cache( $url, $converter );
+
+			if ( false !== $markdown ) {
+				$results['warmed']++;
+				$this->logger->debug( 'Warmed cache for post', array( 'post_id' => $post_id, 'url' => $url ) );
+			} else {
+				$results['failed']++;
+				$this->logger->warning( 'Failed to warm cache for post', array( 'post_id' => $post_id, 'url' => $url ) );
+			}
+
+			// Throttle to avoid overwhelming server.
+			usleep( 100000 ); // 100ms delay.
+		}
+
+		$this->logger->info( 'Cache warmup batch completed', $results );
+
+		return $results;
+	}
 }

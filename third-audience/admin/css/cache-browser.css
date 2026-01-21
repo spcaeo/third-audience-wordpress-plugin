@@ -92,6 +92,95 @@
 	font-size: 13px;
 }
 
+/* Warmup Section */
+.ta-warmup-section {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px;
+	margin: 20px 0;
+}
+
+.ta-warmup-section h3 {
+	margin-top: 0;
+	margin-bottom: 10px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: #1d2327;
+}
+
+.ta-warmup-section .description {
+	margin: 0 0 15px;
+	color: #646970;
+}
+
+.ta-warmup-stats {
+	display: flex;
+	gap: 30px;
+	margin: 15px 0;
+	padding: 15px;
+	background: #f6f7f7;
+	border-radius: 4px;
+}
+
+.ta-warmup-stat {
+	display: flex;
+	gap: 10px;
+}
+
+.ta-warmup-stat .label {
+	color: #646970;
+	font-weight: 500;
+}
+
+.ta-warmup-stat .value {
+	color: #1d2327;
+	font-weight: 600;
+}
+
+.ta-warmup-controls {
+	display: flex;
+	gap: 10px;
+	margin: 15px 0;
+}
+
+.ta-warmup-progress {
+	margin-top: 20px;
+}
+
+.ta-warmup-progress .progress-bar {
+	height: 30px;
+	background: #f0f0f1;
+	border-radius: 4px;
+	overflow: hidden;
+	margin-bottom: 10px;
+}
+
+.ta-warmup-progress .progress-fill {
+	height: 100%;
+	background: linear-gradient(90deg, #2271b1, #135e96);
+	transition: width 0.3s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #fff;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.ta-warmup-progress .progress-text {
+	display: flex;
+	justify-content: space-between;
+	font-size: 13px;
+	color: #646970;
+}
+
+.ta-warmup-progress .progress-text #ta-warmup-percentage {
+	font-weight: 600;
+	color: #2271b1;
+}
+
 /* Bulk Actions Bar */
 .ta-bulk-actions-bar {
 	display: flex;

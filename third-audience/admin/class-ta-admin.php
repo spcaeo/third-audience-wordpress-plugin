@@ -44,6 +44,13 @@ class TA_Admin {
 	private $notifications;
 
 	/**
+	 * Cache admin instance.
+	 *
+	 * @var TA_Cache_Admin
+	 */
+	private $cache_admin;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.1.0
@@ -52,6 +59,7 @@ class TA_Admin {
 		$this->security      = TA_Security::get_instance();
 		$this->logger        = TA_Logger::get_instance();
 		$this->notifications = TA_Notifications::get_instance();
+		$this->cache_admin   = new TA_Cache_Admin( $this->security );
 	}
 
 	/**
@@ -66,6 +74,9 @@ class TA_Admin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_notices', array( $this, 'display_configuration_notices' ) );
 
+		// Initialize cache admin (handles Cache Browser and Warmup).
+		$this->cache_admin->init();
+
 		// Admin post handlers.
 		add_action( 'admin_post_ta_clear_cache', array( $this, 'handle_clear_cache' ) );
 		add_action( 'admin_post_ta_test_smtp', array( $this, 'handle_test_smtp' ) );
@@ -79,13 +90,6 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
 		add_action( 'wp_ajax_ta_clear_cache', array( $this, 'ajax_clear_cache' ) );
 		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
-
-		// Cache Browser AJAX handlers.
-		add_action( 'wp_ajax_ta_delete_cache_entry', array( $this, 'ajax_delete_cache_entry' ) );
-		add_action( 'wp_ajax_ta_bulk_delete_cache', array( $this, 'ajax_bulk_delete_cache' ) );
-		add_action( 'wp_ajax_ta_clear_expired_cache', array( $this, 'ajax_clear_expired_cache' ) );
-		add_action( 'wp_ajax_ta_regenerate_cache', array( $this, 'ajax_regenerate_cache' ) );
-		add_action( 'wp_ajax_ta_view_cache_content', array( $this, 'ajax_view_cache_content' ) );
 	}
 
 	/**
@@ -181,6 +185,7 @@ class TA_Admin {
 					'confirmDelete'       => __( 'Delete this cache entry?', 'third-audience' ),
 					'confirmBulkDelete'   => __( 'Delete selected entries?', 'third-audience' ),
 					'confirmClearExpired' => __( 'Clear all expired entries?', 'third-audience' ),
+					'confirmWarmup'       => __( 'Start warming all cache? This may take a few minutes.', 'third-audience' ),
 					'selectEntries'       => __( 'Select at least one entry.', 'third-audience' ),
 					'success'             => __( 'Success!', 'third-audience' ),
 					'error'               => __( 'Error', 'third-audience' ),
@@ -841,112 +846,5 @@ class TA_Admin {
 		$cache_health = $cache_manager->get_health();
 
 		include TA_PLUGIN_DIR . 'admin/views/cache-browser-page.php';
-	}
-
-	/**
-	 * AJAX: Delete single cache entry.
-	 *
-	 * @since 1.6.0
-	 * @return void
-	 */
-	public function ajax_delete_cache_entry() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
-		if ( empty( $cache_key ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$result = $cache_manager->delete( $cache_key );
-
-		if ( $result ) {
-			wp_send_json_success( array( 'message' => __( 'Cache entry deleted.', 'third-audience' ) ) );
-		} else {
-			wp_send_json_error( array( 'message' => __( 'Failed to delete.', 'third-audience' ) ) );
-		}
-	}
-
-	/**
-	 * AJAX: Bulk delete cache entries.
-	 *
-	 * @since 1.6.0
-	 * @return void
-	 */
-	public function ajax_bulk_delete_cache() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_keys = isset( $_POST['cache_keys'] ) && is_array( $_POST['cache_keys'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cache_keys'] ) ) : array();
-		if ( empty( $cache_keys ) ) {
-			wp_send_json_error( array( 'message' => __( 'No entries selected.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$deleted = $cache_manager->delete_many( $cache_keys );
-
-		wp_send_json_success( array( 'message' => sprintf( __( 'Deleted %d entries.', 'third-audience' ), $deleted ), 'count' => $deleted ) );
-	}
-
-	/**
-	 * AJAX: Clear expired cache entries.
-	 *
-	 * @since 1.6.0
-	 * @return void
-	 */
-	public function ajax_clear_expired_cache() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_manager = new TA_Cache_Manager();
-		$cleared = $cache_manager->cleanup_expired();
-
-		wp_send_json_success( array( 'message' => sprintf( __( 'Cleared %d expired entries.', 'third-audience' ), $cleared ), 'count' => $cleared ) );
-	}
-
-	/**
-	 * AJAX: Regenerate cache for a post.
-	 *
-	 * @since 1.6.0
-	 * @return void
-	 */
-	public function ajax_regenerate_cache() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
-		if ( ! $post_id ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid post ID.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$result = $cache_manager->regenerate_markdown( $post_id );
-
-		if ( $result ) {
-			wp_send_json_success( array( 'message' => __( 'Markdown regenerated.', 'third-audience' ) ) );
-		} else {
-			wp_send_json_error( array( 'message' => __( 'Failed to regenerate.', 'third-audience' ) ) );
-		}
-	}
-
-	/**
-	 * AJAX: View cache content.
-	 *
-	 * @since 1.6.0
-	 * @return void
-	 */
-	public function ajax_view_cache_content() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
-		if ( empty( $cache_key ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$content = $cache_manager->get( $cache_key );
-
-		if ( false === $content ) {
-			wp_send_json_error( array( 'message' => __( 'Cache entry not found.', 'third-audience' ) ) );
-		}
-
-		wp_send_json_success( array( 'content' => $content, 'size' => size_format( strlen( $content ) ) ) );
 	}
 }
