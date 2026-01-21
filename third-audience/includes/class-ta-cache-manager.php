@@ -493,6 +493,39 @@ class TA_Cache_Manager implements TA_Cacheable {
 	}
 
 	/**
+	 * Clear all pre-generated markdown from post meta.
+	 *
+	 * Deletes all _ta_markdown and _ta_markdown_generated post meta entries.
+	 * This forces markdown to be regenerated with current settings on next access.
+	 *
+	 * @since 2.1.0
+	 * @return int Number of posts cleared.
+	 */
+	public function clear_pregenerated_markdown() {
+		global $wpdb;
+
+		// Delete all markdown post meta.
+		$markdown_count = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->postmeta} WHERE meta_key = %s",
+				self::META_MARKDOWN
+			)
+		);
+
+		// Delete all generation timestamp post meta.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->postmeta} WHERE meta_key = %s",
+				self::META_GENERATED
+			)
+		);
+
+		$this->logger->info( 'Pre-generated markdown cleared.', array( 'count' => $markdown_count ) );
+
+		return $markdown_count;
+	}
+
+	/**
 	 * Get cache statistics.
 	 *
 	 * @since 1.0.0

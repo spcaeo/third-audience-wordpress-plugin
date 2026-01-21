@@ -317,6 +317,18 @@ $security = TA_Security::get_instance();
 											</p>
 										</td>
 									</tr>
+									<tr>
+										<th scope="row"><?php esc_html_e( 'Regenerate Markdown', 'third-audience' ); ?></th>
+										<td>
+											<button type="button" id="ta-regenerate-all-markdown" class="button button-secondary">
+												<?php esc_html_e( 'Regenerate All Markdown', 'third-audience' ); ?>
+											</button>
+											<p class="description" style="margin-top: 8px;">
+												<?php esc_html_e( 'Clear all pre-generated markdown to force regeneration with current metadata settings. Use this after changing metadata options above.', 'third-audience' ); ?>
+											</p>
+											<div id="ta-regenerate-markdown-result" style="margin-top: 10px;"></div>
+										</td>
+									</tr>
 								</table>
 							</div>
 
