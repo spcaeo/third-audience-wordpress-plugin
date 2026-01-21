@@ -96,6 +96,77 @@ if ( ! defined( 'ABSPATH' ) ) {
 		</div>
 	</div>
 
+	<!-- Filters Panel -->
+	<div class="ta-filters-panel">
+		<div class="ta-filters-header">
+			<h3>
+				<span class="dashicons dashicons-filter"></span>
+				<?php esc_html_e( 'Filters', 'third-audience' ); ?>
+				<?php if ( $active_filters > 0 ) : ?>
+					<span class="ta-filter-badge"><?php echo esc_html( $active_filters ); ?></span>
+				<?php endif; ?>
+			</h3>
+			<button class="button ta-toggle-filters" type="button">
+				<span class="dashicons dashicons-arrow-down-alt2"></span>
+			</button>
+		</div>
+		<div class="ta-filters-content">
+			<form method="get" action="" id="ta-filters-form">
+				<input type="hidden" name="page" value="third-audience-cache-browser">
+
+				<div class="ta-filters-grid">
+					<!-- Status Filter -->
+					<div class="ta-filter-group">
+						<label for="ta-filter-status"><?php esc_html_e( 'Status', 'third-audience' ); ?></label>
+						<select name="status" id="ta-filter-status">
+							<option value="all" <?php selected( $filters['status'], 'all' ); ?>><?php esc_html_e( 'All', 'third-audience' ); ?></option>
+							<option value="active" <?php selected( $filters['status'], 'active' ); ?>><?php esc_html_e( 'Active', 'third-audience' ); ?></option>
+							<option value="expired" <?php selected( $filters['status'], 'expired' ); ?>><?php esc_html_e( 'Expired', 'third-audience' ); ?></option>
+						</select>
+					</div>
+
+					<!-- Size Filter -->
+					<div class="ta-filter-group">
+						<label><?php esc_html_e( 'Size Range', 'third-audience' ); ?></label>
+						<div class="ta-filter-presets">
+							<button type="button" class="button button-small ta-size-preset" data-min="0" data-max="10240"><?php esc_html_e( 'Small (<10KB)', 'third-audience' ); ?></button>
+							<button type="button" class="button button-small ta-size-preset" data-min="10240" data-max="51200"><?php esc_html_e( 'Medium (10-50KB)', 'third-audience' ); ?></button>
+							<button type="button" class="button button-small ta-size-preset" data-min="51200" data-max="102400"><?php esc_html_e( 'Large (50-100KB)', 'third-audience' ); ?></button>
+						</div>
+						<div class="ta-filter-custom">
+							<input type="number" name="size_min" placeholder="<?php esc_attr_e( 'Min (bytes)', 'third-audience' ); ?>" value="<?php echo esc_attr( $filters['size_min'] ); ?>" id="ta-filter-size-min">
+							<input type="number" name="size_max" placeholder="<?php esc_attr_e( 'Max (bytes)', 'third-audience' ); ?>" value="<?php echo esc_attr( $filters['size_max'] ); ?>" id="ta-filter-size-max">
+						</div>
+					</div>
+
+					<!-- Date Filter -->
+					<div class="ta-filter-group">
+						<label><?php esc_html_e( 'Created Date', 'third-audience' ); ?></label>
+						<div class="ta-filter-presets">
+							<button type="button" class="button button-small ta-date-preset" data-preset="24h"><?php esc_html_e( 'Last 24 Hours', 'third-audience' ); ?></button>
+							<button type="button" class="button button-small ta-date-preset" data-preset="7d"><?php esc_html_e( 'Last 7 Days', 'third-audience' ); ?></button>
+							<button type="button" class="button button-small ta-date-preset" data-preset="30d"><?php esc_html_e( 'Last 30 Days', 'third-audience' ); ?></button>
+						</div>
+						<div class="ta-filter-custom">
+							<input type="date" name="date_from" placeholder="<?php esc_attr_e( 'From', 'third-audience' ); ?>" value="<?php echo esc_attr( $filters['date_from'] ); ?>" id="ta-filter-date-from">
+							<input type="date" name="date_to" placeholder="<?php esc_attr_e( 'To', 'third-audience' ); ?>" value="<?php echo esc_attr( $filters['date_to'] ); ?>" id="ta-filter-date-to">
+						</div>
+					</div>
+				</div>
+
+				<div class="ta-filters-actions">
+					<button type="submit" class="button button-primary">
+						<span class="dashicons dashicons-filter"></span>
+						<?php esc_html_e( 'Apply Filters', 'third-audience' ); ?>
+					</button>
+					<button type="button" class="button" id="ta-clear-filters">
+						<?php esc_html_e( 'Clear Filters', 'third-audience' ); ?>
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
 	<!-- Bulk Actions -->
 	<div class="ta-bulk-actions-bar">
 		<div>
@@ -113,9 +184,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<thead>
 			<tr>
 				<th class="check-column"><input type="checkbox" id="ta-select-all"></th>
-				<th><?php esc_html_e( 'URL', 'third-audience' ); ?></th>
-				<th><?php esc_html_e( 'Size', 'third-audience' ); ?></th>
-				<th><?php esc_html_e( 'Expires', 'third-audience' ); ?></th>
+				<th class="ta-sortable <?php echo ( 'url' === $orderby ) ? 'sorted ' . strtolower( $order ) : ''; ?>" data-column="url">
+					<?php esc_html_e( 'URL', 'third-audience' ); ?>
+					<span class="ta-sort-indicator">
+						<span class="dashicons dashicons-arrow-up"></span>
+						<span class="dashicons dashicons-arrow-down"></span>
+					</span>
+				</th>
+				<th class="ta-sortable <?php echo ( 'size' === $orderby ) ? 'sorted ' . strtolower( $order ) : ''; ?>" data-column="size">
+					<?php esc_html_e( 'Size', 'third-audience' ); ?>
+					<span class="ta-sort-indicator">
+						<span class="dashicons dashicons-arrow-up"></span>
+						<span class="dashicons dashicons-arrow-down"></span>
+					</span>
+				</th>
+				<th class="ta-sortable <?php echo ( 'expiration' === $orderby ) ? 'sorted ' . strtolower( $order ) : ''; ?>" data-column="expiration">
+					<?php esc_html_e( 'Expires', 'third-audience' ); ?>
+					<span class="ta-sort-indicator">
+						<span class="dashicons dashicons-arrow-up"></span>
+						<span class="dashicons dashicons-arrow-down"></span>
+					</span>
+				</th>
 				<th><?php esc_html_e( 'Actions', 'third-audience' ); ?></th>
 			</tr>
 		</thead>

@@ -223,7 +223,7 @@ class TA_Admin {
 	}
 
 	/**
-	 * Handle CSV export request before any output.
+	 * Handle export request (CSV or JSON) before any output.
 	 *
 	 * @since 2.0.5
 	 * @return void
@@ -247,6 +247,18 @@ class TA_Admin {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'third-audience' ) );
 		}
 
+		// Get export format and type.
+		$export_format = isset( $_GET['export_format'] ) ? sanitize_text_field( wp_unslash( $_GET['export_format'] ) ) : 'csv';
+		$export_type   = isset( $_GET['export_type'] ) ? sanitize_text_field( wp_unslash( $_GET['export_type'] ) ) : 'detailed';
+
+		// Validate format and type.
+		if ( ! in_array( $export_format, array( 'csv', 'json' ), true ) ) {
+			$export_format = 'csv';
+		}
+		if ( ! in_array( $export_type, array( 'detailed', 'summary' ), true ) ) {
+			$export_type = 'detailed';
+		}
+
 		// Prepare filters.
 		$analytics = TA_Bot_Analytics::get_instance();
 		$filters   = array();
@@ -262,7 +274,11 @@ class TA_Admin {
 		}
 
 		// Export and exit.
-		$analytics->export_to_csv( $filters );
+		if ( 'json' === $export_format ) {
+			$analytics->export_to_json( $filters, $export_type );
+		} else {
+			$analytics->export_to_csv( $filters, $export_type );
+		}
 	}
 
 	/**
@@ -927,13 +943,79 @@ class TA_Admin {
 		$cache_manager = new TA_Cache_Manager();
 		$cache_stats = $cache_manager->get_stats();
 
+		// Pagination.
 		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
 		$per_page = 50;
 		$offset = ( $current_page - 1 ) * $per_page;
+
+		// Search.
 		$search = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
 
-		$cache_entries = $cache_manager->get_cache_entries( $per_page, $offset, $search );
-		$total_entries = $cache_manager->get_cache_entries_count( $search );
+		// Filters.
+		$filters = array(
+			'status'    => isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : 'all',
+			'size_min'  => isset( $_GET['size_min'] ) ? absint( $_GET['size_min'] ) : 0,
+			'size_max'  => isset( $_GET['size_max'] ) ? absint( $_GET['size_max'] ) : 0,
+			'date_from' => isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GET['date_from'] ) ) : '',
+			'date_to'   => isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '',
+		);
+
+		// Size presets.
+		if ( isset( $_GET['size_preset'] ) && ! empty( $_GET['size_preset'] ) ) {
+			$preset = sanitize_text_field( wp_unslash( $_GET['size_preset'] ) );
+			switch ( $preset ) {
+				case 'small':
+					$filters['size_min'] = 0;
+					$filters['size_max'] = 10240; // 10KB.
+					break;
+				case 'medium':
+					$filters['size_min'] = 10240;
+					$filters['size_max'] = 51200; // 50KB.
+					break;
+				case 'large':
+					$filters['size_min'] = 51200;
+					$filters['size_max'] = 102400; // 100KB.
+					break;
+			}
+		}
+
+		// Date presets.
+		if ( isset( $_GET['date_preset'] ) && ! empty( $_GET['date_preset'] ) ) {
+			$preset = sanitize_text_field( wp_unslash( $_GET['date_preset'] ) );
+			switch ( $preset ) {
+				case '24h':
+					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-1 day' ) );
+					$filters['date_to']   = gmdate( 'Y-m-d' );
+					break;
+				case '7d':
+					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-7 days' ) );
+					$filters['date_to']   = gmdate( 'Y-m-d' );
+					break;
+				case '30d':
+					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+					$filters['date_to']   = gmdate( 'Y-m-d' );
+					break;
+			}
+		}
+
+		// Sorting.
+		$orderby = isset( $_GET['orderby'] ) ? sanitize_text_field( wp_unslash( $_GET['orderby'] ) ) : 'expiration';
+		$order   = isset( $_GET['order'] ) ? sanitize_text_field( wp_unslash( $_GET['order'] ) ) : 'DESC';
+
+		// Count active filters.
+		$active_filters = 0;
+		if ( ! empty( $filters['status'] ) && 'all' !== $filters['status'] ) {
+			$active_filters++;
+		}
+		if ( ! empty( $filters['size_min'] ) || ! empty( $filters['size_max'] ) ) {
+			$active_filters++;
+		}
+		if ( ! empty( $filters['date_from'] ) || ! empty( $filters['date_to'] ) ) {
+			$active_filters++;
+		}
+
+		$cache_entries = $cache_manager->get_cache_entries( $per_page, $offset, $search, $filters, $orderby, $order );
+		$total_entries = $cache_manager->get_cache_entries_count( $search, $filters );
 		$expired_count = count( $cache_manager->get_expired_entries() );
 		$cache_health = $cache_manager->get_health();
 

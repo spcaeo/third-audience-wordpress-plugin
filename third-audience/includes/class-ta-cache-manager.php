@@ -882,12 +882,15 @@ class TA_Cache_Manager implements TA_Cacheable {
 	 * Get cache entries for browser display with metadata.
 	 *
 	 * @since 1.6.0
-	 * @param int    $limit  Number of entries to retrieve (default 50).
-	 * @param int    $offset Offset for pagination.
-	 * @param string $search Optional URL search filter.
+	 * @param int    $limit   Number of entries to retrieve (default 50).
+	 * @param int    $offset  Offset for pagination.
+	 * @param string $search  Optional URL search filter.
+	 * @param array  $filters Optional filters (status, size_min, size_max, date_from, date_to).
+	 * @param string $orderby Optional column to order by (url, size, expiration).
+	 * @param string $order   Optional order direction (ASC, DESC).
 	 * @return array Array of cache entries with metadata.
 	 */
-	public function get_cache_entries( $limit = 50, $offset = 0, $search = '' ) {
+	public function get_cache_entries( $limit = 50, $offset = 0, $search = '', $filters = array(), $orderby = 'expiration', $order = 'DESC' ) {
 		global $wpdb;
 
 		// Build query with optional search.
@@ -902,6 +905,50 @@ class TA_Cache_Manager implements TA_Cacheable {
 				'%' . $wpdb->esc_like( $search ) . '%'
 			);
 		}
+
+		// Apply status filter.
+		if ( ! empty( $filters['status'] ) && 'all' !== $filters['status'] ) {
+			if ( 'active' === $filters['status'] ) {
+				$where .= $wpdb->prepare( " AND timeout.option_value >= %d", time() );
+			} elseif ( 'expired' === $filters['status'] ) {
+				$where .= $wpdb->prepare( " AND timeout.option_value < %d", time() );
+			}
+		}
+
+		// Apply size filters.
+		if ( ! empty( $filters['size_min'] ) ) {
+			$where .= $wpdb->prepare( " AND LENGTH(t.option_value) >= %d", intval( $filters['size_min'] ) );
+		}
+		if ( ! empty( $filters['size_max'] ) ) {
+			$where .= $wpdb->prepare( " AND LENGTH(t.option_value) <= %d", intval( $filters['size_max'] ) );
+		}
+
+		// Apply date filters.
+		$ttl = get_option( 'ta_cache_ttl', 86400 );
+		if ( ! empty( $filters['date_from'] ) ) {
+			$timestamp_from = strtotime( $filters['date_from'] );
+			if ( $timestamp_from ) {
+				$where .= $wpdb->prepare( " AND (timeout.option_value - %d) >= %d", $ttl, $timestamp_from );
+			}
+		}
+		if ( ! empty( $filters['date_to'] ) ) {
+			$timestamp_to = strtotime( $filters['date_to'] ) + 86399; // End of day.
+			if ( $timestamp_to ) {
+				$where .= $wpdb->prepare( " AND (timeout.option_value - %d) <= %d", $ttl, $timestamp_to );
+			}
+		}
+
+		// Validate and sanitize orderby.
+		$allowed_orderby = array(
+			'url'        => 't.option_name',
+			'size'       => 'size_bytes',
+			'expiration' => 'expiration',
+		);
+		$orderby_column = isset( $allowed_orderby[ $orderby ] ) ? $allowed_orderby[ $orderby ] : 'expiration';
+
+		// Validate order direction.
+		$order = strtoupper( $order );
+		$order = in_array( $order, array( 'ASC', 'DESC' ), true ) ? $order : 'DESC';
 
 		// Get entries with timeout info.
 		$results = $wpdb->get_results(
@@ -919,7 +966,7 @@ class TA_Cache_Manager implements TA_Cacheable {
 				LEFT JOIN {$wpdb->options} timeout
 					ON timeout.option_name = CONCAT('_transient_timeout_', REPLACE(t.option_name, '_transient_', ''))
 				{$where}
-				ORDER BY t.option_id DESC
+				ORDER BY {$orderby_column} {$order}
 				LIMIT %d OFFSET %d",
 				time(),
 				$limit,
@@ -946,26 +993,63 @@ class TA_Cache_Manager implements TA_Cacheable {
 	 * Get total count of cache entries.
 	 *
 	 * @since 1.6.0
-	 * @param string $search Optional search term.
+	 * @param string $search  Optional search term.
+	 * @param array  $filters Optional filters.
 	 * @return int Total count.
 	 */
-	public function get_cache_entries_count( $search = '' ) {
+	public function get_cache_entries_count( $search = '', $filters = array() ) {
 		global $wpdb;
 
 		$where = $wpdb->prepare(
-			"WHERE option_name LIKE %s",
+			"WHERE t.option_name LIKE %s",
 			'_transient_' . self::CACHE_PREFIX . '%'
 		);
 
 		if ( ! empty( $search ) ) {
 			$where .= $wpdb->prepare(
-				" AND option_name LIKE %s",
+				" AND t.option_name LIKE %s",
 				'%' . $wpdb->esc_like( $search ) . '%'
 			);
 		}
 
+		// Apply status filter.
+		if ( ! empty( $filters['status'] ) && 'all' !== $filters['status'] ) {
+			if ( 'active' === $filters['status'] ) {
+				$where .= $wpdb->prepare( " AND timeout.option_value >= %d", time() );
+			} elseif ( 'expired' === $filters['status'] ) {
+				$where .= $wpdb->prepare( " AND timeout.option_value < %d", time() );
+			}
+		}
+
+		// Apply size filters.
+		if ( ! empty( $filters['size_min'] ) ) {
+			$where .= $wpdb->prepare( " AND LENGTH(t.option_value) >= %d", intval( $filters['size_min'] ) );
+		}
+		if ( ! empty( $filters['size_max'] ) ) {
+			$where .= $wpdb->prepare( " AND LENGTH(t.option_value) <= %d", intval( $filters['size_max'] ) );
+		}
+
+		// Apply date filters.
+		$ttl = get_option( 'ta_cache_ttl', 86400 );
+		if ( ! empty( $filters['date_from'] ) ) {
+			$timestamp_from = strtotime( $filters['date_from'] );
+			if ( $timestamp_from ) {
+				$where .= $wpdb->prepare( " AND (timeout.option_value - %d) >= %d", $ttl, $timestamp_from );
+			}
+		}
+		if ( ! empty( $filters['date_to'] ) ) {
+			$timestamp_to = strtotime( $filters['date_to'] ) + 86399; // End of day.
+			if ( $timestamp_to ) {
+				$where .= $wpdb->prepare( " AND (timeout.option_value - %d) <= %d", $ttl, $timestamp_to );
+			}
+		}
+
 		return (int) $wpdb->get_var(
-			"SELECT COUNT(*) FROM {$wpdb->options} {$where}"
+			"SELECT COUNT(*)
+			FROM {$wpdb->options} t
+			LEFT JOIN {$wpdb->options} timeout
+				ON timeout.option_name = CONCAT('_transient_timeout_', REPLACE(t.option_name, '_transient_', ''))
+			{$where}"
 		);
 	}
 
