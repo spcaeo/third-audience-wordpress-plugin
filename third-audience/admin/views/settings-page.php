@@ -216,6 +216,109 @@ $security = TA_Security::get_instance();
 								</table>
 							</div>
 
+							<div class="ta-card">
+								<h2><?php esc_html_e( 'AI-Optimized Metadata', 'third-audience' ); ?></h2>
+								<p class="description" style="margin-bottom: 15px;">
+									<?php esc_html_e( 'Add enhanced metadata to markdown frontmatter to help AI agents better understand and process your content.', 'third-audience' ); ?>
+								</p>
+								<table class="form-table" role="presentation">
+									<tr>
+										<th scope="row"><?php esc_html_e( 'Enable Enhanced Metadata', 'third-audience' ); ?></th>
+										<td>
+											<label class="ta-checkbox-label">
+												<input type="checkbox" name="ta_enable_enhanced_metadata" value="1"
+													   <?php checked( get_option( 'ta_enable_enhanced_metadata', true ) ); ?> />
+												<?php esc_html_e( 'Enable AI-optimized metadata in markdown frontmatter', 'third-audience' ); ?>
+											</label>
+											<p class="description"><?php esc_html_e( 'Master switch for all enhanced metadata features below.', 'third-audience' ); ?></p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row"><?php esc_html_e( 'Metadata Fields', 'third-audience' ); ?></th>
+										<td>
+											<fieldset>
+												<label class="ta-checkbox-label" style="display: block; margin-bottom: 8px;">
+													<input type="checkbox" name="ta_metadata_word_count" value="1"
+														   <?php checked( get_option( 'ta_metadata_word_count', true ) ); ?> />
+													<strong><?php esc_html_e( 'Word Count', 'third-audience' ); ?></strong>
+													<span class="description" style="display: block; margin-left: 24px;">
+														<?php esc_html_e( 'Total number of words in the content', 'third-audience' ); ?>
+													</span>
+												</label>
+
+												<label class="ta-checkbox-label" style="display: block; margin-bottom: 8px;">
+													<input type="checkbox" name="ta_metadata_reading_time" value="1"
+														   <?php checked( get_option( 'ta_metadata_reading_time', true ) ); ?> />
+													<strong><?php esc_html_e( 'Reading Time', 'third-audience' ); ?></strong>
+													<span class="description" style="display: block; margin-left: 24px;">
+														<?php esc_html_e( 'Estimated reading time based on 200 words/minute', 'third-audience' ); ?>
+													</span>
+												</label>
+
+												<label class="ta-checkbox-label" style="display: block; margin-bottom: 8px;">
+													<input type="checkbox" name="ta_metadata_summary" value="1"
+														   <?php checked( get_option( 'ta_metadata_summary', true ) ); ?> />
+													<strong><?php esc_html_e( 'Summary', 'third-audience' ); ?></strong>
+													<span class="description" style="display: block; margin-left: 24px;">
+														<?php esc_html_e( 'Post excerpt or first paragraph (max 200 characters)', 'third-audience' ); ?>
+													</span>
+												</label>
+
+												<label class="ta-checkbox-label" style="display: block; margin-bottom: 8px;">
+													<input type="checkbox" name="ta_metadata_language" value="1"
+														   <?php checked( get_option( 'ta_metadata_language', true ) ); ?> />
+													<strong><?php esc_html_e( 'Language', 'third-audience' ); ?></strong>
+													<span class="description" style="display: block; margin-left: 24px;">
+														<?php esc_html_e( 'Content language from WordPress locale', 'third-audience' ); ?>
+													</span>
+												</label>
+
+												<label class="ta-checkbox-label" style="display: block; margin-bottom: 8px;">
+													<input type="checkbox" name="ta_metadata_last_modified" value="1"
+														   <?php checked( get_option( 'ta_metadata_last_modified', true ) ); ?> />
+													<strong><?php esc_html_e( 'Last Modified Date', 'third-audience' ); ?></strong>
+													<span class="description" style="display: block; margin-left: 24px;">
+														<?php esc_html_e( 'ISO 8601 formatted date when content was last updated', 'third-audience' ); ?>
+													</span>
+												</label>
+
+												<label class="ta-checkbox-label" style="display: block; margin-bottom: 8px;">
+													<input type="checkbox" name="ta_metadata_schema_type" value="1"
+														   <?php checked( get_option( 'ta_metadata_schema_type', true ) ); ?> />
+													<strong><?php esc_html_e( 'Schema Type', 'third-audience' ); ?></strong>
+													<span class="description" style="display: block; margin-left: 24px;">
+														<?php esc_html_e( 'Schema.org type (Article for posts, WebPage for pages)', 'third-audience' ); ?>
+													</span>
+												</label>
+
+												<label class="ta-checkbox-label" style="display: block; margin-bottom: 8px;">
+													<input type="checkbox" name="ta_metadata_related_posts" value="1"
+														   <?php checked( get_option( 'ta_metadata_related_posts', true ) ); ?> />
+													<strong><?php esc_html_e( 'Related Posts', 'third-audience' ); ?></strong>
+													<span class="description" style="display: block; margin-left: 24px;">
+														<?php esc_html_e( 'Up to 3 related posts by category and tags', 'third-audience' ); ?>
+													</span>
+												</label>
+											</fieldset>
+											<p class="description" style="margin-top: 12px;">
+												<strong><?php esc_html_e( 'Example frontmatter output:', 'third-audience' ); ?></strong><br>
+												<code style="display: block; margin-top: 8px; padding: 12px; background: #f6f7f7; border-left: 4px solid #0073aa;">
+													word_count: 1250<br>
+													reading_time: "7 min read"<br>
+													summary: "This is a brief summary of the article content..."<br>
+													language: "en"<br>
+													last_modified: "2025-01-21T10:30:00+00:00"<br>
+													schema_type: "Article"<br>
+													related_posts:<br>
+													&nbsp;&nbsp;- title: "Related Article 1"<br>
+													&nbsp;&nbsp;&nbsp;&nbsp;url: "https://example.com/article1"
+												</code>
+											</p>
+										</td>
+									</tr>
+								</table>
+							</div>
+
 							<?php submit_button(); ?>
 						</form>
 					</div>

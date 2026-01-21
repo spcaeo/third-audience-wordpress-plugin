@@ -241,9 +241,190 @@ class TA_Local_Converter {
 			}, $tag_names ) ) . "]\n";
 		}
 
+		// AI-Optimized Metadata (configurable)
+		$enable_metadata = get_option( 'ta_enable_enhanced_metadata', true );
+
+		if ( $enable_metadata ) {
+			// Word count
+			if ( get_option( 'ta_metadata_word_count', true ) ) {
+				$word_count = $this->calculate_word_count( $post->post_content );
+				$frontmatter .= 'word_count: ' . $word_count . "\n";
+			}
+
+			// Reading time
+			if ( get_option( 'ta_metadata_reading_time', true ) ) {
+				$reading_time = $this->calculate_reading_time( $post->post_content );
+				$frontmatter .= 'reading_time: "' . $reading_time . ' min read"' . "\n";
+			}
+
+			// Summary (excerpt)
+			if ( get_option( 'ta_metadata_summary', true ) ) {
+				$summary = $this->generate_summary( $post );
+				if ( ! empty( $summary ) ) {
+					$frontmatter .= 'summary: "' . addslashes( $summary ) . "\"\n";
+				}
+			}
+
+			// Language
+			if ( get_option( 'ta_metadata_language', true ) ) {
+				$language = $this->get_language();
+				$frontmatter .= 'language: "' . $language . "\"\n";
+			}
+
+			// Last modified
+			if ( get_option( 'ta_metadata_last_modified', true ) ) {
+				$last_modified = get_the_modified_date( 'c', $post->ID );
+				$frontmatter .= 'last_modified: "' . $last_modified . "\"\n";
+			}
+
+			// Schema type
+			if ( get_option( 'ta_metadata_schema_type', true ) ) {
+				$schema_type = ( 'post' === $post->post_type ) ? 'Article' : 'WebPage';
+				$frontmatter .= 'schema_type: "' . $schema_type . "\"\n";
+			}
+
+			// Related posts
+			if ( get_option( 'ta_metadata_related_posts', true ) ) {
+				$related_posts = $this->get_related_posts( $post );
+				if ( ! empty( $related_posts ) ) {
+					$frontmatter .= 'related_posts:' . "\n";
+					foreach ( $related_posts as $related_post ) {
+						$frontmatter .= '  - title: "' . addslashes( $related_post['title'] ) . "\"\n";
+						$frontmatter .= '    url: "' . $related_post['url'] . "\"\n";
+					}
+				}
+			}
+		}
+
 		$frontmatter .= "---\n\n";
 
 		return $frontmatter;
+	}
+
+	/**
+	 * Calculate word count for content.
+	 *
+	 * @since 2.0.7
+	 * @param string $content Post content.
+	 * @return int Word count.
+	 */
+	private function calculate_word_count( $content ) {
+		// Strip HTML tags and shortcodes
+		$text = wp_strip_all_tags( strip_shortcodes( $content ) );
+		// Remove extra whitespace
+		$text = trim( preg_replace( '/\s+/', ' ', $text ) );
+		// Count words
+		if ( empty( $text ) ) {
+			return 0;
+		}
+		return str_word_count( $text );
+	}
+
+	/**
+	 * Calculate reading time based on word count.
+	 *
+	 * @since 2.0.7
+	 * @param string $content Post content.
+	 * @return int Reading time in minutes.
+	 */
+	private function calculate_reading_time( $content ) {
+		$word_count = $this->calculate_word_count( $content );
+		$words_per_minute = 200; // Average reading speed
+		$reading_time = ceil( $word_count / $words_per_minute );
+		return max( 1, $reading_time ); // Minimum 1 minute
+	}
+
+	/**
+	 * Generate a summary from post excerpt or first paragraph.
+	 *
+	 * @since 2.0.7
+	 * @param WP_Post $post The post object.
+	 * @return string Summary text (max 200 characters).
+	 */
+	private function generate_summary( $post ) {
+		// Use post excerpt if available
+		if ( ! empty( $post->post_excerpt ) ) {
+			$summary = wp_strip_all_tags( $post->post_excerpt );
+		} else {
+			// Extract first paragraph from content
+			$content = wp_strip_all_tags( strip_shortcodes( $post->post_content ) );
+			$paragraphs = preg_split( '/\n\n+/', $content );
+			$summary = ! empty( $paragraphs[0] ) ? $paragraphs[0] : '';
+		}
+
+		// Limit to 200 characters
+		if ( strlen( $summary ) > 200 ) {
+			$summary = substr( $summary, 0, 197 ) . '...';
+		}
+
+		return trim( $summary );
+	}
+
+	/**
+	 * Get site language from WordPress locale.
+	 *
+	 * @since 2.0.7
+	 * @return string Language code (e.g., 'en', 'es', 'fr').
+	 */
+	private function get_language() {
+		$locale = get_locale();
+		// Extract language code (e.g., 'en' from 'en_US')
+		$language = substr( $locale, 0, 2 );
+		return $language;
+	}
+
+	/**
+	 * Get related posts by category and tags.
+	 *
+	 * @since 2.0.7
+	 * @param WP_Post $post The post object.
+	 * @return array Related posts (up to 3).
+	 */
+	private function get_related_posts( $post ) {
+		$related = array();
+
+		// Get categories
+		$categories = wp_get_post_categories( $post->ID );
+		// Get tags
+		$tags = wp_get_post_tags( $post->ID, array( 'fields' => 'ids' ) );
+
+		if ( empty( $categories ) && empty( $tags ) ) {
+			return $related;
+		}
+
+		// Build query args
+		$args = array(
+			'post_type'      => $post->post_type,
+			'post_status'    => 'publish',
+			'posts_per_page' => 3,
+			'post__not_in'   => array( $post->ID ),
+			'orderby'        => 'rand',
+		);
+
+		// Prioritize posts with same categories
+		if ( ! empty( $categories ) ) {
+			$args['category__in'] = $categories;
+		}
+
+		// Add tag filter if available
+		if ( ! empty( $tags ) ) {
+			$args['tag__in'] = $tags;
+		}
+
+		$query = new WP_Query( $args );
+
+		if ( $query->have_posts() ) {
+			while ( $query->have_posts() ) {
+				$query->the_post();
+				$related[] = array(
+					'title' => get_the_title(),
+					'url'   => get_permalink(),
+				);
+			}
+			wp_reset_postdata();
+		}
+
+		return $related;
 	}
 
 	/**
