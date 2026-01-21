@@ -393,6 +393,80 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 		</div>
 	</div>
 
+	<!-- Rate Limit Violations -->
+	<?php
+	$rate_limiter = new TA_Rate_Limiter();
+	$violation_stats = $rate_limiter->get_violation_stats();
+	$recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
+	?>
+
+	<?php if ( ! empty( $violation_stats ) || ! empty( $recent_violations ) ) : ?>
+		<div class="ta-charts-row" style="margin-top: 30px;">
+			<div class="ta-chart-card ta-chart-full">
+				<div class="ta-chart-header">
+					<h2><?php esc_html_e( 'Rate Limit Violations', 'third-audience' ); ?></h2>
+				</div>
+				<div class="ta-chart-body">
+					<?php if ( ! empty( $violation_stats ) ) : ?>
+						<h3 style="margin: 0 0 15px 0; font-size: 14px;"><?php esc_html_e( 'Violations by Bot Type', 'third-audience' ); ?></h3>
+						<table class="wp-list-table widefat fixed striped">
+							<thead>
+								<tr>
+									<th><?php esc_html_e( 'Bot Name', 'third-audience' ); ?></th>
+									<th><?php esc_html_e( 'Bot Type', 'third-audience' ); ?></th>
+									<th><?php esc_html_e( 'Total Violations', 'third-audience' ); ?></th>
+									<th><?php esc_html_e( 'Unique IPs', 'third-audience' ); ?></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ( $violation_stats as $stat ) : ?>
+									<tr>
+										<td><strong><?php echo esc_html( $stat['bot_name'] ); ?></strong></td>
+										<td><code><?php echo esc_html( $stat['bot_type'] ); ?></code></td>
+										<td><span style="color: #dc3232; font-weight: 600;"><?php echo number_format_i18n( $stat['violations'] ); ?></span></td>
+										<td><?php echo number_format_i18n( $stat['unique_ips'] ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+					<?php endif; ?>
+
+					<?php if ( ! empty( $recent_violations ) ) : ?>
+						<h3 style="margin: 20px 0 15px 0; font-size: 14px;"><?php esc_html_e( 'Recent Rate Limit Violations', 'third-audience' ); ?></h3>
+						<table class="wp-list-table widefat fixed striped">
+							<thead>
+								<tr>
+									<th style="width: 130px;"><?php esc_html_e( 'Bot', 'third-audience' ); ?></th>
+									<th><?php esc_html_e( 'URL', 'third-audience' ); ?></th>
+									<th style="width: 120px;"><?php esc_html_e( 'IP Address', 'third-audience' ); ?></th>
+									<th style="width: 100px;"><?php esc_html_e( 'Country', 'third-audience' ); ?></th>
+									<th style="width: 150px;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ( $recent_violations as $violation ) : ?>
+									<tr>
+										<td><strong><?php echo esc_html( $violation['bot_name'] ); ?></strong></td>
+										<td><code style="font-size: 11px;"><?php echo esc_html( wp_trim_words( $violation['url'], 10 ) ); ?></code></td>
+										<td><?php echo esc_html( $violation['ip_address'] ?: 'N/A' ); ?></td>
+										<td><?php echo esc_html( $violation['country_code'] ?: '—' ); ?></td>
+										<td><?php echo esc_html( human_time_diff( strtotime( $violation['visit_timestamp'] ), current_time( 'timestamp' ) ) ); ?> <?php esc_html_e( 'ago', 'third-audience' ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+					<?php endif; ?>
+
+					<?php if ( empty( $violation_stats ) && empty( $recent_violations ) ) : ?>
+						<p style="text-align: center; padding: 40px; color: #666;">
+							<?php esc_html_e( 'No rate limit violations recorded.', 'third-audience' ); ?>
+						</p>
+					<?php endif; ?>
+				</div>
+			</div>
+		</div>
+	<?php endif; ?>
+
 	<!-- Recent Visits Table -->
 	<div class="ta-recent-visits">
 		<div class="ta-section-header">
