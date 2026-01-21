@@ -19,6 +19,7 @@
 			// Always initialize toggle and clear button, even if no chart data
 			this.initCacheHelpToggle();
 			this.initClearAllVisits();
+			this.initExportDropdown();
 
 			// Only initialize charts if data is available
 			if (typeof taAnalyticsData === 'undefined') {
@@ -125,6 +126,33 @@
 					alert('Error: Failed to communicate with server');
 					$button.prop('disabled', false).text(originalText);
 				}
+			});
+		},
+
+		/**
+		 * Initialize export dropdown
+		 */
+		initExportDropdown: function() {
+			var self = this;
+
+			// Toggle dropdown on button click
+			$(document).on('click', '.ta-export-dropdown-toggle', function(e) {
+				e.preventDefault();
+				e.stopPropagation();
+				var $dropdown = $(this).closest('.ta-export-dropdown');
+				$dropdown.toggleClass('ta-export-dropdown-active');
+			});
+
+			// Close dropdown when clicking outside
+			$(document).on('click', function(e) {
+				if (!$(e.target).closest('.ta-export-dropdown').length) {
+					$('.ta-export-dropdown').removeClass('ta-export-dropdown-active');
+				}
+			});
+
+			// Close dropdown when clicking an option
+			$(document).on('click', '.ta-export-option', function() {
+				$('.ta-export-dropdown').removeClass('ta-export-dropdown-active');
 			});
 		},
 
