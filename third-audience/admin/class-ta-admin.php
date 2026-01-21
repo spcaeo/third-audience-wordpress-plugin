@@ -102,6 +102,25 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function enqueue_scripts( $hook ) {
+		// Enqueue Apple theme globally for all Third Audience pages.
+		$ta_pages = array(
+			'settings_page_third-audience',
+			'toplevel_page_third-audience-bot-analytics',
+			'bot-analytics_page_third-audience-bot-management',
+			'bot-analytics_page_third-audience-cache-browser',
+			'bot-analytics_page_third-audience-system-health',
+			'bot-analytics_page_third-audience-about',
+		);
+
+		if ( in_array( $hook, $ta_pages, true ) ) {
+			wp_enqueue_style(
+				'ta-apple-theme',
+				TA_PLUGIN_URL . 'admin/css/apple-theme.css',
+				array(),
+				TA_VERSION
+			);
+		}
+
 		// Settings page.
 		if ( 'settings_page_third-audience' === $hook ) {
 			wp_enqueue_style(

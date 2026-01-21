@@ -1,0 +1,461 @@
+/**
+ * Third Audience - Apple Style Design System
+ *
+ * Modern, clean design inspired by Apple's design language
+ *
+ * @package ThirdAudience
+ * @since   2.1.0
+ */
+
+/* ========================================
+   DESIGN TOKENS (Apple-inspired)
+   ======================================== */
+:root {
+	/* Colors - Apple System Colors */
+	--ta-blue: #007aff;
+	--ta-green: #34c759;
+	--ta-orange: #ff9500;
+	--ta-red: #ff3b30;
+	--ta-purple: #af52de;
+	--ta-pink: #ff2d55;
+
+	/* Neutrals */
+	--ta-gray-50: #fafafa;
+	--ta-gray-100: #f5f5f7;
+	--ta-gray-200: #e5e5ea;
+	--ta-gray-300: #d1d1d6;
+	--ta-gray-400: #c7c7cc;
+	--ta-gray-500: #aeaeb2;
+	--ta-gray-600: #8e8e93;
+	--ta-gray-700: #636366;
+	--ta-gray-800: #48484a;
+	--ta-gray-900: #1d1d1f;
+
+	/* Spacing */
+	--ta-space-xs: 4px;
+	--ta-space-sm: 8px;
+	--ta-space-md: 16px;
+	--ta-space-lg: 24px;
+	--ta-space-xl: 32px;
+	--ta-space-2xl: 48px;
+
+	/* Border Radius */
+	--ta-radius-sm: 8px;
+	--ta-radius-md: 12px;
+	--ta-radius-lg: 16px;
+	--ta-radius-xl: 20px;
+	--ta-radius-full: 9999px;
+
+	/* Shadows */
+	--ta-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+	--ta-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+	--ta-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+	--ta-shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.15);
+
+	/* Typography */
+	--ta-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--ta-font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+}
+
+/* ========================================
+   GLOBAL RESETS & BASE STYLES
+   ======================================== */
+
+/* Smooth scrolling */
+.wrap.ta-admin-page {
+	font-family: var(--ta-font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* ========================================
+   BUTTONS (Apple Style)
+   ======================================== */
+
+/* Primary Button */
+.button.button-primary.ta-btn,
+.button-primary.ta-btn {
+	background: var(--ta-blue);
+	border: none;
+	border-radius: var(--ta-radius-sm);
+	color: #ffffff;
+	font-weight: 500;
+	padding: 10px 20px;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 1px 3px rgba(0, 122, 255, 0.3);
+	letter-spacing: -0.2px;
+}
+
+.button.button-primary.ta-btn:hover,
+.button-primary.ta-btn:hover {
+	background: #0051d5;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+}
+
+.button.button-primary.ta-btn:active,
+.button-primary.ta-btn:active {
+	transform: translateY(0);
+	box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
+}
+
+/* Secondary Button */
+.button.button-secondary.ta-btn,
+.button-secondary.ta-btn {
+	background: var(--ta-gray-100);
+	border: none;
+	border-radius: var(--ta-radius-sm);
+	color: var(--ta-gray-900);
+	font-weight: 500;
+	padding: 10px 20px;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	letter-spacing: -0.2px;
+}
+
+.button.button-secondary.ta-btn:hover,
+.button-secondary.ta-btn:hover {
+	background: var(--ta-gray-200);
+	transform: translateY(-1px);
+	box-shadow: var(--ta-shadow-sm);
+}
+
+/* Danger Button */
+.button.ta-btn-danger {
+	background: var(--ta-red);
+	border: none;
+	border-radius: var(--ta-radius-sm);
+	color: #ffffff;
+	font-weight: 500;
+	padding: 10px 20px;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	box-shadow: 0 1px 3px rgba(255, 59, 48, 0.3);
+}
+
+.button.ta-btn-danger:hover {
+	background: #d70015;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(255, 59, 48, 0.4);
+}
+
+/* ========================================
+   CARDS (Apple Style)
+   ======================================== */
+
+.ta-card {
+	background: #ffffff;
+	border: none;
+	border-radius: var(--ta-radius-lg);
+	padding: var(--ta-space-xl);
+	margin: var(--ta-space-lg) 0;
+	box-shadow: var(--ta-shadow-sm);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-card:hover {
+	box-shadow: var(--ta-shadow-md);
+	transform: translateY(-2px);
+}
+
+.ta-card-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: var(--ta-space-lg);
+	padding-bottom: var(--ta-space-md);
+	border-bottom: 1px solid var(--ta-gray-100);
+}
+
+.ta-card-title {
+	font-size: 22px;
+	font-weight: 600;
+	color: var(--ta-gray-900);
+	margin: 0;
+	letter-spacing: -0.5px;
+}
+
+.ta-card-subtitle {
+	font-size: 14px;
+	color: var(--ta-gray-600);
+	margin: var(--ta-space-xs) 0 0;
+	font-weight: 400;
+}
+
+/* ========================================
+   STATS/SUMMARY CARDS
+   ======================================== */
+
+.ta-summary-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: var(--ta-space-md);
+	margin: var(--ta-space-lg) 0;
+}
+
+.ta-summary-card {
+	background: var(--ta-gray-50);
+	border: none;
+	border-radius: var(--ta-radius-md);
+	padding: var(--ta-space-lg);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-summary-card:hover {
+	background: #ffffff;
+	box-shadow: var(--ta-shadow-md);
+	transform: translateY(-2px);
+}
+
+.ta-summary-card-icon {
+	width: 44px;
+	height: 44px;
+	border-radius: var(--ta-radius-md);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: var(--ta-space-md);
+	background: linear-gradient(135deg, var(--ta-blue) 0%, #0051d5 100%);
+}
+
+.ta-summary-card-icon .dashicons {
+	font-size: 24px;
+	width: 24px;
+	height: 24px;
+	color: #ffffff;
+}
+
+.ta-summary-card-value {
+	font-size: 32px;
+	font-weight: 600;
+	color: var(--ta-gray-900);
+	margin: 0;
+	letter-spacing: -1px;
+	line-height: 1;
+}
+
+.ta-summary-card-label {
+	font-size: 13px;
+	color: var(--ta-gray-600);
+	margin: var(--ta-space-sm) 0 0;
+	font-weight: 400;
+}
+
+/* ========================================
+   TABLES (Apple Style)
+   ======================================== */
+
+.ta-table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	background: #ffffff;
+	border-radius: var(--ta-radius-md);
+	overflow: hidden;
+	box-shadow: var(--ta-shadow-sm);
+}
+
+.ta-table thead th {
+	background: var(--ta-gray-50);
+	padding: var(--ta-space-md) var(--ta-space-lg);
+	text-align: left;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ta-gray-700);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	border-bottom: 1px solid var(--ta-gray-200);
+}
+
+.ta-table tbody td {
+	padding: var(--ta-space-md) var(--ta-space-lg);
+	border-bottom: 1px solid var(--ta-gray-100);
+	font-size: 14px;
+	color: var(--ta-gray-900);
+}
+
+.ta-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.ta-table tbody tr:hover {
+	background: var(--ta-gray-50);
+}
+
+/* ========================================
+   FORMS (Apple Style)
+   ======================================== */
+
+.ta-form-group {
+	margin-bottom: var(--ta-space-lg);
+}
+
+.ta-form-label {
+	display: block;
+	font-size: 14px;
+	font-weight: 500;
+	color: var(--ta-gray-900);
+	margin-bottom: var(--ta-space-sm);
+	letter-spacing: -0.2px;
+}
+
+.ta-form-input,
+.ta-form-select,
+.ta-form-textarea {
+	width: 100%;
+	padding: 12px 16px;
+	font-size: 15px;
+	border: 1px solid var(--ta-gray-300);
+	border-radius: var(--ta-radius-sm);
+	background: #ffffff;
+	color: var(--ta-gray-900);
+	transition: all 0.2s ease;
+	font-family: var(--ta-font-sans);
+}
+
+.ta-form-input:focus,
+.ta-form-select:focus,
+.ta-form-textarea:focus {
+	outline: none;
+	border-color: var(--ta-blue);
+	box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.ta-form-help {
+	font-size: 13px;
+	color: var(--ta-gray-600);
+	margin-top: var(--ta-space-sm);
+	line-height: 1.5;
+}
+
+/* ========================================
+   BADGES & STATUS INDICATORS
+   ======================================== */
+
+.ta-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	border-radius: var(--ta-radius-full);
+	letter-spacing: 0.3px;
+}
+
+.ta-badge-success {
+	background: rgba(52, 199, 89, 0.1);
+	color: var(--ta-green);
+}
+
+.ta-badge-warning {
+	background: rgba(255, 149, 0, 0.1);
+	color: var(--ta-orange);
+}
+
+.ta-badge-error {
+	background: rgba(255, 59, 48, 0.1);
+	color: var(--ta-red);
+}
+
+.ta-badge-info {
+	background: rgba(0, 122, 255, 0.1);
+	color: var(--ta-blue);
+}
+
+/* ========================================
+   NOTICES (Apple Style)
+   ======================================== */
+
+.ta-notice {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--ta-space-md);
+	padding: var(--ta-space-md) var(--ta-space-lg);
+	border-radius: var(--ta-radius-md);
+	margin: var(--ta-space-lg) 0;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.ta-notice-success {
+	background: rgba(52, 199, 89, 0.06);
+	color: var(--ta-green);
+}
+
+.ta-notice-warning {
+	background: rgba(255, 149, 0, 0.06);
+	color: var(--ta-orange);
+}
+
+.ta-notice-error {
+	background: rgba(255, 59, 48, 0.06);
+	color: var(--ta-red);
+}
+
+.ta-notice-info {
+	background: rgba(0, 122, 255, 0.06);
+	color: var(--ta-blue);
+}
+
+.ta-notice .dashicons {
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+
+.ta-loading {
+	position: relative;
+	pointer-events: none;
+	opacity: 0.6;
+}
+
+.ta-loading::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 20px;
+	height: 20px;
+	margin: -10px 0 0 -10px;
+	border: 2px solid var(--ta-gray-200);
+	border-top-color: var(--ta-blue);
+	border-radius: 50%;
+	animation: ta-spin 0.8s linear infinite;
+}
+
+@keyframes ta-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   UTILITIES
+   ======================================== */
+
+.ta-text-sm { font-size: 13px; }
+.ta-text-base { font-size: 15px; }
+.ta-text-lg { font-size: 17px; }
+.ta-text-xl { font-size: 20px; }
+
+.ta-font-medium { font-weight: 500; }
+.ta-font-semibold { font-weight: 600; }
+.ta-font-bold { font-weight: 700; }
+
+.ta-text-gray { color: var(--ta-gray-600); }
+.ta-text-dark { color: var(--ta-gray-900); }
+
+.ta-mt-sm { margin-top: var(--ta-space-sm); }
+.ta-mt-md { margin-top: var(--ta-space-md); }
+.ta-mt-lg { margin-top: var(--ta-space-lg); }
+
+.ta-mb-sm { margin-bottom: var(--ta-space-sm); }
+.ta-mb-md { margin-bottom: var(--ta-space-md); }
+.ta-mb-lg { margin-bottom: var(--ta-space-lg); }
+
+.ta-flex { display: flex; }
+.ta-flex-col { flex-direction: column; }
+.ta-items-center { align-items: center; }
+.ta-justify-between { justify-content: space-between; }
+.ta-gap-sm { gap: var(--ta-space-sm); }
+.ta-gap-md { gap: var(--ta-space-md); }
+.ta-gap-lg { gap: var(--ta-space-lg); }
