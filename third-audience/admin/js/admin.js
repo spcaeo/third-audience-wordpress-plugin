@@ -41,6 +41,9 @@
 
 			// AJAX test SMTP (optional enhancement)
 			$('#ta-test-smtp-ajax').on('click', this.testSmtpAjax.bind(this));
+
+			// Regenerate all markdown
+			$('#ta-regenerate-all-markdown').on('click', this.regenerateAllMarkdown.bind(this));
 		},
 
 		/**
@@ -240,6 +243,51 @@
 				},
 				error: function() {
 					TAAdmin.showToast(taAdmin.i18n.error, 'error');
+				},
+				complete: function() {
+					$btn.removeClass('ta-btn-loading').prop('disabled', false).text(originalText);
+				}
+			});
+		},
+
+		/**
+		 * Regenerate all markdown via AJAX.
+		 *
+		 * @param {Event} e Click event.
+		 */
+		regenerateAllMarkdown: function(e) {
+			e.preventDefault();
+
+			if (!confirm('This will clear all pre-generated markdown and force regeneration on next access. Continue?')) {
+				return;
+			}
+
+			var $btn = $(e.target);
+			var originalText = $btn.text();
+			var $result = $('#ta-regenerate-markdown-result');
+
+			$btn.addClass('ta-btn-loading').prop('disabled', true).text('Regenerating...');
+			$result.html('');
+
+			$.ajax({
+				url: taAdmin.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'ta_regenerate_all_markdown',
+					nonce: taAdmin.nonce
+				},
+				success: function(response) {
+					if (response.success) {
+						$result.html('<div class="notice notice-success inline"><p>' + response.data.message + '</p></div>');
+						TAAdmin.showToast(response.data.message, 'success');
+					} else {
+						$result.html('<div class="notice notice-error inline"><p>' + (response.data.message || 'Error regenerating markdown') + '</p></div>');
+						TAAdmin.showToast(response.data.message || 'Error regenerating markdown', 'error');
+					}
+				},
+				error: function() {
+					$result.html('<div class="notice notice-error inline"><p>Error regenerating markdown</p></div>');
+					TAAdmin.showToast('Error regenerating markdown', 'error');
 				},
 				complete: function() {
 					$btn.removeClass('ta-btn-loading').prop('disabled', false).text(originalText);
