@@ -59,6 +59,44 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 		<?php esc_html_e( 'Track and analyze AI bot visits to your markdown content without requiring server logs.', 'third-audience' ); ?>
 	</p>
 
+	<!-- Live .md Access Feed -->
+	<div class="ta-live-feed-widget">
+		<div class="ta-live-feed-header">
+			<div class="ta-live-feed-title">
+				<span class="ta-live-pulse"></span>
+				<h2><?php esc_html_e( 'Recent .md Accesses (Live)', 'third-audience' ); ?></h2>
+			</div>
+			<button type="button" class="ta-feed-toggle-btn" data-paused="false">
+				<span class="dashicons dashicons-media-pause"></span>
+				<span><?php esc_html_e( 'Pause', 'third-audience' ); ?></span>
+			</button>
+		</div>
+		<div class="ta-live-feed-content">
+			<table class="ta-live-feed-table">
+				<thead>
+					<tr>
+						<th><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'URL', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'Bot', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'Cache', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'Response', 'third-audience' ); ?></th>
+					</tr>
+				</thead>
+				<tbody id="ta-live-feed-tbody">
+					<tr class="ta-feed-loading">
+						<td colspan="5">
+							<span class="ta-feed-spinner"></span>
+							<?php esc_html_e( 'Loading...', 'third-audience' ); ?>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<div class="ta-live-feed-footer">
+			<span class="ta-feed-status"><?php esc_html_e( 'Auto-refreshing every 10 seconds', 'third-audience' ); ?></span>
+		</div>
+	</div>
+
 	<!-- Filter Bar -->
 	<div class="ta-analytics-filters">
 		<form method="get" id="ta-analytics-filters-form">
@@ -441,7 +479,8 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 			visitsOverTime: <?php echo wp_json_encode( array_reverse( $visits_time ) ); ?>,
 			botDistribution: <?php echo wp_json_encode( $bot_stats ); ?>,
 			period: <?php echo wp_json_encode( $time_period ); ?>,
-			nonce: <?php echo wp_json_encode( wp_create_nonce( 'ta_bot_analytics' ) ); ?>
+			nonce: <?php echo wp_json_encode( wp_create_nonce( 'ta_bot_analytics' ) ); ?>,
+			feedNonce: <?php echo wp_json_encode( wp_create_nonce( 'ta_bot_analytics_feed' ) ); ?>
 		};
 	</script>
 </div>

@@ -13,6 +13,16 @@
 	 */
 	var TABotAnalytics = {
 		/**
+		 * Feed refresh interval ID
+		 */
+		feedRefreshInterval: null,
+
+		/**
+		 * Feed is paused
+		 */
+		feedPaused: false,
+
+		/**
 		 * Initialize
 		 */
 		init: function () {
@@ -20,6 +30,7 @@
 			this.initCacheHelpToggle();
 			this.initClearAllVisits();
 			this.initExportDropdown();
+			this.initLiveFeed();
 
 			// Only initialize charts if data is available
 			if (typeof taAnalyticsData === 'undefined') {
@@ -286,6 +297,187 @@
 					}
 				}
 			});
+		},
+
+		/**
+		 * Initialize live feed
+		 */
+		initLiveFeed: function () {
+			var self = this;
+
+			// Load initial data
+			this.loadLiveFeedData();
+
+			// Set up auto-refresh interval (10 seconds)
+			this.feedRefreshInterval = setInterval(function () {
+				if (!self.feedPaused) {
+					self.loadLiveFeedData();
+				}
+			}, 10000);
+
+			// Initialize pause/play button
+			$(document).on('click', '.ta-feed-toggle-btn', function (e) {
+				e.preventDefault();
+				self.toggleFeedPause();
+			});
+		},
+
+		/**
+		 * Load live feed data via AJAX
+		 */
+		loadLiveFeedData: function () {
+			var self = this;
+
+			if (typeof taAnalyticsData === 'undefined' || !taAnalyticsData.feedNonce) {
+				return;
+			}
+
+			$.ajax({
+				url: ajaxurl,
+				type: 'POST',
+				data: {
+					action: 'ta_get_recent_accesses',
+					nonce: taAnalyticsData.feedNonce
+				},
+				success: function (response) {
+					if (response.success && response.data.accesses) {
+						self.updateLiveFeedTable(response.data.accesses);
+					}
+				},
+				error: function () {
+					// Silently fail on AJAX error, just don't update
+				}
+			});
+		},
+
+		/**
+		 * Update live feed table with new data
+		 */
+		updateLiveFeedTable: function (accesses) {
+			var $tbody = $('#ta-live-feed-tbody');
+			var currentIds = {};
+
+			// Get current row IDs
+			$tbody.find('tr').each(function () {
+				var id = $(this).attr('data-access-id');
+				if (id) {
+					currentIds[id] = true;
+				}
+			});
+
+			// Build new rows
+			var newRows = [];
+			var hasNewRows = false;
+
+			for (var i = 0; i < accesses.length; i++) {
+				var access = accesses[i];
+				var rowHtml = this.buildAccessRow(access);
+
+				if (!currentIds[access.id]) {
+					hasNewRows = true;
+				}
+
+				newRows.push({
+					id: access.id,
+					html: rowHtml,
+					isNew: !currentIds[access.id]
+				});
+			}
+
+			// Only update if we have data or if the table is still loading
+			if (newRows.length > 0) {
+				// Clear loading state if present
+				$tbody.find('.ta-feed-loading').remove();
+
+				// Add new rows with fade-in animation
+				for (var j = 0; j < newRows.length; j++) {
+					var newRow = $(newRows[j].html);
+					if (newRows[j].isNew) {
+						newRow.addClass('ta-feed-row-new');
+					}
+					$tbody.prepend(newRow);
+				}
+
+				// Keep only last 20 rows
+				var rows = $tbody.find('tr');
+				if (rows.length > 20) {
+					rows.slice(20).remove();
+				}
+			}
+		},
+
+		/**
+		 * Build a single access row HTML
+		 */
+		buildAccessRow: function (access) {
+			var timeText = this.formatRelativeTime(access.timestamp);
+			var urlDisplay = access.url.split('/').pop() || access.url;
+			if (urlDisplay.length > 40) {
+				urlDisplay = urlDisplay.substring(0, 37) + '...';
+			}
+
+			var cacheClass = 'ta-cache-' + access.cache_status.toLowerCase();
+			var responseTime = access.response_time ? access.response_time + 'ms' : '-';
+
+			var html = '<tr data-access-id="' + access.id + '">' +
+				'<td class="ta-feed-time" title="' + this.escapeHtml(access.timestamp) + '">' + timeText + '</td>' +
+				'<td class="ta-feed-url"><a href="' + this.escapeHtml(access.url) + '" target="_blank" title="' + this.escapeHtml(access.url) + '">' + this.escapeHtml(urlDisplay) + '</a></td>' +
+				'<td class="ta-feed-bot"><span class="ta-bot-badge">' + this.escapeHtml(access.bot_name) + '</span></td>' +
+				'<td class="ta-feed-cache"><span class="ta-cache-badge ' + cacheClass + '">' + this.escapeHtml(access.cache_status) + '</span></td>' +
+				'<td class="ta-feed-response">' + responseTime + '</td>' +
+				'</tr>';
+
+			return html;
+		},
+
+		/**
+		 * Format relative time (e.g., "5s ago", "2m ago")
+		 */
+		formatRelativeTime: function (timestamp) {
+			var now = new Date();
+			var then = new Date(timestamp);
+			var diff = Math.floor((now - then) / 1000); // seconds
+
+			if (diff < 60) {
+				return diff + 's ago';
+			} else if (diff < 3600) {
+				return Math.floor(diff / 60) + 'm ago';
+			} else if (diff < 86400) {
+				return Math.floor(diff / 3600) + 'h ago';
+			} else {
+				return Math.floor(diff / 86400) + 'd ago';
+			}
+		},
+
+		/**
+		 * Escape HTML to prevent XSS
+		 */
+		escapeHtml: function (text) {
+			var div = document.createElement('div');
+			div.textContent = text;
+			return div.innerHTML;
+		},
+
+		/**
+		 * Toggle feed pause/play
+		 */
+		toggleFeedPause: function () {
+			var $btn = $('.ta-feed-toggle-btn');
+			this.feedPaused = !this.feedPaused;
+
+			if (this.feedPaused) {
+				$btn.attr('data-paused', 'true');
+				$btn.find('.dashicons').removeClass('dashicons-media-pause').addClass('dashicons-controls-play');
+				$btn.find('span').text('Resume');
+				$('.ta-live-feed-widget').addClass('ta-feed-paused');
+			} else {
+				$btn.attr('data-paused', 'false');
+				$btn.find('.dashicons').removeClass('dashicons-controls-play').addClass('dashicons-media-pause');
+				$btn.find('span').text('Pause');
+				$('.ta-live-feed-widget').removeClass('ta-feed-paused');
+				// Load fresh data when resuming
+				this.loadLiveFeedData();
+			}
 		},
 
 		/**
