@@ -70,10 +70,12 @@ class TA_Local_Converter {
 				'header_style'    => 'atx',              // Use # for headers
 				'bold_style'      => '**',               // Use ** for bold
 				'italic_style'    => '_',                // Use _ for italic
-				'strip_tags'      => false,              // Keep HTML tags that can't be converted
-				'remove_nodes'    => 'script style',     // Remove script and style tags
+				'strip_tags'      => true,               // Strip all HTML tags for pure markdown
+				'remove_nodes'    => 'script style nav header footer aside form',  // Remove UI chrome
 				'hard_break'      => false,              // Use double space for line breaks
 				'list_item_style' => '-',                // Use - for unordered lists
+				'table_pipe_escape' => '\\',             // Escape pipes in tables
+				'use_autolinks'   => true,               // Convert URLs to autolinks
 			);
 
 			$this->converter = new HtmlConverter( $options );
@@ -282,41 +284,123 @@ class TA_Local_Converter {
 	/**
 	 * Extract main content from HTML (remove sidebars, headers, footers, etc.).
 	 *
+	 * This function attempts to extract only the primary content area from rendered HTML,
+	 * removing navigation, sidebars, forms, comments, and other UI chrome that isn't
+	 * relevant for AI agents consuming the content.
+	 *
 	 * @since 2.0.0
 	 * @param string $html The HTML content.
-	 * @return string Cleaned HTML.
+	 * @return string Cleaned HTML containing only main content.
 	 */
 	private function extract_main_content( $html ) {
 		// Use DOMDocument to parse HTML
 		$dom = new DOMDocument();
-		@$dom->loadHTML( '<?xml encoding="utf-8" ?>' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+		libxml_use_internal_errors( true ); // Suppress HTML5 warnings
+		@$dom->loadHTML( '<?xml encoding="utf-8" ?><html><body>' . $html . '</body></html>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD );
+		libxml_clear_errors();
 
-		// Remove script and style elements
-		$scripts = $dom->getElementsByTagName( 'script' );
-		$styles  = $dom->getElementsByTagName( 'style' );
+		$xpath = new DOMXPath( $dom );
 
-		$remove = array();
-		foreach ( $scripts as $script ) {
-			$remove[] = $script;
+		// Strategy 1: Look for <article> tag (HTML5 semantic markup)
+		$article = $xpath->query( '//article' )->item( 0 );
+		if ( $article ) {
+			$this->logger->debug( 'Found <article> tag, using as main content.' );
+			return $this->get_inner_html( $article );
 		}
-		foreach ( $styles as $style ) {
-			$remove[] = $style;
+
+		// Strategy 2: Look for common WordPress content class names
+		$content_selectors = array(
+			'entry-content',
+			'post-content',
+			'main-content',
+			'content-area',
+			'article-content',
+			'page-content',
+		);
+
+		foreach ( $content_selectors as $class ) {
+			$elements = $xpath->query( "//*[contains(@class, '{$class}')]" );
+			if ( $elements->length > 0 ) {
+				$this->logger->debug( "Found content via class: {$class}" );
+				return $this->get_inner_html( $elements->item( 0 ) );
+			}
 		}
 
-		foreach ( $remove as $node ) {
+		// Strategy 3: Look for <main> tag
+		$main = $xpath->query( '//main' )->item( 0 );
+		if ( $main ) {
+			$this->logger->debug( 'Found <main> tag, using as main content.' );
+			return $this->get_inner_html( $main );
+		}
+
+		// Strategy 4: Remove known UI chrome elements and return what's left
+		$this->logger->debug( 'Using fallback: removing known UI chrome elements.' );
+		$remove_selectors = array(
+			'//script',
+			'//style',
+			'//nav',
+			'//header',
+			'//footer',
+			'//aside',
+			'//form',
+			'//*[contains(@class, "sidebar")]',
+			'//*[contains(@class, "widget")]',
+			'//*[contains(@class, "navigation")]',
+			'//*[contains(@class, "menu")]',
+			'//*[contains(@class, "nav")]',
+			'//*[contains(@class, "comment")]',
+			'//*[contains(@class, "related")]',
+			'//*[contains(@class, "footer")]',
+			'//*[contains(@class, "header")]',
+			'//*[contains(@id, "sidebar")]',
+			'//*[contains(@id, "footer")]',
+			'//*[contains(@id, "header")]',
+			'//*[contains(@id, "nav")]',
+			'//*[contains(@id, "menu")]',
+		);
+
+		$nodes_to_remove = array();
+		foreach ( $remove_selectors as $selector ) {
+			$elements = $xpath->query( $selector );
+			foreach ( $elements as $element ) {
+				$nodes_to_remove[] = $element;
+			}
+		}
+
+		// Remove collected nodes
+		foreach ( $nodes_to_remove as $node ) {
 			if ( $node->parentNode ) {
 				$node->parentNode->removeChild( $node );
 			}
 		}
 
 		// Get cleaned HTML
-		$cleaned_html = $dom->saveHTML();
+		$body = $xpath->query( '//body' )->item( 0 );
+		if ( $body ) {
+			return $this->get_inner_html( $body );
+		}
 
-		// Remove the XML declaration and HTML/body wrapper tags that DOMDocument adds
-		$cleaned_html = preg_replace( '/^<\?xml[^?]+\?>\s*/i', '', $cleaned_html );
-		$cleaned_html = preg_replace( '/<\/?(?:html|body)>/i', '', $cleaned_html );
+		// Fallback: return the original HTML (better than nothing)
+		$this->logger->warning( 'Could not extract main content, returning original HTML.' );
+		return $html;
+	}
 
-		return trim( $cleaned_html );
+	/**
+	 * Get inner HTML of a DOMNode.
+	 *
+	 * @since 2.0.0
+	 * @param DOMNode $node The DOM node.
+	 * @return string The inner HTML.
+	 */
+	private function get_inner_html( $node ) {
+		$innerHTML = '';
+		$children  = $node->childNodes;
+
+		foreach ( $children as $child ) {
+			$innerHTML .= $node->ownerDocument->saveHTML( $child );
+		}
+
+		return trim( $innerHTML );
 	}
 
 	/**
