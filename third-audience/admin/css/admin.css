@@ -1,5 +1,5 @@
 /**
- * Third Audience Admin Styles
+ * Third Audience Admin Styles - Apple Design System
  *
  * Additional styles for the admin interface.
  * Main styles are inline in settings-page.php for simplicity.
@@ -8,11 +8,11 @@
  * @since   1.1.0
  */
 
-/* Loading States */
+/* Loading States - Apple Style */
 .ta-loading {
 	position: relative;
 	pointer-events: none;
-	opacity: 0.7;
+	opacity: 0.6;
 }
 
 .ta-loading::after {
@@ -23,15 +23,14 @@
 	width: 20px;
 	height: 20px;
 	margin: -10px 0 0 -10px;
-	border: 2px solid #f3f3f3;
-	border-top: 2px solid #0073aa;
+	border: 2px solid #e5e5ea;
+	border-top-color: #007aff;
 	border-radius: 50%;
-	animation: ta-spin 1s linear infinite;
+	animation: ta-spin 0.8s linear infinite;
 }
 
 @keyframes ta-spin {
-	0% { transform: rotate(0deg); }
-	100% { transform: rotate(360deg); }
+	to { transform: rotate(360deg); }
 }
 
 /* Button States */
@@ -54,33 +53,36 @@
 	animation: ta-spin 0.6s linear infinite;
 }
 
-/* Toast Notifications */
+/* Toast Notifications - Apple Style */
 .ta-toast {
 	position: fixed;
-	bottom: 30px;
-	right: 30px;
-	padding: 12px 24px;
-	background: #1d2327;
-	color: #fff;
-	border-radius: 4px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	bottom: 32px;
+	right: 32px;
+	padding: 16px 24px;
+	background: rgba(28, 28, 30, 0.95);
+	backdrop-filter: blur(20px);
+	color: #ffffff;
+	border-radius: 12px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 	z-index: 100000;
 	opacity: 0;
-	transform: translateY(20px);
-	transition: opacity 0.3s, transform 0.3s;
+	transform: translateY(20px) scale(0.95);
+	transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+	font-size: 14px;
+	font-weight: 500;
 }
 
 .ta-toast.ta-toast-visible {
 	opacity: 1;
-	transform: translateY(0);
+	transform: translateY(0) scale(1);
 }
 
 .ta-toast.ta-toast-success {
-	background: #00a32a;
+	background: linear-gradient(135deg, #34c759 0%, #30d158 100%);
 }
 
 .ta-toast.ta-toast-error {
-	background: #d63638;
+	background: linear-gradient(135deg, #ff3b30 0%, #ff453a 100%);
 }
 
 /* Password Toggle */
