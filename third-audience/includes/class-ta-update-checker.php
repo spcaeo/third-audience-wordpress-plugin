@@ -26,14 +26,14 @@ class TA_Update_Checker {
 	 *
 	 * @var string
 	 */
-	const GITHUB_OWNER = 'third-audience';
+	const GITHUB_OWNER = 'spcaeo';
 
 	/**
 	 * GitHub repository name.
 	 *
 	 * @var string
 	 */
-	const GITHUB_REPO = 'wordpress-plugin';
+	const GITHUB_REPO = 'third-audience-wordpress-plugin';
 
 	/**
 	 * Transient key for storing version check results.
