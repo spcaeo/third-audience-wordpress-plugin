@@ -31,6 +31,11 @@
 			$('#ta-warmup-all-btn').on('click', this.handleWarmup.bind(this));
 			$('#ta-warmup-cancel-btn').on('click', this.handleCancelWarmup.bind(this));
 
+			// Export events.
+			$('#ta-export-selected-btn').on('click', this.handleExportSelected.bind(this));
+			$('#ta-export-filtered-btn').on('click', this.handleExportFiltered.bind(this));
+			$('#ta-export-all-btn').on('click', this.handleExportAll.bind(this));
+
 			// Filter events.
 			$('.ta-toggle-filters').on('click', this.toggleFilters.bind(this));
 			$('.ta-size-preset').on('click', this.handleSizePreset.bind(this));
@@ -370,6 +375,118 @@
 		handleCancelWarmup: function() {
 			this.warmupCancelled = true;
 			$('#ta-warmup-cancel-btn').prop('disabled', true).text('Cancelling...');
+		},
+
+		handleExportSelected: function() {
+			var keys = [];
+			$('.ta-cache-checkbox:checked').each(function() {
+				keys.push($(this).val());
+			});
+
+			if (keys.length === 0) {
+				alert(taCacheBrowser.i18n.selectEntries);
+				return;
+			}
+
+			this.performExport('selected', keys);
+		},
+
+		handleExportFiltered: function() {
+			this.performExport('filtered', this.getFilteredData());
+		},
+
+		handleExportAll: function() {
+			if (!confirm('Export all cache entries to CSV? This may include thousands of entries.')) return;
+			this.performExport('all', {});
+		},
+
+		getFilteredData: function() {
+			var urlParams = new URLSearchParams(window.location.search);
+			return {
+				search: urlParams.get('search') || '',
+				filters: {
+					status: urlParams.get('status') || 'all',
+					size_min: urlParams.get('size_min') || '0',
+					size_max: urlParams.get('size_max') || '0',
+					date_from: urlParams.get('date_from') || '',
+					date_to: urlParams.get('date_to') || '',
+				},
+				orderby: urlParams.get('orderby') || 'expiration',
+				order: urlParams.get('order') || 'DESC',
+			};
+		},
+
+		performExport: function(exportType, data) {
+			var self = this;
+			var postData = {
+				action: 'ta_export_cache_entries',
+				nonce: taCacheBrowser.nonce,
+				export_type: exportType,
+			};
+
+			if ('selected' === exportType) {
+				postData.cache_keys = data;
+			} else if ('filtered' === exportType) {
+				postData.search = data.search;
+				postData.filters = data.filters;
+				postData.orderby = data.orderby;
+				postData.order = data.order;
+			}
+
+			$.ajax({
+				url: taCacheBrowser.ajaxUrl,
+				type: 'POST',
+				data: postData,
+				success: function(response) {
+					if (response.success) {
+						self.generateAndDownloadCSV(response.data.csv_data, response.data.filename);
+						var message = 'Exported ' + response.data.count + ' cache entries';
+						console.log(message);
+					} else {
+						alert(response.data.message || 'Export failed');
+					}
+				},
+				error: function() {
+					alert(taCacheBrowser.i18n.error);
+				}
+			});
+		},
+
+		generateAndDownloadCSV: function(csvData, filename) {
+			// Convert array data to CSV string
+			var csvContent = '';
+			for (var i = 0; i < csvData.length; i++) {
+				var row = csvData[i];
+				var csvRow = [];
+				for (var j = 0; j < row.length; j++) {
+					var cell = row[j];
+					// Escape quotes in cells and wrap in quotes if contains comma
+					if (cell === null || cell === undefined) {
+						cell = '';
+					}
+					cell = String(cell).replace(/"/g, '""');
+					if (cell.includes(',') || cell.includes('"') || cell.includes('\n')) {
+						cell = '"' + cell + '"';
+					}
+					csvRow.push(cell);
+				}
+				csvContent += csvRow.join(',') + '\n';
+			}
+
+			// Create blob and download
+			var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+			var link = document.createElement('a');
+			if (navigator.msSaveBlob) { // IE 10+
+				navigator.msSaveBlob(blob, filename);
+			} else {
+				var url = URL.createObjectURL(blob);
+				link.setAttribute('href', url);
+				link.setAttribute('download', filename);
+				link.style.visibility = 'hidden';
+				document.body.appendChild(link);
+				link.click();
+				document.body.removeChild(link);
+			}
 		}
 	};
 
