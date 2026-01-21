@@ -321,10 +321,28 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 				<canvas id="ta-bot-distribution-chart"></canvas>
 			</div>
 			<div class="ta-chart-legend">
+				<?php
+				$bot_analytics_inst = TA_Bot_Analytics::get_instance();
+				$priority_colors_map = array(
+					'high'    => '#0073aa',
+					'medium'  => '#46b450',
+					'low'     => '#ffb900',
+					'blocked' => '#dc3232',
+				);
+				?>
 				<?php foreach ( $bot_stats as $bot ) : ?>
+					<?php
+					$bot_priority_val = $bot_analytics_inst->get_bot_priority( $bot['bot_type'], 'medium' );
+					$priority_badge_color = isset( $priority_colors_map[ $bot_priority_val ] ) ? $priority_colors_map[ $bot_priority_val ] : '#999';
+					?>
 					<div class="ta-legend-item">
 						<span class="ta-legend-color" style="background-color: <?php echo esc_attr( $bot['color'] ); ?>"></span>
-						<span class="ta-legend-label"><?php echo esc_html( $bot['bot_name'] ); ?></span>
+						<span class="ta-legend-label">
+							<?php echo esc_html( $bot['bot_name'] ); ?>
+							<span style="background: <?php echo esc_attr( $priority_badge_color ); ?>; color: white; padding: 1px 5px; border-radius: 3px; font-size: 9px; margin-left: 4px; text-transform: uppercase; font-weight: 600;">
+								<?php echo esc_html( $bot_priority_val ); ?>
+							</span>
+						</span>
 						<span class="ta-legend-value"><?php echo number_format( $bot['count'] ); ?> visits</span>
 					</div>
 				<?php endforeach; ?>
@@ -407,11 +425,26 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 					</tr>
 				<?php else : ?>
 					<?php foreach ( $recent_visits as $visit ) : ?>
+						<?php
+						// Get bot priority for color coding.
+						$bot_analytics_instance = TA_Bot_Analytics::get_instance();
+						$bot_priority = $bot_analytics_instance->get_bot_priority( $visit['bot_type'], 'medium' );
+						$priority_colors = array(
+							'high'    => '#0073aa',
+							'medium'  => '#46b450',
+							'low'     => '#ffb900',
+							'blocked' => '#dc3232',
+						);
+						$priority_color = isset( $priority_colors[ $bot_priority ] ) ? $priority_colors[ $bot_priority ] : '#999';
+						?>
 						<tr>
 							<td><?php echo esc_html( $visit['id'] ); ?></td>
 							<td>
-								<span class="ta-bot-badge" style="border-left-color: <?php echo esc_attr( TA_Bot_Analytics::get_known_bots()[ $visit['bot_type'] ]['color'] ?? '#999' ); ?>">
+								<span class="ta-bot-badge" style="border-left-color: <?php echo esc_attr( $priority_color ); ?>; border-left-width: 4px;">
 									<?php echo esc_html( $visit['bot_name'] ); ?>
+									<span class="ta-priority-indicator" style="background: <?php echo esc_attr( $priority_color ); ?>; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 6px; text-transform: uppercase; font-weight: 600;">
+										<?php echo esc_html( $bot_priority ); ?>
+									</span>
 								</span>
 							</td>
 							<td class="ta-page-cell">

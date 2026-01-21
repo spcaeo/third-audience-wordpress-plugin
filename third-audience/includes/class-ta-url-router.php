@@ -253,14 +253,18 @@ class TA_URL_Router {
 			return;
 		}
 
-		// Cache the result.
-		$this->cache_manager->set( $cache_key, $markdown );
+		// Get cache TTL based on bot priority.
+		$cache_ttl = $this->get_cache_ttl_for_request( $user_agent );
+
+		// Cache the result with priority-based TTL.
+		$this->cache_manager->set( $cache_key, $markdown, $cache_ttl );
 
 		$conversion_time = ( microtime( true ) - $start_time ) * 1000;
 		$this->logger->debug( 'Markdown conversion successful.', array(
-			'url'  => $original_url,
-			'time' => round( $conversion_time, 2 ) . 'ms',
-			'size' => strlen( $markdown ),
+			'url'       => $original_url,
+			'time'      => round( $conversion_time, 2 ) . 'ms',
+			'size'      => strlen( $markdown ),
+			'cache_ttl' => $cache_ttl,
 		) );
 
 		// Track bot visit.
@@ -419,6 +423,24 @@ class TA_URL_Router {
 
 		echo 'Third Audience Error: ' . esc_html( $message );
 		exit;
+	}
+
+	/**
+	 * Get cache TTL based on bot priority from user agent.
+	 *
+	 * @since 2.1.0
+	 * @param string $user_agent The user agent string.
+	 * @return int Cache TTL in seconds.
+	 */
+	private function get_cache_ttl_for_request( $user_agent ) {
+		$bot_info = $this->bot_analytics->detect_bot( $user_agent );
+
+		if ( false !== $bot_info && isset( $bot_info['priority'] ) ) {
+			return TA_Bot_Analytics::get_cache_ttl_for_priority( $bot_info['priority'] );
+		}
+
+		// Default to medium priority (24 hours) for unknown bots.
+		return 24 * HOUR_IN_SECONDS;
 	}
 
 	/**
