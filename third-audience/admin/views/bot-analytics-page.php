@@ -122,9 +122,43 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-bot-analytics' ) ); ?>" class="button">
 						<?php esc_html_e( 'Reset Filters', 'third-audience' ); ?>
 					</a>
-					<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export' ) ) ), 'ta_export_analytics' ) ); ?>" class="button">
-						<?php esc_html_e( 'Export CSV', 'third-audience' ); ?>
-					</a>
+					<div class="ta-export-dropdown">
+						<button type="button" class="button ta-export-dropdown-toggle">
+							<span class="dashicons dashicons-download"></span>
+							<?php esc_html_e( 'Export', 'third-audience' ); ?>
+							<span class="dashicons dashicons-arrow-down-alt2"></span>
+						</button>
+						<div class="ta-export-dropdown-menu">
+							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export', 'export_format' => 'csv', 'export_type' => 'detailed' ) ) ), 'ta_export_analytics' ) ); ?>" class="ta-export-option">
+								<span class="dashicons dashicons-media-spreadsheet"></span>
+								<div>
+									<strong><?php esc_html_e( 'CSV - Detailed', 'third-audience' ); ?></strong>
+									<span><?php esc_html_e( 'All columns with visit details', 'third-audience' ); ?></span>
+								</div>
+							</a>
+							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export', 'export_format' => 'csv', 'export_type' => 'summary' ) ) ), 'ta_export_analytics' ) ); ?>" class="ta-export-option">
+								<span class="dashicons dashicons-chart-bar"></span>
+								<div>
+									<strong><?php esc_html_e( 'CSV - Summary', 'third-audience' ); ?></strong>
+									<span><?php esc_html_e( 'Aggregated stats by bot type', 'third-audience' ); ?></span>
+								</div>
+							</a>
+							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export', 'export_format' => 'json', 'export_type' => 'detailed' ) ) ), 'ta_export_analytics' ) ); ?>" class="ta-export-option">
+								<span class="dashicons dashicons-media-code"></span>
+								<div>
+									<strong><?php esc_html_e( 'JSON - Detailed', 'third-audience' ); ?></strong>
+									<span><?php esc_html_e( 'All data in JSON format', 'third-audience' ); ?></span>
+								</div>
+							</a>
+							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export', 'export_format' => 'json', 'export_type' => 'summary' ) ) ), 'ta_export_analytics' ) ); ?>" class="ta-export-option">
+								<span class="dashicons dashicons-analytics"></span>
+								<div>
+									<strong><?php esc_html_e( 'JSON - Summary', 'third-audience' ); ?></strong>
+									<span><?php esc_html_e( 'Aggregated stats in JSON', 'third-audience' ); ?></span>
+								</div>
+							</a>
+						</div>
+					</div>
 					<button type="button" class="button button-secondary ta-clear-all-visits" style="margin-left: 10px; color: #d63638; border-color: #d63638;">
 						<?php esc_html_e( 'Clear All Visits', 'third-audience' ); ?>
 					</button>
