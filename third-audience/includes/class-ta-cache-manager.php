@@ -877,4 +877,140 @@ class TA_Cache_Manager implements TA_Cacheable {
 
 		return $health;
 	}
+
+	/**
+	 * Get cache entries for browser display with metadata.
+	 *
+	 * @since 1.6.0
+	 * @param int    $limit  Number of entries to retrieve (default 50).
+	 * @param int    $offset Offset for pagination.
+	 * @param string $search Optional URL search filter.
+	 * @return array Array of cache entries with metadata.
+	 */
+	public function get_cache_entries( $limit = 50, $offset = 0, $search = '' ) {
+		global $wpdb;
+
+		// Build query with optional search.
+		$where = $wpdb->prepare(
+			"WHERE t.option_name LIKE %s",
+			'_transient_' . self::CACHE_PREFIX . '%'
+		);
+
+		if ( ! empty( $search ) ) {
+			$where .= $wpdb->prepare(
+				" AND t.option_name LIKE %s",
+				'%' . $wpdb->esc_like( $search ) . '%'
+			);
+		}
+
+		// Get entries with timeout info.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					REPLACE(t.option_name, '_transient_', '') as cache_key,
+					t.option_value as content,
+					LENGTH(t.option_value) as size_bytes,
+					timeout.option_value as expiration,
+					CASE
+						WHEN timeout.option_value < %d THEN 1
+						ELSE 0
+					END as is_expired
+				FROM {$wpdb->options} t
+				LEFT JOIN {$wpdb->options} timeout
+					ON timeout.option_name = CONCAT('_transient_timeout_', REPLACE(t.option_name, '_transient_', ''))
+				{$where}
+				ORDER BY t.option_id DESC
+				LIMIT %d OFFSET %d",
+				time(),
+				$limit,
+				$offset
+			),
+			ARRAY_A
+		);
+
+		// Reverse-lookup URLs from cache keys and add metadata.
+		foreach ( $results as &$entry ) {
+			$url_info              = $this->reverse_lookup_url( $entry['cache_key'] );
+			$entry['url']          = $url_info['url'];
+			$entry['title']        = $url_info['title'];
+			$entry['post_id']      = $url_info['post_id'];
+			$entry['size_human']   = size_format( $entry['size_bytes'] );
+			$entry['expires_in']   = $entry['is_expired'] ? 'Expired' : human_time_diff( time(), $entry['expiration'] );
+			$entry['created_time'] = $entry['is_expired'] ? 'Expired' : date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $entry['expiration'] - ( get_option( 'ta_cache_ttl', 86400 ) ) );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Get total count of cache entries.
+	 *
+	 * @since 1.6.0
+	 * @param string $search Optional search term.
+	 * @return int Total count.
+	 */
+	public function get_cache_entries_count( $search = '' ) {
+		global $wpdb;
+
+		$where = $wpdb->prepare(
+			"WHERE option_name LIKE %s",
+			'_transient_' . self::CACHE_PREFIX . '%'
+		);
+
+		if ( ! empty( $search ) ) {
+			$where .= $wpdb->prepare(
+				" AND option_name LIKE %s",
+				'%' . $wpdb->esc_like( $search ) . '%'
+			);
+		}
+
+		return (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$wpdb->options} {$where}"
+		);
+	}
+
+	/**
+	 * Reverse lookup URL from cache key (best effort).
+	 *
+	 * Queries all published posts and matches URL hash to find the original URL.
+	 *
+	 * @since 1.6.0
+	 * @param string $cache_key The cache key.
+	 * @return array URL info array with 'url', 'title', 'post_id'.
+	 */
+	private function reverse_lookup_url( $cache_key ) {
+		// Cache the URL map to avoid repeated queries.
+		static $url_map = null;
+
+		if ( null === $url_map ) {
+			$url_map = array();
+
+			$enabled_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
+			$posts         = get_posts(
+				array(
+					'post_type'      => $enabled_types,
+					'post_status'    => 'publish',
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+				)
+			);
+
+			foreach ( $posts as $post_id ) {
+				$url     = get_permalink( $post_id );
+				$key     = $this->get_cache_key( $url );
+				$url_map[ $key ] = array(
+					'url'     => $url,
+					'title'   => get_the_title( $post_id ),
+					'post_id' => $post_id,
+				);
+			}
+		}
+
+		// Return URL info if found, otherwise return cache key as URL.
+		return isset( $url_map[ $cache_key ] ) ? $url_map[ $cache_key ] : array(
+			'url'     => $cache_key,
+			'title'   => 'Unknown',
+			'post_id' => 0,
+		);
+	}
 }

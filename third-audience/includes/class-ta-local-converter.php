@@ -426,7 +426,7 @@ class TA_Local_Converter {
 	}
 
 	/**
-	 * Generate footer section.
+	 * Generate footer section with tracking metadata.
 	 *
 	 * @since 2.0.0
 	 * @param WP_Post $post The post object.
@@ -435,7 +435,8 @@ class TA_Local_Converter {
 	private function generate_footer( $post ) {
 		$footer = "\n\n---\n\n";
 		$footer .= '_View the original post at: [' . get_permalink( $post->ID ) . '](' . get_permalink( $post->ID ) . ')_  ' . "\n";
-		$footer .= '_Served as markdown by [Third Audience](https://github.com/third-audience)_  ' . "\n";
+		$footer .= '_Served as markdown by [Third Audience](https://github.com/third-audience) v' . TA_VERSION . '_  ' . "\n";
+		$footer .= '_Generated: ' . gmdate( 'Y-m-d H:i:s' ) . ' UTC_  ' . "\n";
 
 		return $footer;
 	}

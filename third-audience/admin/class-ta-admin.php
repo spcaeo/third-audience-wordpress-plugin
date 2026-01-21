@@ -79,6 +79,13 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
 		add_action( 'wp_ajax_ta_clear_cache', array( $this, 'ajax_clear_cache' ) );
 		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
+
+		// Cache Browser AJAX handlers.
+		add_action( 'wp_ajax_ta_delete_cache_entry', array( $this, 'ajax_delete_cache_entry' ) );
+		add_action( 'wp_ajax_ta_bulk_delete_cache', array( $this, 'ajax_bulk_delete_cache' ) );
+		add_action( 'wp_ajax_ta_clear_expired_cache', array( $this, 'ajax_clear_expired_cache' ) );
+		add_action( 'wp_ajax_ta_regenerate_cache', array( $this, 'ajax_regenerate_cache' ) );
+		add_action( 'wp_ajax_ta_view_cache_content', array( $this, 'ajax_view_cache_content' ) );
 	}
 
 	/**
@@ -149,6 +156,37 @@ class TA_Admin {
 				true
 			);
 		}
+
+		// Cache Browser page.
+		if ( 'bot-analytics_page_third-audience-cache-browser' === $hook ) {
+			wp_enqueue_style(
+				'ta-cache-browser',
+				TA_PLUGIN_URL . 'admin/css/cache-browser.css',
+				array(),
+				TA_VERSION
+			);
+
+			wp_enqueue_script(
+				'ta-cache-browser',
+				TA_PLUGIN_URL . 'admin/js/cache-browser.js',
+				array( 'jquery' ),
+				TA_VERSION,
+				true
+			);
+
+			wp_localize_script( 'ta-cache-browser', 'taCacheBrowser', array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => $this->security->create_nonce( 'cache_browser' ),
+				'i18n'    => array(
+					'confirmDelete'       => __( 'Delete this cache entry?', 'third-audience' ),
+					'confirmBulkDelete'   => __( 'Delete selected entries?', 'third-audience' ),
+					'confirmClearExpired' => __( 'Clear all expired entries?', 'third-audience' ),
+					'selectEntries'       => __( 'Select at least one entry.', 'third-audience' ),
+					'success'             => __( 'Success!', 'third-audience' ),
+					'error'               => __( 'Error', 'third-audience' ),
+				),
+			) );
+		}
 	}
 
 	/**
@@ -186,6 +224,16 @@ class TA_Admin {
 			'manage_options',
 			'third-audience-bot-management',
 			array( $this, 'render_bot_management_page' )
+		);
+
+		// Cache Browser submenu.
+		add_submenu_page(
+			'third-audience-bot-analytics',
+			__( 'Cache Browser', 'third-audience' ),
+			__( 'Cache Browser', 'third-audience' ),
+			'manage_options',
+			'third-audience-cache-browser',
+			array( $this, 'render_cache_browser_page' )
 		);
 
 		// System Health submenu.
@@ -768,5 +816,137 @@ class TA_Admin {
 
 		wp_safe_redirect( add_query_arg( $args, admin_url( 'options-general.php' ) ) );
 		exit;
+	}
+
+	/**
+	 * Render Cache Browser page.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public function render_cache_browser_page() {
+		$this->security->verify_admin_capability();
+
+		$cache_manager = new TA_Cache_Manager();
+		$cache_stats = $cache_manager->get_stats();
+
+		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$per_page = 50;
+		$offset = ( $current_page - 1 ) * $per_page;
+		$search = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
+
+		$cache_entries = $cache_manager->get_cache_entries( $per_page, $offset, $search );
+		$total_entries = $cache_manager->get_cache_entries_count( $search );
+		$expired_count = count( $cache_manager->get_expired_entries() );
+		$cache_health = $cache_manager->get_health();
+
+		include TA_PLUGIN_DIR . 'admin/views/cache-browser-page.php';
+	}
+
+	/**
+	 * AJAX: Delete single cache entry.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public function ajax_delete_cache_entry() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
+		if ( empty( $cache_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$result = $cache_manager->delete( $cache_key );
+
+		if ( $result ) {
+			wp_send_json_success( array( 'message' => __( 'Cache entry deleted.', 'third-audience' ) ) );
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Failed to delete.', 'third-audience' ) ) );
+		}
+	}
+
+	/**
+	 * AJAX: Bulk delete cache entries.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public function ajax_bulk_delete_cache() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_keys = isset( $_POST['cache_keys'] ) && is_array( $_POST['cache_keys'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cache_keys'] ) ) : array();
+		if ( empty( $cache_keys ) ) {
+			wp_send_json_error( array( 'message' => __( 'No entries selected.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$deleted = $cache_manager->delete_many( $cache_keys );
+
+		wp_send_json_success( array( 'message' => sprintf( __( 'Deleted %d entries.', 'third-audience' ), $deleted ), 'count' => $deleted ) );
+	}
+
+	/**
+	 * AJAX: Clear expired cache entries.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public function ajax_clear_expired_cache() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_manager = new TA_Cache_Manager();
+		$cleared = $cache_manager->cleanup_expired();
+
+		wp_send_json_success( array( 'message' => sprintf( __( 'Cleared %d expired entries.', 'third-audience' ), $cleared ), 'count' => $cleared ) );
+	}
+
+	/**
+	 * AJAX: Regenerate cache for a post.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public function ajax_regenerate_cache() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+		if ( ! $post_id ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid post ID.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$result = $cache_manager->regenerate_markdown( $post_id );
+
+		if ( $result ) {
+			wp_send_json_success( array( 'message' => __( 'Markdown regenerated.', 'third-audience' ) ) );
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Failed to regenerate.', 'third-audience' ) ) );
+		}
+	}
+
+	/**
+	 * AJAX: View cache content.
+	 *
+	 * @since 1.6.0
+	 * @return void
+	 */
+	public function ajax_view_cache_content() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
+		if ( empty( $cache_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$content = $cache_manager->get( $cache_key );
+
+		if ( false === $content ) {
+			wp_send_json_error( array( 'message' => __( 'Cache entry not found.', 'third-audience' ) ) );
+		}
+
+		wp_send_json_success( array( 'content' => $content, 'size' => size_format( strlen( $content ) ) ) );
 	}
 }
