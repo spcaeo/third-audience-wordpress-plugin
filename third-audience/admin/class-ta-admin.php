@@ -774,6 +774,8 @@ class TA_Admin {
 		$blocked_bots = isset( $_POST['blocked_bots'] ) && is_array( $_POST['blocked_bots'] ) ? array_map( 'sanitize_text_field', $_POST['blocked_bots'] ) : array();
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$custom_bots = isset( $_POST['custom_bots'] ) && is_array( $_POST['custom_bots'] ) ? $_POST['custom_bots'] : array();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$bot_priorities = isset( $_POST['bot_priorities'] ) && is_array( $_POST['bot_priorities'] ) ? $_POST['bot_priorities'] : array();
 
 		// Validate and sanitize custom bots.
 		$sanitized_custom_bots = array();
@@ -786,20 +788,31 @@ class TA_Admin {
 			}
 		}
 
+		// Validate and sanitize bot priorities.
+		$sanitized_bot_priorities = array();
+		$valid_priorities = array( 'high', 'medium', 'low', 'blocked' );
+		foreach ( $bot_priorities as $bot_type => $priority ) {
+			if ( in_array( $priority, $valid_priorities, true ) ) {
+				$sanitized_bot_priorities[ sanitize_text_field( $bot_type ) ] = sanitize_text_field( $priority );
+			}
+		}
+
 		// Save configuration.
 		$bot_config = array(
-			'track_unknown' => $track_unknown,
-			'blocked_bots'  => $blocked_bots,
-			'custom_bots'   => $sanitized_custom_bots,
+			'track_unknown'  => $track_unknown,
+			'blocked_bots'   => $blocked_bots,
+			'custom_bots'    => $sanitized_custom_bots,
+			'bot_priorities' => $sanitized_bot_priorities,
 		);
 
 		update_option( 'ta_bot_config', $bot_config );
 
 		// Log the change.
 		$this->logger->info( 'Bot configuration updated.', array(
-			'track_unknown' => $track_unknown,
-			'blocked_count' => count( $blocked_bots ),
-			'custom_count'  => count( $sanitized_custom_bots ),
+			'track_unknown'    => $track_unknown,
+			'blocked_count'    => count( $blocked_bots ),
+			'custom_count'     => count( $sanitized_custom_bots ),
+			'priorities_count' => count( $sanitized_bot_priorities ),
 		) );
 
 		add_settings_error(
