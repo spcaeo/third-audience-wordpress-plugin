@@ -287,9 +287,33 @@ class TA_URL_Router {
 		// Detect if this is a known bot.
 		$bot_info = $this->bot_analytics->detect_bot( $user_agent );
 
-		// Only track known AI bots - skip regular browsers.
+		// If not a known bot, detect generic bots by user agent patterns.
 		if ( false === $bot_info ) {
-			return;
+			// Check if this looks like a bot (contains common bot keywords).
+			$bot_keywords = array( 'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python', 'java', 'go-http', 'okhttp' );
+			$is_bot = false;
+
+			foreach ( $bot_keywords as $keyword ) {
+				if ( stripos( $user_agent, $keyword ) !== false ) {
+					$is_bot = true;
+					break;
+				}
+			}
+
+			// Only track if it's a bot-like agent - skip regular browsers.
+			if ( ! $is_bot ) {
+				return;
+			}
+
+			// Extract bot name from user agent.
+			$bot_name = $this->extract_bot_name_from_user_agent( $user_agent );
+
+			// Create generic bot info for unknown bots.
+			$bot_info = array(
+				'type'  => 'Unknown_Bot',
+				'name'  => $bot_name,
+				'color' => '#6B7280', // Gray color for unknown bots.
+			);
 		}
 
 		// Get referer.
@@ -395,5 +419,49 @@ class TA_URL_Router {
 
 		echo 'Third Audience Error: ' . esc_html( $message );
 		exit;
+	}
+
+	/**
+	 * Extract bot name from user agent string.
+	 *
+	 * @since 2.0.6
+	 * @param string $user_agent The user agent string.
+	 * @return string The extracted bot name.
+	 */
+	private function extract_bot_name_from_user_agent( $user_agent ) {
+		// Common patterns for bot names:
+		// 1. "BotName/version" -> extract "BotName"
+		// 2. "BotName version" -> extract "BotName"
+		// 3. "curl/7.68.0" -> extract "curl"
+
+		// Pattern 1: Name/Version (most common)
+		if ( preg_match( '/^([a-zA-Z0-9._-]+)\/[\d.]+/i', $user_agent, $matches ) ) {
+			return ucfirst( strtolower( $matches[1] ) );
+		}
+
+		// Pattern 2: Name followed by space and version
+		if ( preg_match( '/^([a-zA-Z0-9._-]+)\s+[\d.]+/i', $user_agent, $matches ) ) {
+			return ucfirst( strtolower( $matches[1] ) );
+		}
+
+		// Pattern 3: Just the first word if it contains "bot", "crawler", "spider"
+		if ( preg_match( '/^([a-zA-Z0-9._-]*(?:bot|crawler|spider)[a-zA-Z0-9._-]*)/i', $user_agent, $matches ) ) {
+			return ucfirst( strtolower( $matches[1] ) );
+		}
+
+		// Pattern 4: Common tools (curl, wget, python-requests, etc.)
+		$common_tools = array( 'curl', 'wget', 'python-requests', 'python', 'java', 'go-http', 'okhttp' );
+		foreach ( $common_tools as $tool ) {
+			if ( stripos( $user_agent, $tool ) !== false ) {
+				return ucfirst( $tool );
+			}
+		}
+
+		// Fallback: Use first word (up to 20 chars)
+		if ( preg_match( '/^([a-zA-Z0-9._-]{1,20})/i', $user_agent, $matches ) ) {
+			return ucfirst( strtolower( $matches[1] ) );
+		}
+
+		return 'Unknown Bot';
 	}
 }
