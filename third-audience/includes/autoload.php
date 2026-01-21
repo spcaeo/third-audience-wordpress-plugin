@@ -125,8 +125,9 @@ class TA_Autoloader {
 			'TA_Discovery'           => 'includes/class-ta-discovery.php',
 			'TA_Cache_Manager'       => 'includes/class-ta-cache-manager.php',
 
-			// Bot Analytics
+			// Bot Analytics and Webhooks
 			'TA_Bot_Analytics'       => 'includes/class-ta-bot-analytics.php',
+			'TA_Webhooks'            => 'includes/class-ta-webhooks.php',
 
 			// Rate limiting and queue
 			'TA_Rate_Limiter'        => 'includes/class-ta-rate-limiter.php',
@@ -372,6 +373,7 @@ class TA_Autoloader {
 				'TA_Content_Negotiation',
 				'TA_Discovery',
 				'TA_Cache_Manager',
+				'TA_Webhooks',
 			),
 			'api'      => array(
 				'TA_Rate_Limiter',

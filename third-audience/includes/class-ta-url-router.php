@@ -65,6 +65,13 @@ class TA_URL_Router {
 	private $rate_limiter;
 
 	/**
+	 * Webhooks instance.
+	 *
+	 * @var TA_Webhooks
+	 */
+	private $webhooks;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
@@ -77,6 +84,7 @@ class TA_URL_Router {
 		$this->logger        = TA_Logger::get_instance();
 		$this->bot_analytics = TA_Bot_Analytics::get_instance();
 		$this->rate_limiter  = new TA_Rate_Limiter();
+		$this->webhooks      = TA_Webhooks::get_instance();
 	}
 
 	/**
@@ -361,7 +369,7 @@ class TA_URL_Router {
 		// Get referer.
 		$referer = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : null;
 
-		// Calculate response time.
+	// Calculate response time.
 		$response_time = round( ( microtime( true ) - $start_time ) * 1000 ); // milliseconds.
 
 		// Track the visit.
@@ -378,6 +386,17 @@ class TA_URL_Router {
 			'response_time'  => $response_time,
 			'response_size'  => $size,
 			'referer'        => $referer,
+		) );
+
+		// Fire webhook for markdown.accessed event.
+		$this->webhooks->fire_markdown_accessed( array(
+			'bot_type'      => $bot_info['type'],
+			'bot_name'      => $bot_info['name'],
+			'url'           => $url,
+			'post_id'       => $post->ID,
+			'post_title'    => $post->post_title,
+			'cache_status'  => $cache_status,
+			'response_time' => $response_time,
 		) );
 	}
 

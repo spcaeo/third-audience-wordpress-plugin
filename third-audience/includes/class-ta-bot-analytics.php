@@ -119,6 +119,13 @@ class TA_Bot_Analytics {
 	private $logger;
 
 	/**
+	 * Webhooks instance.
+	 *
+	 * @var TA_Webhooks
+	 */
+	private $webhooks;
+
+	/**
 	 * Singleton instance.
 	 *
 	 * @var TA_Bot_Analytics|null
@@ -145,6 +152,7 @@ class TA_Bot_Analytics {
 	 */
 	private function __construct() {
 		$this->logger = TA_Logger::get_instance();
+		$this->webhooks = TA_Webhooks::get_instance();
 		$this->maybe_create_table();
 	}
 
@@ -371,7 +379,7 @@ class TA_Bot_Analytics {
 			'%s', // visit_timestamp
 		);
 
-		$result = $wpdb->insert( $table_name, $insert_data, $format );
+	$result = $wpdb->insert( $table_name, $insert_data, $format );
 
 		if ( false === $result ) {
 			$this->logger->error( 'Failed to track bot visit.', array(
@@ -386,6 +394,21 @@ class TA_Bot_Analytics {
 			'bot_type' => $data['bot_type'],
 			'url'      => $data['url'],
 		) );
+
+		// Check if this is a new bot by counting previous visits for this bot type.
+		$visit_count = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$table_name} WHERE bot_type = %s AND id != %d",
+			$data['bot_type'],
+			$wpdb->insert_id
+		) );
+
+		// If this is the first visit from this bot type, fire bot.detected webhook.
+		if ( 0 === absint( $visit_count ) ) {
+			$bot_info = $this->detect_bot( $data['user_agent'] ?? '' );
+			if ( false !== $bot_info ) {
+				$this->webhooks->fire_bot_detected( $bot_info );
+			}
+		}
 
 		return $wpdb->insert_id;
 	}

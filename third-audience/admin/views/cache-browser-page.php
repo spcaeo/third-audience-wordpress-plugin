@@ -174,6 +174,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<button id="ta-clear-expired-btn" class="button"><?php esc_html_e( 'Clear Expired', 'third-audience' ); ?></button>
 		</div>
 		<div>
+			<button id="ta-export-selected-btn" class="button" title="<?php esc_attr_e( 'Export only selected cache entries', 'third-audience' ); ?>">
+				<span class="dashicons dashicons-download"></span>
+				<?php esc_html_e( 'Export Selected', 'third-audience' ); ?>
+			</button>
+			<button id="ta-export-filtered-btn" class="button button-primary" title="<?php esc_attr_e( 'Export current filtered and sorted view', 'third-audience' ); ?>">
+				<span class="dashicons dashicons-download"></span>
+				<?php esc_html_e( 'Export View', 'third-audience' ); ?>
+			</button>
+			<button id="ta-export-all-btn" class="button" title="<?php esc_attr_e( 'Export all cache entries', 'third-audience' ); ?>">
+				<span class="dashicons dashicons-download"></span>
+				<?php esc_html_e( 'Export All', 'third-audience' ); ?>
+			</button>
+		</div>
+		<div>
 			<input type="search" id="ta-cache-search" placeholder="<?php esc_attr_e( 'Search URL...', 'third-audience' ); ?>" value="<?php echo esc_attr( $search ); ?>">
 			<button class="button" onclick="location.href='?page=third-audience-cache-browser&search='+document.getElementById('ta-cache-search').value"><?php esc_html_e( 'Search', 'third-audience' ); ?></button>
 		</div>
