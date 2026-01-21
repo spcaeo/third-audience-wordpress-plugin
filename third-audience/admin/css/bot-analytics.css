@@ -10,6 +10,281 @@
 	margin: 20px 20px 20px 0;
 }
 
+/* Live Feed Widget - Apple Style */
+.ta-live-feed-widget {
+	background: #ffffff;
+	border: none;
+	border-radius: 16px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+	overflow: hidden;
+	margin: 24px 0;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-live-feed-widget:hover {
+	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.ta-live-feed-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 24px 28px 20px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+	background: #ffffff;
+}
+
+.ta-live-feed-title {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1;
+}
+
+.ta-live-feed-title h2 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: #1d1d1f;
+	letter-spacing: -0.3px;
+}
+
+.ta-live-pulse {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	background: #34c759;
+	border-radius: 50%;
+	animation: ta-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ta-pulse {
+	0%, 100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.6;
+		transform: scale(1.2);
+	}
+}
+
+.ta-live-feed-widget.ta-feed-paused .ta-live-pulse {
+	background: #ff9500;
+	animation: none;
+}
+
+.ta-feed-toggle-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 14px;
+	height: 36px;
+	border-radius: 8px;
+	border: 1px solid #d1d1d6;
+	background: #ffffff;
+	color: #1d1d1f;
+	font-weight: 500;
+	font-size: 13px;
+	cursor: pointer;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-feed-toggle-btn:hover {
+	background: #f5f5f7;
+	border-color: #007aff;
+	transform: translateY(-1px);
+}
+
+.ta-feed-toggle-btn .dashicons {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+.ta-live-feed-content {
+	padding: 0;
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+.ta-live-feed-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 0;
+}
+
+.ta-live-feed-table thead {
+	background: #f5f5f7;
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+.ta-live-feed-table th {
+	padding: 14px 16px;
+	text-align: left;
+	font-size: 12px;
+	font-weight: 600;
+	color: #646970;
+	text-transform: uppercase;
+	letter-spacing: 0.2px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ta-live-feed-table tbody tr {
+	border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+	transition: background-color 0.2s ease;
+}
+
+.ta-live-feed-table tbody tr:hover {
+	background: #f9f9f9;
+}
+
+.ta-live-feed-table tbody tr.ta-feed-row-new {
+	animation: ta-fade-in 0.4s ease-out;
+}
+
+@keyframes ta-fade-in {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.ta-live-feed-table td {
+	padding: 12px 16px;
+	font-size: 13px;
+	color: #1d2327;
+	vertical-align: middle;
+}
+
+.ta-feed-time {
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 12px;
+	color: #86868b;
+	white-space: nowrap;
+	width: 90px;
+	font-weight: 500;
+}
+
+.ta-feed-url {
+	flex: 1;
+	max-width: 300px;
+}
+
+.ta-feed-url a {
+	color: #2271b1;
+	text-decoration: none;
+	display: block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	transition: color 0.2s;
+}
+
+.ta-feed-url a:hover {
+	color: #135e96;
+	text-decoration: underline;
+}
+
+.ta-feed-bot {
+	width: 150px;
+}
+
+.ta-feed-cache {
+	width: 120px;
+}
+
+.ta-feed-response {
+	width: 100px;
+	text-align: right;
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 12px;
+	color: #646970;
+	font-weight: 500;
+}
+
+.ta-feed-loading {
+	text-align: center;
+	padding: 60px 20px !important;
+	color: #8c8f94;
+}
+
+.ta-feed-spinner {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid #f0f0f1;
+	border-top-color: #2271b1;
+	border-radius: 50%;
+	margin-right: 10px;
+	animation: ta-spin 0.8s linear infinite;
+	vertical-align: middle;
+}
+
+.ta-live-feed-footer {
+	padding: 12px 16px;
+	background: #f9f9f9;
+	border-top: 1px solid rgba(0, 0, 0, 0.04);
+	text-align: center;
+	font-size: 12px;
+	color: #86868b;
+	font-weight: 400;
+}
+
+.ta-live-feed-widget.ta-feed-paused .ta-live-feed-footer {
+	background: rgba(255, 149, 0, 0.06);
+	color: #ff9500;
+}
+
+/* Responsive design for live feed */
+@media screen and (max-width: 1280px) {
+	.ta-live-feed-table th:nth-child(2),
+	.ta-live-feed-table td:nth-child(2) {
+		min-width: 200px;
+	}
+}
+
+@media screen and (max-width: 782px) {
+	.ta-live-feed-header {
+		padding: 16px 20px 12px;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.ta-live-feed-title {
+		width: 100%;
+	}
+
+	.ta-feed-toggle-btn {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.ta-live-feed-table {
+		font-size: 12px;
+	}
+
+	.ta-live-feed-table th,
+	.ta-live-feed-table td {
+		padding: 10px 12px;
+	}
+
+	.ta-feed-time {
+		width: auto;
+	}
+
+	.ta-feed-response {
+		width: auto;
+	}
+}
+
 /* Filter Bar - Apple Style */
 .ta-analytics-filters {
 	background: #ffffff;

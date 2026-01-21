@@ -99,6 +99,7 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_view_cache_content', array( $this, 'ajax_view_cache_content' ) );
 		add_action( 'wp_ajax_ta_get_warmup_stats', array( $this, 'ajax_get_warmup_stats' ) );
 		add_action( 'wp_ajax_ta_warm_cache_batch', array( $this, 'ajax_warm_cache_batch' ) );
+		add_action( 'wp_ajax_ta_get_recent_accesses', array( $this, 'ajax_get_recent_accesses' ) );
 	}
 
 	/**
@@ -399,6 +400,55 @@ class TA_Admin {
 			'type'              => 'string',
 			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
 			'default'           => '',
+		) );
+
+		// AI-Optimized Metadata settings.
+		register_setting( 'ta_settings', 'ta_enable_enhanced_metadata', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
+		register_setting( 'ta_settings', 'ta_metadata_word_count', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
+		register_setting( 'ta_settings', 'ta_metadata_reading_time', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
+		register_setting( 'ta_settings', 'ta_metadata_summary', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
+		register_setting( 'ta_settings', 'ta_metadata_language', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
+		register_setting( 'ta_settings', 'ta_metadata_last_modified', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
+		register_setting( 'ta_settings', 'ta_metadata_schema_type', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
+		) );
+
+		register_setting( 'ta_settings', 'ta_metadata_related_posts', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => true,
 		) );
 	}
 
@@ -1182,5 +1232,48 @@ class TA_Admin {
 		) );
 
 		wp_send_json_success( $result );
+	}
+
+	/**
+	 * Get recent .md access attempts for live feed.
+	 *
+	 * @since 2.1.0
+	 * @return void
+	 */
+	public function ajax_get_recent_accesses() {
+		// Verify nonce.
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'ta_bot_analytics_feed' ) ) {
+			wp_send_json_error( array( 'message' => 'Nonce verification failed' ), 403 );
+		}
+
+		// Check capabilities.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions' ), 403 );
+		}
+
+		$analytics = TA_Bot_Analytics::get_instance();
+		$accesses = $analytics->get_recent_visits( array(), 20, 0 );
+
+		if ( empty( $accesses ) ) {
+			wp_send_json_success( array( 'accesses' => array() ) );
+		}
+
+		// Format data for frontend.
+		$formatted = array();
+		foreach ( $accesses as $access ) {
+			$formatted[] = array(
+				'id'              => intval( $access['id'] ),
+				'timestamp'       => $access['visit_timestamp'],
+				'url'             => $access['url'],
+				'bot_name'        => $access['bot_name'],
+				'bot_type'        => $access['bot_type'],
+				'cache_status'    => $access['cache_status'],
+				'response_time'   => intval( $access['response_time'] ?? 0 ),
+				'post_title'      => $access['post_title'] ?? 'Untitled',
+			);
+		}
+
+		wp_send_json_success( array( 'accesses' => $formatted ) );
 	}
 }
