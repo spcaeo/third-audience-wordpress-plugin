@@ -53,43 +53,6 @@ $security = TA_Security::get_instance();
 							<?php settings_fields( 'ta_settings' ); ?>
 
 							<div class="ta-card">
-								<h2><?php esc_html_e( 'Service Configuration', 'third-audience' ); ?></h2>
-								<table class="form-table" role="presentation">
-									<tr>
-										<th scope="row">
-											<label for="ta_worker_url"><?php esc_html_e( 'Worker URL', 'third-audience' ); ?></label>
-										</th>
-										<td>
-											<input type="url" name="ta_worker_url" id="ta_worker_url" class="regular-text"
-												   value="<?php echo esc_attr( get_option( 'ta_worker_url', 'https://ta-worker.rp-2ae.workers.dev' ) ); ?>" />
-											<p class="description"><?php esc_html_e( 'Cloudflare Worker URL for HTML-to-Markdown conversion.', 'third-audience' ); ?></p>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="ta_router_url"><?php esc_html_e( 'Router URL (Optional)', 'third-audience' ); ?></label>
-										</th>
-										<td>
-											<input type="url" name="ta_router_url" id="ta_router_url" class="regular-text"
-												   value="<?php echo esc_attr( get_option( 'ta_router_url', '' ) ); ?>" />
-											<p class="description"><?php esc_html_e( 'Router service URL for load balancing (leave empty to use Worker directly).', 'third-audience' ); ?></p>
-										</td>
-									</tr>
-									<tr>
-										<th scope="row">
-											<label for="ta_api_key"><?php esc_html_e( 'API Key (Optional)', 'third-audience' ); ?></label>
-										</th>
-										<td>
-											<input type="password" name="ta_api_key" id="ta_api_key" class="regular-text"
-												   value="" placeholder="<?php echo get_option( 'ta_api_key_encrypted' ) ? '********' : ''; ?>"
-												   autocomplete="new-password" />
-											<p class="description"><?php esc_html_e( 'API key for router authentication (required if using router).', 'third-audience' ); ?></p>
-										</td>
-									</tr>
-								</table>
-							</div>
-
-							<div class="ta-card">
 								<h2><?php esc_html_e( 'Cache Settings', 'third-audience' ); ?></h2>
 								<table class="form-table" role="presentation">
 									<tr>
@@ -199,19 +162,6 @@ $security = TA_Security::get_instance();
 							</form>
 						</div>
 
-						<!-- Connection Test Card -->
-						<div class="ta-card">
-							<h2><?php esc_html_e( 'Connection Test', 'third-audience' ); ?></h2>
-							<p><?php esc_html_e( 'Test the connection to the conversion service.', 'third-audience' ); ?></p>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline">
-								<?php $security->nonce_field( 'test_connection' ); ?>
-								<input type="hidden" name="action" value="ta_test_connection" />
-								<button type="submit" class="button button-secondary" id="ta-test-connection-btn">
-									<?php esc_html_e( 'Test Connection', 'third-audience' ); ?>
-								</button>
-							</form>
-						</div>
-
 						<!-- How It Works Card -->
 						<div class="ta-card">
 							<h2><?php esc_html_e( 'How It Works', 'third-audience' ); ?></h2>
@@ -219,9 +169,12 @@ $security = TA_Security::get_instance();
 								<li><?php esc_html_e( 'AI crawlers request page.md URLs', 'third-audience' ); ?></li>
 								<li><?php esc_html_e( 'Plugin intercepts the request', 'third-audience' ); ?></li>
 								<li><?php esc_html_e( 'Checks local cache first', 'third-audience' ); ?></li>
-								<li><?php esc_html_e( 'If miss, converts HTML to Markdown', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'If miss, converts HTML to Markdown locally', 'third-audience' ); ?></li>
 								<li><?php esc_html_e( 'Caches and returns clean Markdown', 'third-audience' ); ?></li>
 							</ol>
+							<p class="description" style="margin-top: 10px;">
+								<strong><?php esc_html_e( 'All conversion happens on your server - no external dependencies!', 'third-audience' ); ?></strong>
+							</p>
 						</div>
 
 						<!-- Test Your Setup Card -->
@@ -383,11 +336,6 @@ $security = TA_Security::get_instance();
 										<td>
 											<fieldset>
 												<label class="ta-checkbox-label">
-													<input type="checkbox" name="ta_notifications[on_worker_failure]" value="1"
-														   <?php checked( ! empty( $notification_settings['on_worker_failure'] ) ); ?> />
-													<?php esc_html_e( 'Worker connection failures', 'third-audience' ); ?>
-												</label>
-												<label class="ta-checkbox-label">
 													<input type="checkbox" name="ta_notifications[on_high_error_rate]" value="1"
 														   <?php checked( ! empty( $notification_settings['on_high_error_rate'] ) ); ?> />
 													<?php esc_html_e( 'High error rate alerts', 'third-audience' ); ?>
@@ -398,7 +346,7 @@ $security = TA_Security::get_instance();
 													<?php esc_html_e( 'Cache issues', 'third-audience' ); ?>
 												</label>
 												<label class="ta-checkbox-label">
-													<input type="checkbox" name="ta_notifications[daily_digest]" value="1"
+													<input type="checkbox" name="ta_notifications[on_daily_digest]" value="1"
 														   <?php checked( ! empty( $notification_settings['daily_digest'] ) ); ?> />
 													<?php esc_html_e( 'Daily digest summary', 'third-audience' ); ?>
 												</label>

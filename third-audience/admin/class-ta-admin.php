@@ -68,7 +68,6 @@ class TA_Admin {
 
 		// Admin post handlers.
 		add_action( 'admin_post_ta_clear_cache', array( $this, 'handle_clear_cache' ) );
-		add_action( 'admin_post_ta_test_connection', array( $this, 'handle_test_connection' ) );
 		add_action( 'admin_post_ta_test_smtp', array( $this, 'handle_test_smtp' ) );
 		add_action( 'admin_post_ta_clear_errors', array( $this, 'handle_clear_errors' ) );
 		add_action( 'admin_post_ta_save_smtp_settings', array( $this, 'handle_save_smtp_settings' ) );
@@ -76,7 +75,6 @@ class TA_Admin {
 		add_action( 'admin_post_ta_save_bot_config', array( $this, 'handle_save_bot_config' ) );
 
 		// AJAX handlers.
-		add_action( 'wp_ajax_ta_test_connection', array( $this, 'ajax_test_connection' ) );
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
 		add_action( 'wp_ajax_ta_clear_cache', array( $this, 'ajax_clear_cache' ) );
 		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
@@ -197,6 +195,16 @@ class TA_Admin {
 			'third-audience-system-health',
 			array( $this, 'render_system_health_page' )
 		);
+
+		// About submenu.
+		add_submenu_page(
+			'third-audience-bot-analytics',
+			__( 'About', 'third-audience' ),
+			__( 'About', 'third-audience' ),
+			'manage_options',
+			'third-audience-about',
+			array( $this, 'render_about_page' )
+		);
 	}
 
 	/**
@@ -206,24 +214,6 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function register_settings() {
-		// Service settings.
-		register_setting( 'ta_settings', 'ta_router_url', array(
-			'type'              => 'string',
-			'sanitize_callback' => array( $this->security, 'sanitize_url' ),
-			'default'           => '',
-		) );
-
-		register_setting( 'ta_settings', 'ta_worker_url', array(
-			'type'              => 'string',
-			'sanitize_callback' => array( $this->security, 'sanitize_url' ),
-			'default'           => 'https://ta-worker.rp-2ae.workers.dev',
-		) );
-
-		register_setting( 'ta_settings', 'ta_api_key', array(
-			'type'              => 'string',
-			'sanitize_callback' => array( $this, 'sanitize_api_key' ),
-		) );
-
 		// Cache settings.
 		register_setting( 'ta_settings', 'ta_cache_ttl', array(
 			'type'              => 'integer',
@@ -260,7 +250,7 @@ class TA_Admin {
 	/**
 	 * Display configuration notices if plugin is not properly set up.
 	 *
-	 * @since 1.4.0
+	 * @since 2.0.0
 	 * @return void
 	 */
 	public function display_configuration_notices() {
@@ -270,22 +260,19 @@ class TA_Admin {
 			return;
 		}
 
-		$worker_url = get_option( 'ta_worker_url', '' );
-		$router_url = get_option( 'ta_router_url', '' );
-
-		// Check if either worker or router URL is configured.
-		if ( empty( $worker_url ) && empty( $router_url ) ) {
+		// Check if HTML to Markdown library is installed.
+		if ( ! TA_Local_Converter::is_library_available() ) {
 			?>
 			<div class="notice notice-error">
 				<p>
-					<strong><?php esc_html_e( 'Third Audience Configuration Required', 'third-audience' ); ?></strong>
+					<strong><?php esc_html_e( 'Third Audience - Library Missing', 'third-audience' ); ?></strong>
 				</p>
 				<p>
 					<?php
 					printf(
-						/* translators: %s: settings page URL */
-						esc_html__( 'Please configure your Worker URL or Router URL in the %s to enable markdown conversion for AI bots.', 'third-audience' ),
-						'<a href="' . esc_url( admin_url( 'options-general.php?page=third-audience' ) ) . '">' . esc_html__( 'plugin settings', 'third-audience' ) . '</a>'
+						/* translators: %s: System Health page URL */
+						esc_html__( 'The HTML to Markdown conversion library is not installed. Please check the %s page for installation instructions.', 'third-audience' ),
+						'<a href="' . esc_url( admin_url( 'admin.php?page=third-audience-system-health' ) ) . '">' . esc_html__( 'System Health', 'third-audience' ) . '</a>'
 					);
 					?>
 				</p>
@@ -311,22 +298,6 @@ class TA_Admin {
 			</div>
 			<?php
 		}
-	}
-
-	/**
-	 * Sanitize API key (encrypt and store).
-	 *
-	 * @since 1.0.0
-	 * @param string $value The API key.
-	 * @return string Empty string (we store encrypted separately).
-	 */
-	public function sanitize_api_key( $value ) {
-		if ( ! empty( $value ) ) {
-			$value = $this->security->sanitize_text( $value );
-			$this->security->store_encrypted_option( 'ta_api_key', $value );
-			$this->logger->info( 'API key updated.' );
-		}
-		return ''; // Don't store unencrypted.
 	}
 
 	/**
@@ -397,6 +368,18 @@ class TA_Admin {
 	}
 
 	/**
+	 * Render About page.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function render_about_page() {
+		$this->security->verify_admin_capability();
+
+		include TA_PLUGIN_DIR . 'admin/views/about-page.php';
+	}
+
+	/**
 	 * Handle clear cache action.
 	 *
 	 * @since 1.0.0
@@ -429,78 +412,6 @@ class TA_Admin {
 			admin_url( 'options-general.php' )
 		) );
 		exit;
-	}
-
-	/**
-	 * Handle test connection action.
-	 *
-	 * @since 1.0.0
-	 * @return void
-	 */
-	public function handle_test_connection() {
-		$this->security->verify_admin_capability();
-		$this->security->verify_nonce_or_die( 'test_connection' );
-
-		$api_client = new TA_API_Client();
-		$worker_url = $api_client->get_worker_url();
-
-		// Validate URL.
-		$validated_url = $this->security->validate_url_for_worker( $worker_url );
-		if ( is_wp_error( $validated_url ) ) {
-			add_settings_error(
-				'ta_messages',
-				'ta_test_failed',
-				__( 'Invalid worker URL: ', 'third-audience' ) . $validated_url->get_error_message(),
-				'error'
-			);
-			$this->redirect_to_settings();
-			return;
-		}
-
-		// Test worker health.
-		$response = wp_remote_get( $worker_url . '/health', array( 'timeout' => 10 ) );
-
-		if ( is_wp_error( $response ) ) {
-			$this->logger->error( 'Worker connection test failed.', array(
-				'url'   => $worker_url,
-				'error' => $response->get_error_message(),
-			) );
-
-			// Trigger notification.
-			do_action( 'ta_worker_connection_failed', $worker_url, $response );
-
-			add_settings_error(
-				'ta_messages',
-				'ta_test_failed',
-				__( 'Connection failed: ', 'third-audience' ) . $response->get_error_message(),
-				'error'
-			);
-		} else {
-			$status_code = wp_remote_retrieve_response_code( $response );
-			if ( 200 === $status_code ) {
-				$this->logger->info( 'Worker connection test successful.', array( 'url' => $worker_url ) );
-				add_settings_error(
-					'ta_messages',
-					'ta_test_success',
-					__( 'Connection successful! Worker is healthy.', 'third-audience' ),
-					'success'
-				);
-			} else {
-				$this->logger->warning( 'Worker returned unexpected status.', array(
-					'url'    => $worker_url,
-					'status' => $status_code,
-				) );
-				add_settings_error(
-					'ta_messages',
-					'ta_test_failed',
-					/* translators: %d: HTTP status code */
-					sprintf( __( 'Worker returned status %d', 'third-audience' ), $status_code ),
-					'error'
-				);
-			}
-		}
-
-		$this->redirect_to_settings();
 	}
 
 	/**
@@ -706,50 +617,6 @@ class TA_Admin {
 			)
 		);
 		exit;
-	}
-
-	/**
-	 * AJAX handler for testing connection.
-	 *
-	 * @since 1.1.0
-	 * @return void
-	 */
-	public function ajax_test_connection() {
-		$this->security->verify_ajax_request( 'admin_ajax' );
-
-		$api_client = new TA_API_Client();
-		$worker_url = $api_client->get_worker_url();
-
-		// Validate URL.
-		$validated_url = $this->security->validate_url_for_worker( $worker_url );
-		if ( is_wp_error( $validated_url ) ) {
-			wp_send_json_error( array( 'message' => $validated_url->get_error_message() ) );
-		}
-
-		$response = wp_remote_get( $worker_url . '/health', array( 'timeout' => 10 ) );
-
-		if ( is_wp_error( $response ) ) {
-			$this->logger->error( 'Worker connection test failed (AJAX).', array(
-				'error' => $response->get_error_message(),
-			) );
-			wp_send_json_error( array( 'message' => $response->get_error_message() ) );
-		}
-
-		$status_code = wp_remote_retrieve_response_code( $response );
-
-		if ( 200 === $status_code ) {
-			$body = wp_remote_retrieve_body( $response );
-			$data = json_decode( $body, true );
-			wp_send_json_success( array(
-				'message' => __( 'Connection successful!', 'third-audience' ),
-				'data'    => $data,
-			) );
-		} else {
-			wp_send_json_error( array(
-				/* translators: %d: HTTP status code */
-				'message' => sprintf( __( 'Worker returned status %d', 'third-audience' ), $status_code ),
-			) );
-		}
 	}
 
 	/**

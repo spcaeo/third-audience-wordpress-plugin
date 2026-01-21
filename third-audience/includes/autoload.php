@@ -124,7 +124,6 @@ class TA_Autoloader {
 			'TA_Content_Negotiation' => 'includes/class-ta-content-negotiation.php',
 			'TA_Discovery'           => 'includes/class-ta-discovery.php',
 			'TA_Cache_Manager'       => 'includes/class-ta-cache-manager.php',
-			'TA_API_Client'          => 'includes/class-ta-api-client.php',
 
 			// Bot Analytics
 			'TA_Bot_Analytics'       => 'includes/class-ta-bot-analytics.php',
@@ -133,8 +132,9 @@ class TA_Autoloader {
 			'TA_Rate_Limiter'        => 'includes/class-ta-rate-limiter.php',
 			'TA_Request_Queue'       => 'includes/class-ta-request-queue.php',
 
-			// Health check
+			// Health check and updates
 			'TA_Health_Check'        => 'includes/class-ta-health-check.php',
+			'TA_Update_Checker'      => 'includes/class-ta-update-checker.php',
 
 			// Admin classes
 			'TA_Admin'               => 'admin/class-ta-admin.php',
@@ -374,7 +374,6 @@ class TA_Autoloader {
 				'TA_Cache_Manager',
 			),
 			'api'      => array(
-				'TA_API_Client',
 				'TA_Rate_Limiter',
 				'TA_Request_Queue',
 				'TA_Health_Check',

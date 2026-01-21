@@ -44,13 +44,6 @@ class TA_Health_Check {
 	private $cache_manager;
 
 	/**
-	 * API client instance.
-	 *
-	 * @var TA_API_Client
-	 */
-	private $api_client;
-
-	/**
 	 * Constructor.
 	 *
 	 * @since 1.2.0
@@ -58,7 +51,6 @@ class TA_Health_Check {
 	public function __construct() {
 		$this->logger        = TA_Logger::get_instance();
 		$this->cache_manager = new TA_Cache_Manager();
-		$this->api_client    = new TA_API_Client();
 	}
 
 	/**
@@ -70,10 +62,10 @@ class TA_Health_Check {
 	 */
 	public function check( $detailed = false ) {
 		$checks = array(
-			'worker'  => $this->check_worker(),
-			'cache'   => $this->check_cache(),
-			'system'  => $this->check_system(),
-			'config'  => $this->check_configuration(),
+			'converter' => $this->check_converter(),
+			'cache'     => $this->check_cache(),
+			'system'    => $this->check_system(),
+			'config'    => $this->check_configuration(),
 		);
 
 		// Determine overall status.
@@ -114,47 +106,43 @@ class TA_Health_Check {
 	 * @since 1.2.0
 	 * @return array Worker health status.
 	 */
-	public function check_worker() {
+	public function check_converter() {
 		$result = array(
 			'status' => self::STATUS_HEALTHY,
 			'issues' => array(),
 			'data'   => array(),
 		);
 
-		$worker_url = $this->api_client->get_worker_url();
-
-		if ( empty( $worker_url ) ) {
+		// Check if library is installed.
+		if ( ! TA_Local_Converter::is_library_available() ) {
 			$result['status']   = self::STATUS_UNHEALTHY;
-			$result['issues'][] = __( 'Worker URL not configured.', 'third-audience' );
+			$result['issues'][] = __( 'HTML to Markdown library is not installed.', 'third-audience' );
 			return $result;
 		}
 
-		$result['data']['worker_url'] = $worker_url;
+		// Get library version.
+		$library_version = TA_Local_Converter::get_library_version();
+		$result['data']['library_version'] = $library_version;
 
-		// Test connectivity.
-		$test_result = $this->api_client->test_connection();
+		// Check system requirements.
+		$requirements = TA_Local_Converter::check_system_requirements();
+		$has_errors   = false;
 
-		if ( is_wp_error( $test_result ) ) {
-			$result['status']   = self::STATUS_UNHEALTHY;
-			$result['issues'][] = sprintf(
-				/* translators: %s: Error message */
-				__( 'Worker connection failed: %s', 'third-audience' ),
-				$test_result->get_error_message()
-			);
-			return $result;
+		foreach ( $requirements as $key => $check ) {
+			if ( 'error' === $check['status'] ) {
+				$has_errors             = true;
+				$result['status']       = self::STATUS_UNHEALTHY;
+				$result['issues'][]     = $check['message'];
+			} elseif ( 'warning' === $check['status'] ) {
+				if ( self::STATUS_HEALTHY === $result['status'] ) {
+					$result['status'] = self::STATUS_DEGRADED;
+				}
+				$result['issues'][] = $check['message'];
+			}
 		}
 
-		$result['data']['response_time'] = $test_result['response_time'] ?? 0;
-		$result['data']['worker_status'] = $test_result['status'] ?? 'unknown';
-
-		// Check response time.
-		if ( isset( $test_result['response_time'] ) && $test_result['response_time'] > 5000 ) {
-			$result['status']   = self::STATUS_DEGRADED;
-			$result['issues'][] = sprintf(
-				/* translators: %d: Response time in milliseconds */
-				__( 'Worker response time is slow: %dms', 'third-audience' ),
-				$test_result['response_time']
-			);
+		if ( ! $has_errors ) {
+			$result['data']['status'] = 'All system requirements met';
 		}
 
 		return $result;

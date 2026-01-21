@@ -73,13 +73,6 @@ class TA_Request_Queue {
 	private $cache_manager;
 
 	/**
-	 * API client instance.
-	 *
-	 * @var TA_API_Client
-	 */
-	private $api_client;
-
-	/**
 	 * Constructor.
 	 *
 	 * @since 1.2.0
@@ -87,7 +80,6 @@ class TA_Request_Queue {
 	public function __construct() {
 		$this->logger        = TA_Logger::get_instance();
 		$this->cache_manager = new TA_Cache_Manager();
-		$this->api_client    = new TA_API_Client();
 	}
 
 	/**
@@ -348,8 +340,30 @@ class TA_Request_Queue {
 			'attempts' => $item['attempts'] + 1,
 		) );
 
-		// Try to convert.
-		$markdown = $this->api_client->convert_url( $item['url'], $item['options'] );
+		// Try to convert locally.
+		$post_id = url_to_postid( $item['url'] );
+		if ( ! $post_id ) {
+			$this->update_item( $id, array(
+				'status' => self::STATUS_FAILED,
+				'error'  => 'Post not found for URL',
+			) );
+			return array(
+				'success' => false,
+				'error'   => 'Post not found for URL',
+			);
+		}
+
+		$converter = new TA_Local_Converter();
+		$markdown  = $converter->convert_post( $post_id, array_merge(
+			array(
+				'include_frontmatter'    => true,
+				'extract_main_content'   => true,
+				'include_title'          => true,
+				'include_excerpt'        => true,
+				'include_featured_image' => true,
+			),
+			$item['options'] ?? array()
+		) );
 
 		if ( is_wp_error( $markdown ) ) {
 			// Check if we should retry.

@@ -341,9 +341,15 @@ class TA_Cache_Manager implements TA_Cacheable {
 			return false;
 		}
 
-		// Convert via API client.
-		$api_client = new TA_API_Client();
-		$markdown   = $api_client->convert_url( $url );
+		// Convert locally.
+		$converter = new TA_Local_Converter();
+		$markdown  = $converter->convert_post( $post_id, array(
+			'include_frontmatter'    => true,
+			'extract_main_content'   => true,
+			'include_title'          => true,
+			'include_excerpt'        => true,
+			'include_featured_image' => true,
+		) );
 
 		if ( is_wp_error( $markdown ) ) {
 			$this->logger->warning( 'Pre-generation failed.', array(
@@ -638,7 +644,7 @@ class TA_Cache_Manager implements TA_Cacheable {
 			'failed'  => 0,
 		);
 
-		$api_client = new TA_API_Client();
+		$converter = new TA_Local_Converter();
 
 		foreach ( $posts as $post_id ) {
 			$url       = get_permalink( $post_id );
@@ -651,7 +657,7 @@ class TA_Cache_Manager implements TA_Cacheable {
 			}
 
 			// Fetch and cache.
-			$markdown = $this->fetch_and_cache( $url, $api_client );
+			$markdown = $this->fetch_and_cache( $url, $converter );
 
 			if ( false !== $markdown ) {
 				$results['warmed']++;
@@ -681,69 +687,45 @@ class TA_Cache_Manager implements TA_Cacheable {
 	}
 
 	/**
-	 * Fetch markdown and cache it.
+	 * Fetch markdown and cache it (using local converter).
 	 *
-	 * @since 1.2.0
-	 * @param string        $url        The URL to fetch.
-	 * @param TA_API_Client $api_client Optional. API client instance.
+	 * @since 2.0.0
+	 * @param string             $url       The URL to fetch.
+	 * @param TA_Local_Converter $converter Optional. Local converter instance.
 	 * @return string|false The markdown or false on failure.
 	 */
-	private function fetch_and_cache( $url, $api_client = null ) {
-		if ( null === $api_client ) {
-			$api_client = new TA_API_Client();
+	private function fetch_and_cache( $url, $converter = null ) {
+		if ( null === $converter ) {
+			$converter = new TA_Local_Converter();
 		}
 
-		$worker_url = $api_client->get_worker_url();
-		if ( ! $worker_url ) {
+		// Get post ID from URL.
+		$post_id = url_to_postid( $url );
+		if ( ! $post_id ) {
 			return false;
 		}
 
-		$response = wp_remote_post(
-			$worker_url . '/convert',
-			array(
-				'timeout' => 30,
-				'headers' => array(
-					'Content-Type' => 'application/json',
-					'Accept'       => 'text/markdown',
-				),
-				'body'    => wp_json_encode( array(
-					'url'     => $url,
-					'options' => array(
-						'include_frontmatter'  => true,
-						'extract_main_content' => true,
-					),
-				) ),
-			)
-		);
+		// Convert locally.
+		$markdown = $converter->convert_post( $post_id, array(
+			'include_frontmatter'    => true,
+			'extract_main_content'   => true,
+			'include_title'          => true,
+			'include_excerpt'        => true,
+			'include_featured_image' => true,
+		) );
 
-		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+		if ( is_wp_error( $markdown ) ) {
 			return false;
-		}
-
-		$body         = wp_remote_retrieve_body( $response );
-		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
-
-		// Handle JSON response.
-		if ( false !== strpos( $content_type, 'application/json' ) ) {
-			$data = json_decode( $body, true );
-			if ( ! empty( $data['markdown'] ) ) {
-				$body = $data['markdown'];
-			} else {
-				return false;
-			}
 		}
 
 		// Cache the result.
 		$cache_key = $this->generate_key( $url );
-		$this->set( $cache_key, $body );
+		$this->set( $cache_key, $markdown );
 
-		// Tag with post ID if available.
-		$post_id = url_to_postid( $url );
-		if ( $post_id ) {
-			$this->tag_cache( $cache_key, array( 'post_' . $post_id ) );
-		}
+		// Tag with post ID.
+		$this->tag_cache( $cache_key, array( 'post_' . $post_id ) );
 
-		return $body;
+		return $markdown;
 	}
 
 	// =========================================================================
