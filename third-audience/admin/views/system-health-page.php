@@ -13,6 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Get system requirements status.
 $requirements = TA_Local_Converter::check_system_requirements();
 
+// Get version info.
+$update_checker = new TA_Update_Checker();
+$version_info   = $update_checker->get_version_info();
+
 // Calculate overall health status.
 $has_errors   = false;
 $has_warnings = false;
@@ -56,6 +60,54 @@ $library_version = TA_Local_Converter::get_library_version();
 		<p>
 			<strong><?php esc_html_e( 'Overall Status:', 'third-audience' ); ?></strong>
 			<?php echo esc_html( $overall_message ); ?>
+		</p>
+	</div>
+
+	<!-- Version Information -->
+	<div class="ta-card" style="margin-top: 20px; padding: 20px; background: #fff; border: 1px solid #ccd0d4; box-shadow: 0 1px 1px rgba(0,0,0,.04);">
+		<h2 style="margin-top: 0;"><?php esc_html_e( 'Version Information', 'third-audience' ); ?></h2>
+		<table class="widefat" style="margin-bottom: 15px;">
+			<tr>
+				<td style="width: 200px;"><strong><?php esc_html_e( 'Current Version:', 'third-audience' ); ?></strong></td>
+				<td><code><?php echo esc_html( $version_info['current_version'] ); ?></code></td>
+			</tr>
+			<tr>
+				<td><strong><?php esc_html_e( 'Latest Version:', 'third-audience' ); ?></strong></td>
+				<td>
+					<code><?php echo esc_html( $version_info['latest_version'] ); ?></code>
+					<?php if ( $version_info['update_available'] ) : ?>
+						<span class="dashicons dashicons-warning" style="color: #d63638;"></span>
+						<span style="color: #d63638; font-weight: 600;">
+							<?php esc_html_e( 'Update Available!', 'third-audience' ); ?>
+						</span>
+					<?php else : ?>
+						<span class="dashicons dashicons-yes-alt" style="color: #00a32a;"></span>
+						<span style="color: #00a32a; font-weight: 600;">
+							<?php esc_html_e( 'Up to date', 'third-audience' ); ?>
+						</span>
+					<?php endif; ?>
+				</td>
+			</tr>
+			<tr>
+				<td><strong><?php esc_html_e( 'Last Checked:', 'third-audience' ); ?></strong></td>
+				<td><?php echo esc_html( $version_info['last_checked'] ); ?></td>
+			</tr>
+		</table>
+		<p>
+			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ta_check_updates' ), 'ta_check_updates' ) ); ?>"
+			   class="button button-secondary">
+				<span class="dashicons dashicons-update" style="vertical-align: middle;"></span>
+				<?php esc_html_e( 'Check for Updates', 'third-audience' ); ?>
+			</a>
+			<?php if ( $version_info['update_available'] && ! empty( $version_info['release_url'] ) ) : ?>
+				<a href="<?php echo esc_url( $version_info['release_url'] ); ?>"
+				   class="button button-primary"
+				   target="_blank"
+				   rel="noopener">
+					<span class="dashicons dashicons-download" style="vertical-align: middle;"></span>
+					<?php esc_html_e( 'Download Latest Version', 'third-audience' ); ?>
+				</a>
+			<?php endif; ?>
 		</p>
 	</div>
 
