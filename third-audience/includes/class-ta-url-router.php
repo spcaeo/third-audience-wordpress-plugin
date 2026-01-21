@@ -58,6 +58,13 @@ class TA_URL_Router {
 	private $bot_analytics;
 
 	/**
+	 * Rate Limiter instance.
+	 *
+	 * @var TA_Rate_Limiter
+	 */
+	private $rate_limiter;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.0.0
@@ -69,6 +76,7 @@ class TA_URL_Router {
 		$this->security      = TA_Security::get_instance();
 		$this->logger        = TA_Logger::get_instance();
 		$this->bot_analytics = TA_Bot_Analytics::get_instance();
+		$this->rate_limiter  = new TA_Rate_Limiter();
 	}
 
 	/**
@@ -203,6 +211,36 @@ class TA_URL_Router {
 
 			$this->send_error_response( 403, 'Access forbidden for this bot' );
 			return;
+		}
+
+		// Check rate limits for known bots.
+		if ( false !== $bot_info ) {
+			$client_ip   = $this->get_client_ip();
+			$rate_status = $this->rate_limiter->check_bot_rate_limit(
+				$bot_info['type'],
+				$bot_info['priority'],
+				$client_ip
+			);
+
+			if ( ! $rate_status['allowed'] ) {
+				$this->logger->warning( 'Bot rate limit exceeded.', array(
+					'bot_type'   => $bot_info['type'],
+					'bot_name'   => $bot_info['name'],
+					'ip'         => $client_ip,
+					'limit_type' => $rate_status['limit_type'],
+					'url'        => $original_url,
+				) );
+
+				// Track the rate limited attempt.
+				$this->track_bot_visit( $original_url, $post, 'RATE_LIMITED', $request_start_time, 0 );
+
+				// Send 429 response with rate limit headers.
+				$this->send_rate_limited_response( $rate_status );
+				return;
+			}
+
+			// Increment rate limit counters.
+			$this->rate_limiter->increment_bot_counter( $bot_info['type'], $client_ip );
 		}
 
 		// Priority 1: Check pre-generated markdown in post_meta (fastest, permanent).
@@ -403,8 +441,47 @@ class TA_URL_Router {
 		header( 'X-Powered-By: Third Audience ' . TA_VERSION );
 		header( 'X-Content-Type-Options: nosniff' );
 
+		// Add rate limit headers for known bots.
+		$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		$bot_info   = $this->bot_analytics->detect_bot( $user_agent );
+
+		if ( false !== $bot_info ) {
+			$client_ip   = $this->get_client_ip();
+			$rate_status = $this->rate_limiter->check_bot_rate_limit(
+				$bot_info['type'],
+				$bot_info['priority'],
+				$client_ip
+			);
+
+			if ( isset( $rate_status['minute_limit'] ) && $rate_status['minute_limit'] > 0 ) {
+				header( 'X-RateLimit-Limit: ' . $rate_status['minute_limit'] );
+				header( 'X-RateLimit-Remaining: ' . $rate_status['minute_remaining'] );
+			}
+		}
+
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markdown content from trusted source.
 		echo $markdown;
+		exit;
+	}
+
+	/**
+	 * Send rate limited response.
+	 *
+	 * @since 2.1.0
+	 * @param array $rate_status Rate limit status from check_bot_rate_limit().
+	 * @return void
+	 */
+	private function send_rate_limited_response( $rate_status ) {
+		status_header( 429 );
+		header( 'Content-Type: text/plain; charset=utf-8' );
+		header( 'Retry-After: ' . $rate_status['retry_after'] );
+		header( 'X-RateLimit-Limit: ' . $rate_status['limit'] );
+		header( 'X-RateLimit-Remaining: 0' );
+		header( 'X-RateLimit-Reset: ' . $rate_status['reset'] );
+		header( 'X-Content-Type-Options: nosniff' );
+
+		$limit_type = $rate_status['limit_type'] === 'minute' ? 'per minute' : 'per hour';
+		echo 'Third Audience Error: Rate limit exceeded (' . esc_html( $rate_status['limit'] ) . ' requests ' . esc_html( $limit_type ) . '). Please retry after ' . esc_html( $rate_status['retry_after'] ) . ' seconds.';
 		exit;
 	}
 
@@ -485,5 +562,27 @@ class TA_URL_Router {
 		}
 
 		return 'Unknown Bot';
+	}
+
+	/**
+	 * Get client IP address.
+	 *
+	 * @since 2.1.0
+	 * @return string Client IP address.
+	 */
+	private function get_client_ip() {
+		$ip = null;
+
+		if ( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+			// Cloudflare.
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+		} elseif ( isset( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
+			$ip = explode( ',', $ip )[0];
+		} elseif ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+		}
+
+		return $ip ?: '0.0.0.0';
 	}
 }

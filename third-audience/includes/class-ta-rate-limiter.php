@@ -421,6 +421,204 @@ class TA_Rate_Limiter {
 	}
 
 	/**
+	 * Get rate limits for a specific bot type based on priority.
+	 *
+	 * @since 2.1.0
+	 * @param string $bot_type Bot type identifier.
+	 * @param string $priority Bot priority level.
+	 * @return array Rate limits with 'per_minute' and 'per_hour' keys.
+	 */
+	public function get_bot_rate_limits( $bot_type, $priority ) {
+		// Get custom limits from settings if configured.
+		$saved_limits = get_option( 'ta_bot_rate_limits', array() );
+
+		// Check if limits are set for this specific priority level.
+		if ( isset( $saved_limits[ $priority ] ) ) {
+			return $saved_limits[ $priority ];
+		}
+
+		// Default limits based on priority.
+		$default_limits = array(
+			'high'    => array(
+				'per_minute' => 0, // Unlimited (0 = no limit).
+				'per_hour'   => 0,
+			),
+			'medium'  => array(
+				'per_minute' => 60,
+				'per_hour'   => 1000,
+			),
+			'low'     => array(
+				'per_minute' => 10,
+				'per_hour'   => 100,
+			),
+			'blocked' => array(
+				'per_minute' => 0,
+				'per_hour'   => 0,
+			),
+		);
+
+		return isset( $default_limits[ $priority ] ) ? $default_limits[ $priority ] : $default_limits['medium'];
+	}
+
+	/**
+	 * Check rate limit for a specific bot type and IP.
+	 *
+	 * @since 2.1.0
+	 * @param string $bot_type Bot type identifier.
+	 * @param string $priority Bot priority level.
+	 * @param string $ip       IP address.
+	 * @return array Array with 'allowed' (bool), 'limit_type' (string), 'retry_after' (int).
+	 */
+	public function check_bot_rate_limit( $bot_type, $priority, $ip ) {
+		$limits = $this->get_bot_rate_limits( $bot_type, $priority );
+
+		// If both limits are 0 (unlimited or blocked), allow the request.
+		// Note: Blocked bots should be handled before rate limiting.
+		if ( $limits['per_minute'] === 0 && $limits['per_hour'] === 0 ) {
+			return array(
+				'allowed'     => true,
+				'limit_type'  => null,
+				'retry_after' => 0,
+			);
+		}
+
+		// Check minute limit.
+		if ( $limits['per_minute'] > 0 ) {
+			$minute_key  = 'ta_ratelimit_' . md5( $bot_type . '_' . $ip ) . '_minute';
+			$minute_data = get_transient( $minute_key );
+
+			if ( false === $minute_data ) {
+				$minute_data = array( 'count' => 0, 'reset' => time() + 60 );
+			}
+
+			if ( $minute_data['count'] >= $limits['per_minute'] ) {
+				return array(
+					'allowed'     => false,
+					'limit_type'  => 'minute',
+					'retry_after' => $minute_data['reset'] - time(),
+					'limit'       => $limits['per_minute'],
+					'remaining'   => 0,
+					'reset'       => $minute_data['reset'],
+				);
+			}
+		}
+
+		// Check hour limit.
+		if ( $limits['per_hour'] > 0 ) {
+			$hour_key  = 'ta_ratelimit_' . md5( $bot_type . '_' . $ip ) . '_hour';
+			$hour_data = get_transient( $hour_key );
+
+			if ( false === $hour_data ) {
+				$hour_data = array( 'count' => 0, 'reset' => time() + 3600 );
+			}
+
+			if ( $hour_data['count'] >= $limits['per_hour'] ) {
+				return array(
+					'allowed'     => false,
+					'limit_type'  => 'hour',
+					'retry_after' => $hour_data['reset'] - time(),
+					'limit'       => $limits['per_hour'],
+					'remaining'   => 0,
+					'reset'       => $hour_data['reset'],
+				);
+			}
+		}
+
+		// Allowed - calculate remaining counts for headers.
+		$minute_key       = 'ta_ratelimit_' . md5( $bot_type . '_' . $ip ) . '_minute';
+		$hour_key         = 'ta_ratelimit_' . md5( $bot_type . '_' . $ip ) . '_hour';
+		$minute_data      = get_transient( $minute_key ) ?: array( 'count' => 0 );
+		$hour_data        = get_transient( $hour_key ) ?: array( 'count' => 0 );
+		$minute_remaining = $limits['per_minute'] > 0 ? max( 0, $limits['per_minute'] - $minute_data['count'] ) : 999999;
+		$hour_remaining   = $limits['per_hour'] > 0 ? max( 0, $limits['per_hour'] - $hour_data['count'] ) : 999999;
+
+		return array(
+			'allowed'          => true,
+			'limit_type'       => null,
+			'retry_after'      => 0,
+			'minute_limit'     => $limits['per_minute'],
+			'minute_remaining' => $minute_remaining,
+			'hour_limit'       => $limits['per_hour'],
+			'hour_remaining'   => $hour_remaining,
+		);
+	}
+
+	/**
+	 * Increment rate limit counters for a bot.
+	 *
+	 * @since 2.1.0
+	 * @param string $bot_type Bot type identifier.
+	 * @param string $ip       IP address.
+	 * @return void
+	 */
+	public function increment_bot_counter( $bot_type, $ip ) {
+		$minute_key = 'ta_ratelimit_' . md5( $bot_type . '_' . $ip ) . '_minute';
+		$hour_key   = 'ta_ratelimit_' . md5( $bot_type . '_' . $ip ) . '_hour';
+
+		// Increment minute counter.
+		$minute_data = get_transient( $minute_key );
+		if ( false === $minute_data ) {
+			$minute_data = array( 'count' => 0, 'reset' => time() + 60 );
+		}
+		$minute_data['count']++;
+		set_transient( $minute_key, $minute_data, 60 );
+
+		// Increment hour counter.
+		$hour_data = get_transient( $hour_key );
+		if ( false === $hour_data ) {
+			$hour_data = array( 'count' => 0, 'reset' => time() + 3600 );
+		}
+		$hour_data['count']++;
+		set_transient( $hour_key, $hour_data, 3600 );
+	}
+
+	/**
+	 * Get rate limit violations from analytics.
+	 *
+	 * @since 2.1.0
+	 * @param int $limit Number of recent violations to fetch.
+	 * @return array Array of violation records.
+	 */
+	public function get_rate_limit_violations( $limit = 50 ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . TA_Bot_Analytics::TABLE_NAME;
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table_name}
+				WHERE cache_status = 'RATE_LIMITED'
+				ORDER BY visit_timestamp DESC
+				LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Get rate limit violation statistics by bot type.
+	 *
+	 * @since 2.1.0
+	 * @return array Statistics grouped by bot type.
+	 */
+	public function get_violation_stats() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . TA_Bot_Analytics::TABLE_NAME;
+
+		$results = $wpdb->get_results(
+			"SELECT bot_type, bot_name, COUNT(*) as violations,
+			COUNT(DISTINCT ip_address) as unique_ips
+			FROM {$table_name}
+			WHERE cache_status = 'RATE_LIMITED'
+			GROUP BY bot_type, bot_name
+			ORDER BY violations DESC",
+			ARRAY_A
+		);
+
+		return $results;
+	}
+
+	/**
 	 * Clear all rate limit data.
 	 *
 	 * @since 1.2.0

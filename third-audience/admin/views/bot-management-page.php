@@ -202,6 +202,90 @@ $bot_stats = $wpdb->get_results(
 			</tbody>
 		</table>
 
+		<!-- Rate Limits -->
+		<h2 style="margin-top: 40px;"><?php esc_html_e( 'Rate Limits', 'third-audience' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Configure rate limits per bot priority level. Set to 0 for unlimited.', 'third-audience' ); ?>
+		</p>
+
+		<table class="form-table">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Priority Level', 'third-audience' ); ?></th>
+					<th><?php esc_html_e( 'Requests per Minute', 'third-audience' ); ?></th>
+					<th><?php esc_html_e( 'Requests per Hour', 'third-audience' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php
+				$rate_limiter = new TA_Rate_Limiter();
+				$priorities = array(
+					'high'    => __( 'High Priority', 'third-audience' ),
+					'medium'  => __( 'Medium Priority', 'third-audience' ),
+					'low'     => __( 'Low Priority', 'third-audience' ),
+				);
+
+				foreach ( $priorities as $priority => $label ) :
+					$limits = $rate_limiter->get_bot_rate_limits( 'default', $priority );
+					?>
+					<tr>
+						<td>
+							<strong><?php echo esc_html( $label ); ?></strong>
+						</td>
+						<td>
+							<input
+								type="number"
+								name="rate_limits[<?php echo esc_attr( $priority ); ?>][per_minute]"
+								value="<?php echo esc_attr( $limits['per_minute'] ); ?>"
+								min="0"
+								class="small-text"
+								placeholder="0"
+							>
+							<p class="description">
+								<?php
+								if ( 0 === $limits['per_minute'] ) {
+									esc_html_e( 'Unlimited', 'third-audience' );
+								} else {
+									printf(
+										esc_html__( 'Current: %d requests/min', 'third-audience' ),
+										$limits['per_minute']
+									);
+								}
+								?>
+							</p>
+						</td>
+						<td>
+							<input
+								type="number"
+								name="rate_limits[<?php echo esc_attr( $priority ); ?>][per_hour]"
+								value="<?php echo esc_attr( $limits['per_hour'] ); ?>"
+								min="0"
+								class="small-text"
+								placeholder="0"
+							>
+							<p class="description">
+								<?php
+								if ( 0 === $limits['per_hour'] ) {
+									esc_html_e( 'Unlimited', 'third-audience' );
+								} else {
+									printf(
+										esc_html__( 'Current: %d requests/hour', 'third-audience' ),
+										$limits['per_hour']
+									);
+								}
+								?>
+							</p>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+
+		<p class="description" style="margin-top: 10px;">
+			<strong><?php esc_html_e( 'Note:', 'third-audience' ); ?></strong>
+			<?php esc_html_e( 'Blocked bots (priority: blocked) cannot access content regardless of rate limits. Rate limits only apply to allowed bots.', 'third-audience' ); ?>
+		</p>
+
 		<!-- Custom Bot Patterns -->
 		<h2 style="margin-top: 40px;"><?php esc_html_e( 'Custom Bot Patterns', 'third-audience' ); ?></h2>
 		<p class="description">

@@ -797,7 +797,22 @@ class TA_Admin {
 			}
 		}
 
-		// Save configuration.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$rate_limits = isset( $_POST['rate_limits'] ) && is_array( $_POST['rate_limits'] ) ? $_POST['rate_limits'] : array();
+
+		// Validate and sanitize rate limits.
+		$sanitized_rate_limits = array();
+		$valid_rate_priorities = array( 'high', 'medium', 'low' );
+		foreach ( $rate_limits as $priority => $limits ) {
+			if ( in_array( $priority, $valid_rate_priorities, true ) ) {
+				$sanitized_rate_limits[ $priority ] = array(
+					'per_minute' => isset( $limits['per_minute'] ) ? absint( $limits['per_minute'] ) : 0,
+					'per_hour'   => isset( $limits['per_hour'] ) ? absint( $limits['per_hour'] ) : 0,
+				);
+			}
+		}
+
+		// Save bot configuration.
 		$bot_config = array(
 			'track_unknown'  => $track_unknown,
 			'blocked_bots'   => $blocked_bots,
@@ -807,12 +822,18 @@ class TA_Admin {
 
 		update_option( 'ta_bot_config', $bot_config );
 
+		// Save rate limits separately.
+		if ( ! empty( $sanitized_rate_limits ) ) {
+			update_option( 'ta_bot_rate_limits', $sanitized_rate_limits );
+		}
+
 		// Log the change.
 		$this->logger->info( 'Bot configuration updated.', array(
 			'track_unknown'    => $track_unknown,
 			'blocked_count'    => count( $blocked_bots ),
 			'custom_count'     => count( $sanitized_custom_bots ),
 			'priorities_count' => count( $sanitized_bot_priorities ),
+			'rate_limits'      => $sanitized_rate_limits,
 		) );
 
 		add_settings_error(
