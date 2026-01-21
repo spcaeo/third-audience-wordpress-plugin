@@ -103,14 +103,14 @@ $bot_stats = $wpdb->get_results(
 				<tr>
 					<th><?php esc_html_e( 'Bot Name', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Bot Type', 'third-audience' ); ?></th>
+					<th><?php esc_html_e( 'Priority', 'third-audience' ); ?></th>
+					<th><?php esc_html_e( 'Cache TTL', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Total Visits', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Unique Pages', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Unique IPs', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Countries', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Avg Response', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Last Seen', 'third-audience' ); ?></th>
-					<th><?php esc_html_e( 'Status', 'third-audience' ); ?></th>
-					<th><?php esc_html_e( 'Action', 'third-audience' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -123,12 +123,48 @@ $bot_stats = $wpdb->get_results(
 				<?php else : ?>
 					<?php foreach ( $bot_stats as $bot ) : ?>
 						<?php
-						$is_blocked = in_array( $bot['bot_type'], $bot_config['blocked_bots'], true );
+						$bot_priorities = isset( $bot_config['bot_priorities'] ) ? $bot_config['bot_priorities'] : array();
+						$current_priority = isset( $bot_priorities[ $bot['bot_type'] ] ) ? $bot_priorities[ $bot['bot_type'] ] : 'medium';
+						$cache_ttl = TA_Bot_Analytics::get_cache_ttl_for_priority( $current_priority );
 						$bandwidth  = size_format( $bot['total_bandwidth'], 2 );
+
+						// Priority color mapping.
+						$priority_colors = array(
+							'high'    => '#0073aa',
+							'medium'  => '#46b450',
+							'low'     => '#ffb900',
+							'blocked' => '#dc3232',
+						);
+						$priority_color = isset( $priority_colors[ $current_priority ] ) ? $priority_colors[ $current_priority ] : '#666';
 						?>
 						<tr>
 							<td><strong><?php echo esc_html( $bot['bot_name'] ); ?></strong></td>
 							<td><code><?php echo esc_html( $bot['bot_type'] ); ?></code></td>
+							<td>
+								<select name="bot_priorities[<?php echo esc_attr( $bot['bot_type'] ); ?>]" class="ta-priority-select" style="color: <?php echo esc_attr( $priority_color ); ?>; font-weight: 600;">
+									<option value="high" <?php selected( $current_priority, 'high' ); ?> style="color: #0073aa;">
+										<?php esc_html_e( 'High', 'third-audience' ); ?>
+									</option>
+									<option value="medium" <?php selected( $current_priority, 'medium' ); ?> style="color: #46b450;">
+										<?php esc_html_e( 'Medium', 'third-audience' ); ?>
+									</option>
+									<option value="low" <?php selected( $current_priority, 'low' ); ?> style="color: #ffb900;">
+										<?php esc_html_e( 'Low', 'third-audience' ); ?>
+									</option>
+									<option value="blocked" <?php selected( $current_priority, 'blocked' ); ?> style="color: #dc3232;">
+										<?php esc_html_e( 'Blocked', 'third-audience' ); ?>
+									</option>
+								</select>
+							</td>
+							<td>
+								<?php
+								if ( 'blocked' === $current_priority ) {
+									echo '<span style="color: #dc3232; font-weight: 600;">403 Forbidden</span>';
+								} else {
+									echo esc_html( human_time_diff( 0, $cache_ttl ) );
+								}
+								?>
+							</td>
 							<td><?php echo number_format_i18n( $bot['total_visits'] ); ?></td>
 							<td><?php echo number_format_i18n( $bot['unique_pages'] ); ?></td>
 							<td><?php echo number_format_i18n( $bot['unique_ips'] ); ?></td>
@@ -159,28 +195,6 @@ $bot_stats = $wpdb->get_results(
 								);
 								?>
 								<?php esc_html_e( 'ago', 'third-audience' ); ?>
-							</td>
-							<td>
-								<?php if ( $is_blocked ) : ?>
-									<span class="ta-bot-status ta-bot-blocked">
-										<?php esc_html_e( 'Blocked', 'third-audience' ); ?>
-									</span>
-								<?php else : ?>
-									<span class="ta-bot-status ta-bot-allowed">
-										<?php esc_html_e( 'Allowed', 'third-audience' ); ?>
-									</span>
-								<?php endif; ?>
-							</td>
-							<td>
-								<label>
-									<input
-										type="checkbox"
-										name="blocked_bots[]"
-										value="<?php echo esc_attr( $bot['bot_type'] ); ?>"
-										<?php checked( $is_blocked, true ); ?>
-									>
-									<?php esc_html_e( 'Block', 'third-audience' ); ?>
-								</label>
 							</td>
 						</tr>
 					<?php endforeach; ?>
@@ -264,11 +278,37 @@ $bot_stats = $wpdb->get_results(
 	background: #f8d7da;
 	color: #721c24;
 }
+.ta-priority-select {
+	padding: 4px 8px;
+	border-radius: 4px;
+	border: 1px solid #ddd;
+	font-size: 13px;
+	min-width: 100px;
+}
+.ta-priority-select:focus {
+	border-color: #0073aa;
+	outline: none;
+	box-shadow: 0 0 0 1px #0073aa;
+}
 </style>
 
 <script>
 jQuery(document).ready(function($) {
 	let customBotIndex = <?php echo count( $bot_config['custom_bots'] ); ?>;
+
+	// Priority color mapping
+	const priorityColors = {
+		'high': '#0073aa',
+		'medium': '#46b450',
+		'low': '#ffb900',
+		'blocked': '#dc3232'
+	};
+
+	// Update priority select color on change
+	$('.ta-priority-select').on('change', function() {
+		const priority = $(this).val();
+		$(this).css('color', priorityColors[priority]);
+	});
 
 	// Add custom bot pattern
 	$('#add-custom-bot').on('click', function() {

@@ -50,54 +50,64 @@ class TA_Bot_Analytics {
 	 */
 	private static $known_bots = array(
 		'ClaudeBot'         => array(
-			'pattern' => '/ClaudeBot/i',
-			'name'    => 'Claude (Anthropic)',
-			'color'   => '#D97757',
+			'pattern'  => '/ClaudeBot/i',
+			'name'     => 'Claude (Anthropic)',
+			'color'    => '#D97757',
+			'priority' => 'high',
 		),
 		'GPTBot'            => array(
-			'pattern' => '/GPTBot/i',
-			'name'    => 'GPT (OpenAI)',
-			'color'   => '#10A37F',
+			'pattern'  => '/GPTBot/i',
+			'name'     => 'GPT (OpenAI)',
+			'color'    => '#10A37F',
+			'priority' => 'high',
 		),
 		'ChatGPT-User'      => array(
-			'pattern' => '/ChatGPT-User/i',
-			'name'    => 'ChatGPT User',
-			'color'   => '#10A37F',
+			'pattern'  => '/ChatGPT-User/i',
+			'name'     => 'ChatGPT User',
+			'color'    => '#10A37F',
+			'priority' => 'high',
 		),
 		'PerplexityBot'     => array(
-			'pattern' => '/PerplexityBot/i',
-			'name'    => 'Perplexity',
-			'color'   => '#1FB6D0',
+			'pattern'  => '/PerplexityBot/i',
+			'name'     => 'Perplexity',
+			'color'    => '#1FB6D0',
+			'priority' => 'high',
 		),
 		'Bytespider'        => array(
-			'pattern' => '/Bytespider/i',
-			'name'    => 'ByteDance AI',
-			'color'   => '#FF4458',
+			'pattern'  => '/Bytespider/i',
+			'name'     => 'ByteDance AI',
+			'color'    => '#FF4458',
+			'priority' => 'medium',
 		),
 		'anthropic-ai'      => array(
-			'pattern' => '/anthropic-ai/i',
-			'name'    => 'Anthropic AI',
-			'color'   => '#D97757',
+			'pattern'  => '/anthropic-ai/i',
+			'name'     => 'Anthropic AI',
+			'color'    => '#D97757',
+			'priority' => 'high',
 		),
 		'cohere-ai'         => array(
-			'pattern' => '/cohere-ai/i',
-			'name'    => 'Cohere',
-			'color'   => '#39594D',
+			'pattern'  => '/cohere-ai/i',
+			'name'     => 'Cohere',
+			'color'    => '#39594D',
+			'priority' => 'medium',
 		),
 		'Google-Extended'   => array(
-			'pattern' => '/Google-Extended/i',
-			'name'    => 'Google Gemini',
-			'color'   => '#4285F4',
+			'pattern'  => '/Google-Extended/i',
+			'name'     => 'Google Gemini',
+			'color'    => '#4285F4',
+			'priority' => 'medium',
 		),
 		'FacebookBot'       => array(
-			'pattern' => '/FacebookBot/i',
-			'name'    => 'Meta AI',
-			'color'   => '#1877F2',
+			'pattern'  => '/FacebookBot/i',
+			'name'     => 'Meta AI',
+			'color'    => '#1877F2',
+			'priority' => 'medium',
 		),
 		'Applebot-Extended' => array(
-			'pattern' => '/Applebot-Extended/i',
-			'name'    => 'Apple Intelligence',
-			'color'   => '#000000',
+			'pattern'  => '/Applebot-Extended/i',
+			'name'     => 'Apple Intelligence',
+			'color'    => '#000000',
+			'priority' => 'medium',
 		),
 	);
 
@@ -205,10 +215,14 @@ class TA_Bot_Analytics {
 		// Check known bots first.
 		foreach ( self::$known_bots as $bot_type => $bot_info ) {
 			if ( preg_match( $bot_info['pattern'], $user_agent ) ) {
+				// Get custom priority from config, fallback to default.
+				$priority = $this->get_bot_priority( $bot_type, $bot_info['priority'] );
+
 				return array(
-					'type'  => $bot_type,
-					'name'  => $bot_info['name'],
-					'color' => $bot_info['color'],
+					'type'     => $bot_type,
+					'name'     => $bot_info['name'],
+					'color'    => $bot_info['color'],
+					'priority' => $priority,
 				);
 			}
 		}
@@ -225,10 +239,14 @@ class TA_Bot_Analytics {
 			// Safely check pattern (suppress errors for invalid regex).
 			$pattern = $custom_bot['pattern'];
 			if ( @preg_match( $pattern, $user_agent ) ) {
+				$bot_type = 'Custom_' . sanitize_title( $custom_bot['name'] );
+				$priority = $this->get_bot_priority( $bot_type, 'low' );
+
 				return array(
-					'type'  => 'Custom_' . sanitize_title( $custom_bot['name'] ),
-					'name'  => $custom_bot['name'],
-					'color' => '#8B5CF6', // Purple color for custom bots.
+					'type'     => $bot_type,
+					'name'     => $custom_bot['name'],
+					'color'    => '#8B5CF6', // Purple color for custom bots.
+					'priority' => $priority,
 				);
 			}
 		}
@@ -247,7 +265,52 @@ class TA_Bot_Analytics {
 		$bot_config   = get_option( 'ta_bot_config', array() );
 		$blocked_bots = isset( $bot_config['blocked_bots'] ) ? $bot_config['blocked_bots'] : array();
 
-		return in_array( $bot_type, $blocked_bots, true );
+		// Check if bot is explicitly blocked.
+		if ( in_array( $bot_type, $blocked_bots, true ) ) {
+			return true;
+		}
+
+		// Check if bot priority is set to 'blocked'.
+		$priority = $this->get_bot_priority( $bot_type );
+		return 'blocked' === $priority;
+	}
+
+	/**
+	 * Get bot priority level.
+	 *
+	 * @since 2.1.0
+	 * @param string      $bot_type        The bot type.
+	 * @param string|null $default_priority Default priority if not set.
+	 * @return string Priority level: 'high', 'medium', 'low', or 'blocked'.
+	 */
+	public function get_bot_priority( $bot_type, $default_priority = 'medium' ) {
+		$bot_config     = get_option( 'ta_bot_config', array() );
+		$bot_priorities = isset( $bot_config['bot_priorities'] ) ? $bot_config['bot_priorities'] : array();
+
+		// Return custom priority if set, otherwise return default.
+		if ( isset( $bot_priorities[ $bot_type ] ) ) {
+			return $bot_priorities[ $bot_type ];
+		}
+
+		return $default_priority;
+	}
+
+	/**
+	 * Get cache TTL based on bot priority.
+	 *
+	 * @since 2.1.0
+	 * @param string $priority Bot priority level.
+	 * @return int Cache TTL in seconds.
+	 */
+	public static function get_cache_ttl_for_priority( $priority ) {
+		$ttl_map = array(
+			'high'    => 48 * HOUR_IN_SECONDS, // 48 hours.
+			'medium'  => 24 * HOUR_IN_SECONDS, // 24 hours.
+			'low'     => 6 * HOUR_IN_SECONDS,  // 6 hours.
+			'blocked' => 0,                     // No cache for blocked bots.
+		);
+
+		return isset( $ttl_map[ $priority ] ) ? $ttl_map[ $priority ] : 24 * HOUR_IN_SECONDS;
 	}
 
 	/**
