@@ -63,7 +63,7 @@ $bot_stats = $wpdb->get_results(
 	?>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<?php wp_nonce_field( 'ta_save_bot_config', 'ta_bot_config_nonce' ); ?>
+		<?php wp_nonce_field( 'ta_ta_save_bot_config', 'ta_bot_config_nonce' ); ?>
 		<input type="hidden" name="action" value="ta_save_bot_config">
 
 		<!-- Global Settings -->
