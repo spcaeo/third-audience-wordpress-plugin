@@ -92,6 +92,13 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_clear_cache', array( $this, 'ajax_clear_cache' ) );
 		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
 		add_action( 'wp_ajax_ta_clear_all_visits', array( $this, 'ajax_clear_all_visits' ) );
+		add_action( 'wp_ajax_ta_delete_cache_entry', array( $this, 'ajax_delete_cache_entry' ) );
+		add_action( 'wp_ajax_ta_bulk_delete_cache', array( $this, 'ajax_bulk_delete_cache' ) );
+		add_action( 'wp_ajax_ta_clear_expired_cache', array( $this, 'ajax_clear_expired_cache' ) );
+		add_action( 'wp_ajax_ta_regenerate_cache', array( $this, 'ajax_regenerate_cache' ) );
+		add_action( 'wp_ajax_ta_view_cache_content', array( $this, 'ajax_view_cache_content' ) );
+		add_action( 'wp_ajax_ta_get_warmup_stats', array( $this, 'ajax_get_warmup_stats' ) );
+		add_action( 'wp_ajax_ta_warm_cache_batch', array( $this, 'ajax_warm_cache_batch' ) );
 	}
 
 	/**
@@ -931,5 +938,167 @@ class TA_Admin {
 		$cache_health = $cache_manager->get_health();
 
 		include TA_PLUGIN_DIR . 'admin/views/cache-browser-page.php';
+	}
+
+	/**
+	 * AJAX handler: Delete single cache entry.
+	 *
+	 * @since 2.0.6
+	 * @return void
+	 */
+	public function ajax_delete_cache_entry() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
+
+		if ( empty( $cache_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$result = $cache_manager->delete( $cache_key );
+
+		if ( $result ) {
+			wp_send_json_success( array( 'message' => __( 'Cache entry deleted.', 'third-audience' ) ) );
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Failed to delete cache entry.', 'third-audience' ) ) );
+		}
+	}
+
+	/**
+	 * AJAX handler: Bulk delete cache entries.
+	 *
+	 * @since 2.0.6
+	 * @return void
+	 */
+	public function ajax_bulk_delete_cache() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_keys = isset( $_POST['cache_keys'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cache_keys'] ) ) : array();
+
+		if ( empty( $cache_keys ) ) {
+			wp_send_json_error( array( 'message' => __( 'No cache keys provided.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$result = $cache_manager->delete_many( $cache_keys );
+
+		wp_send_json_success( array(
+			'message' => sprintf(
+				/* translators: %d: number of entries deleted */
+				__( '%d cache entries deleted.', 'third-audience' ),
+				count( $cache_keys )
+			),
+		) );
+	}
+
+	/**
+	 * AJAX handler: Clear expired cache entries.
+	 *
+	 * @since 2.0.6
+	 * @return void
+	 */
+	public function ajax_clear_expired_cache() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_manager = new TA_Cache_Manager();
+		$count = $cache_manager->cleanup_expired();
+
+		wp_send_json_success( array(
+			'message' => sprintf(
+				/* translators: %d: number of expired entries */
+				__( '%d expired entries cleared.', 'third-audience' ),
+				$count
+			),
+		) );
+	}
+
+	/**
+	 * AJAX handler: Regenerate cache for a post.
+	 *
+	 * @since 2.0.6
+	 * @return void
+	 */
+	public function ajax_regenerate_cache() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+
+		if ( empty( $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid post ID.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$result = $cache_manager->regenerate_markdown( $post_id );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success( array( 'message' => __( 'Cache regenerated successfully.', 'third-audience' ) ) );
+	}
+
+	/**
+	 * AJAX handler: View cache content.
+	 *
+	 * @since 2.0.6
+	 * @return void
+	 */
+	public function ajax_view_cache_content() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
+
+		if ( empty( $cache_key ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
+		}
+
+		$cache_manager = new TA_Cache_Manager();
+		$content = $cache_manager->get( $cache_key );
+
+		if ( false === $content ) {
+			wp_send_json_error( array( 'message' => __( 'Cache entry not found.', 'third-audience' ) ) );
+		}
+
+		wp_send_json_success( array(
+			'content' => $content,
+			'size'    => size_format( strlen( $content ) ),
+		) );
+	}
+
+	/**
+	 * AJAX handler: Get cache warmup statistics.
+	 *
+	 * @since 2.0.6
+	 * @return void
+	 */
+	public function ajax_get_warmup_stats() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cache_manager = new TA_Cache_Manager();
+		$stats = $cache_manager->get_warmup_stats();
+
+		wp_send_json_success( $stats );
+	}
+
+	/**
+	 * AJAX handler: Warm cache batch.
+	 *
+	 * @since 2.0.6
+	 * @return void
+	 */
+	public function ajax_warm_cache_batch() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$batch_size = isset( $_POST['batch_size'] ) ? absint( $_POST['batch_size'] ) : 5;
+		$offset = isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0;
+
+		$cache_manager = new TA_Cache_Manager();
+		$result = $cache_manager->warm_cache_batch( array(
+			'limit'  => $batch_size,
+			'offset' => $offset,
+		) );
+
+		wp_send_json_success( $result );
 	}
 }
