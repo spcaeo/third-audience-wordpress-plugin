@@ -109,6 +109,7 @@ class TA_Admin {
 			wp_localize_script( 'ta-admin', 'taAdmin', array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => $this->security->create_nonce( 'admin_ajax' ),
+			'homeUrl' => trailingslashit( home_url() ),
 				'i18n'    => array(
 					'testing'        => __( 'Testing...', 'third-audience' ),
 					'clearing'       => __( 'Clearing...', 'third-audience' ),

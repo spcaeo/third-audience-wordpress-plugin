@@ -23,8 +23,8 @@ class TA_Discovery {
             return;
         }
 
-        // For homepage
-        if (is_front_page() && is_home()) {
+        // For homepage (static page OR blog page)
+        if (is_front_page()) {
             $pattern = get_option('ta_homepage_md_pattern', 'index.md');
             // Handle custom pattern
             if ($pattern === 'custom') {

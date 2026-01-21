@@ -85,6 +85,13 @@
 					} else {
 						$customInput.hide();
 					}
+					// Update preview URL
+					TAAdmin.updateHomepagePreview();
+				});
+
+				// Handle custom input change
+				$customInput.on('input', function() {
+					TAAdmin.updateHomepagePreview();
 				});
 
 				// Trigger on page load if custom is selected
@@ -92,6 +99,50 @@
 					$customInput.show();
 				}
 			}
+		},
+
+		/**
+		 * Update homepage markdown URL preview dynamically.
+		 */
+		updateHomepagePreview: function() {
+			var $select = $('#ta_homepage_md_pattern');
+			var $customInput = $('#ta_homepage_md_pattern_custom');
+			var $previewCode = $('.ta-homepage-preview-url');
+			var $testLink = $('.ta-homepage-test-link');
+
+			if (!$select.length || !$previewCode.length) {
+				return;
+			}
+
+			// Get selected pattern
+			var pattern = $select.val();
+
+			// If custom, use custom input value
+			if (pattern === 'custom') {
+				pattern = $customInput.val() || 'index.md';
+			}
+
+			// Ensure .md extension
+			if (pattern.substr(-3) !== '.md') {
+				pattern += '.md';
+			}
+
+			// Build preview URL (use taAdmin.homeUrl if available, fallback to extracting from page)
+			var homeUrl = (typeof taAdmin !== 'undefined' && taAdmin.homeUrl) ?
+				taAdmin.homeUrl : window.location.origin;
+
+			// Ensure trailing slash
+			if (homeUrl.substr(-1) !== '/') {
+				homeUrl += '/';
+			}
+
+			var previewUrl = homeUrl + pattern;
+
+			// Update preview display
+			$previewCode.text(previewUrl);
+
+			// Update test link
+			$testLink.attr('href', previewUrl);
 		},
 
 		/**

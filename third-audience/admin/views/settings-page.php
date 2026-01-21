@@ -170,6 +170,47 @@ $security = TA_Security::get_instance();
 												<strong><?php esc_html_e( 'Important:', 'third-audience' ); ?></strong>
 												<?php esc_html_e( 'After changing this setting, go to Settings → Permalinks and click "Save Changes" to flush rewrite rules.', 'third-audience' ); ?>
 											</p>
+
+											<!-- Live Preview & Validation -->
+											<div style="margin-top: 15px; padding: 12px; background: #f0f6fc; border: 1px solid #d0e4f5; border-radius: 4px;">
+												<h4 style="margin: 0 0 10px 0; font-size: 13px; color: #0073aa;">
+													<span class="dashicons dashicons-visibility" style="font-size: 16px; vertical-align: middle;"></span>
+													<?php esc_html_e( 'Live Preview & Validation', 'third-audience' ); ?>
+												</h4>
+
+												<?php
+												// Calculate current homepage markdown URL
+												$preview_pattern = $current_pattern;
+												if ( $preview_pattern === 'custom' && ! empty( $custom_pattern ) ) {
+													$preview_pattern = $custom_pattern;
+												}
+												// Ensure .md extension
+												if ( substr( $preview_pattern, -3 ) !== '.md' ) {
+													$preview_pattern .= '.md';
+												}
+												$preview_url = trailingslashit( home_url() ) . $preview_pattern;
+												?>
+
+												<p style="margin: 0 0 8px 0;">
+													<strong><?php esc_html_e( 'Your homepage markdown URL:', 'third-audience' ); ?></strong><br>
+													<code class="ta-homepage-preview-url" style="font-size: 13px; background: white; padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px;">
+														<?php echo esc_html( $preview_url ); ?>
+													</code>
+													<a href="<?php echo esc_url( $preview_url ); ?>"
+													   target="_blank"
+													   rel="noopener"
+													   class="button button-secondary ta-homepage-test-link"
+													   style="margin-left: 8px; vertical-align: middle;">
+														<span class="dashicons dashicons-external" style="font-size: 16px; vertical-align: middle; margin-top: 3px;"></span>
+														<?php esc_html_e( 'Test URL', 'third-audience' ); ?>
+													</a>
+												</p>
+
+												<p style="margin: 8px 0 0 0; font-size: 12px; color: #646970;">
+													<span class="dashicons dashicons-info" style="font-size: 14px; vertical-align: middle;"></span>
+													<?php esc_html_e( 'Click "Test URL" to open the markdown version in a new tab and verify it works correctly.', 'third-audience' ); ?>
+												</p>
+											</div>
 										</td>
 									</tr>
 								</table>
