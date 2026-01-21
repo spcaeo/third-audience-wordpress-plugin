@@ -408,6 +408,20 @@
 	text-transform: uppercase;
 }
 
+/* Country Badge */
+.ta-country-badge {
+	display: inline-block;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 600;
+	background: #f0f6ff;
+	color: #0073aa;
+	border: 1px solid #d0e5f5;
+	text-align: center;
+	min-width: 36px;
+}
+
 .ta-cache-hit {
 	background: #d5f4e6;
 	color: #00a32a;

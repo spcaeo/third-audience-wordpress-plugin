@@ -320,6 +320,7 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 					<th style="width: 130px;"><?php esc_html_e( 'Bot', 'third-audience' ); ?></th>
 					<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
 					<th style="width: 100px;"><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
+					<th style="width: 80px;"><?php esc_html_e( 'Country', 'third-audience' ); ?></th>
 					<th style="width: 100px;"><?php esc_html_e( 'Cache', 'third-audience' ); ?></th>
 					<th style="width: 100px;"><?php esc_html_e( 'Response', 'third-audience' ); ?></th>
 					<th style="width: 150px;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
@@ -328,7 +329,7 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 			<tbody>
 				<?php if ( empty( $recent_visits ) ) : ?>
 					<tr>
-						<td colspan="7" class="ta-no-data">
+						<td colspan="8" class="ta-no-data">
 							<?php esc_html_e( 'No bot visits recorded yet.', 'third-audience' ); ?>
 						</td>
 					</tr>
@@ -347,6 +348,15 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 								</a>
 							</td>
 							<td><?php echo esc_html( $visit['post_type'] ?? 'N/A' ); ?></td>
+							<td>
+								<?php if ( ! empty( $visit['country_code'] ) ) : ?>
+									<span class="ta-country-badge" title="<?php echo esc_attr( $visit['ip_address'] ?? 'Unknown IP' ); ?>">
+										<?php echo esc_html( $visit['country_code'] ); ?>
+									</span>
+								<?php else : ?>
+									<span class="ta-country-badge" title="Unknown location">-</span>
+								<?php endif; ?>
+							</td>
 							<td>
 								<span class="ta-cache-badge ta-cache-<?php echo esc_attr( strtolower( $visit['cache_status'] ) ); ?>">
 									<?php echo esc_html( $visit['cache_status'] ); ?>
