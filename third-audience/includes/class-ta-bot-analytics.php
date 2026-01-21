@@ -342,6 +342,12 @@ class TA_Bot_Analytics {
 			return null;
 		}
 
+		// Validate IP address format.
+		if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6 ) ) {
+			$this->logger->debug( 'Invalid IP address format for geolocation.', array( 'ip' => $ip ) );
+			return null;
+		}
+
 		// Don't lookup local/private IPs.
 		if ( $this->is_private_ip( $ip ) ) {
 			return null;

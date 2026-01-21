@@ -103,6 +103,23 @@ class TA_Local_Converter {
 			return new WP_Error( 'invalid_post', __( 'Invalid post.', 'third-audience' ) );
 		}
 
+		// Check content size to prevent timeouts (1MB limit).
+		$content_size = strlen( $post->post_content );
+		if ( $content_size > 1048576 ) {
+			$this->logger->warning( 'Content exceeds maximum size for conversion.', array(
+				'post_id' => $post->ID,
+				'size'    => $content_size,
+			) );
+			return new WP_Error(
+				'content_too_large',
+				sprintf(
+					/* translators: %s: Content size in KB */
+					__( 'Content exceeds maximum size for conversion (%s KB). Maximum allowed is 1024 KB.', 'third-audience' ),
+					number_format( $content_size / 1024, 2 )
+				)
+			);
+		}
+
 		$default_options = array(
 			'include_frontmatter'  => true,
 			'extract_main_content' => true,
@@ -295,7 +312,11 @@ class TA_Local_Converter {
 		// Get cleaned HTML
 		$cleaned_html = $dom->saveHTML();
 
-		return $cleaned_html;
+		// Remove the XML declaration and HTML/body wrapper tags that DOMDocument adds
+		$cleaned_html = preg_replace( '/^<\?xml[^?]+\?>\s*/i', '', $cleaned_html );
+		$cleaned_html = preg_replace( '/<\/?(?:html|body)>/i', '', $cleaned_html );
+
+		return trim( $cleaned_html );
 	}
 
 	/**

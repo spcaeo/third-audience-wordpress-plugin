@@ -141,13 +141,40 @@ if ( ! ta_check_php_version() || ! ta_check_wp_version() ) {
 	return;
 }
 
+// Check if Composer dependencies are installed.
+if ( ! file_exists( TA_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
+	add_action( 'admin_notices', function() {
+		?>
+		<div class="notice notice-error">
+			<p>
+				<strong><?php esc_html_e( 'Third Audience - Missing Dependencies', 'third-audience' ); ?></strong>
+			</p>
+			<p>
+				<?php esc_html_e( 'The required PHP libraries are not installed. Please run the following command in the plugin directory:', 'third-audience' ); ?>
+			</p>
+			<p>
+				<code style="background: #f0f0f0; padding: 5px 10px; display: inline-block; margin: 5px 0;">composer install --no-dev</code>
+			</p>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: URL to System Health page */
+					esc_html__( 'For more information, please visit the %s page.', 'third-audience' ),
+					'<a href="' . esc_url( admin_url( 'admin.php?page=third-audience-system-health' ) ) . '">' . esc_html__( 'System Health', 'third-audience' ) . '</a>'
+				);
+				?>
+			</p>
+		</div>
+		<?php
+	} );
+	return; // Don't load the rest of the plugin.
+}
+
 // Load autoloader for lazy loading of classes.
 require_once TA_PLUGIN_DIR . 'includes/autoload.php';
 
 // Load Composer autoloader for third-party libraries.
-if ( file_exists( TA_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
-	require_once TA_PLUGIN_DIR . 'vendor/autoload.php';
-}
+require_once TA_PLUGIN_DIR . 'vendor/autoload.php';
 
 /**
  * Initialize the plugin.
@@ -170,6 +197,12 @@ function ta_init() {
 	// Initialize notifications.
 	$notifications = TA_Notifications::get_instance();
 	$notifications->init();
+
+	// Initialize update checker.
+	if ( is_admin() ) {
+		$update_checker = new TA_Update_Checker();
+		$update_checker->init();
+	}
 
 	// Initialize main plugin.
 	$plugin = new Third_Audience();
@@ -337,6 +370,25 @@ function ta_upgrade( $installed_version ) {
 			update_option( 'ta_enable_pre_generation', true, false );
 		}
 		$logger->info( 'Pre-generation feature enabled (v1.3.0 upgrade).' );
+	}
+
+	// Upgrade from 1.x to 2.0.0 - Major architectural change: Local conversion.
+	if ( version_compare( $installed_version, '2.0.0', '<' ) ) {
+		// Remove deprecated Cloudflare Worker settings.
+		delete_option( 'ta_worker_url' );
+		delete_option( 'ta_router_url' );
+		delete_option( 'ta_api_key' );
+		delete_option( 'ta_api_key_encrypted' );
+
+		// Clear all cache to force regeneration with local converter.
+		require_once TA_PLUGIN_DIR . 'includes/class-ta-cache-manager.php';
+		$cache_manager = new TA_Cache_Manager();
+		$cache_cleared = $cache_manager->clear_all();
+
+		$logger->info( 'Upgraded to v2.0.0 - Local conversion enabled.', array(
+			'cache_cleared'     => $cache_cleared,
+			'removed_settings'  => array( 'ta_worker_url', 'ta_router_url', 'ta_api_key' ),
+		) );
 	}
 
 	// Log upgrade completion.
@@ -590,6 +642,34 @@ function ta_ajax_get_cache_stats() {
 	wp_send_json_success( $stats );
 }
 add_action( 'wp_ajax_ta_get_cache_stats', 'ta_ajax_get_cache_stats' );
+
+/**
+ * AJAX handler to dismiss update notice.
+ *
+ * @since 2.0.0
+ * @return void
+ */
+function ta_ajax_dismiss_update_notice() {
+	check_ajax_referer( 'ta_dismiss_update', '_ajax_nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Permission denied.', 'third-audience' ) ) );
+		return;
+	}
+
+	$version = isset( $_POST['version'] ) ? sanitize_text_field( wp_unslash( $_POST['version'] ) ) : '';
+
+	if ( empty( $version ) ) {
+		wp_send_json_error( array( 'message' => __( 'Invalid version.', 'third-audience' ) ) );
+		return;
+	}
+
+	// Store dismissal in user meta.
+	update_user_meta( get_current_user_id(), 'ta_dismissed_update_' . $version, true );
+
+	wp_send_json_success();
+}
+add_action( 'wp_ajax_ta_dismiss_update_notice', 'ta_ajax_dismiss_update_notice' );
 
 /**
  * Add async/defer attributes to plugin scripts.
