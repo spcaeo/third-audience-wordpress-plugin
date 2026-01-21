@@ -111,6 +111,100 @@ $library_version = TA_Local_Converter::get_library_version();
 		</p>
 	</div>
 
+	<!-- Changelog & Version History -->
+	<?php if ( ! empty( $version_info['changelog'] ) || $version_info['update_available'] ) : ?>
+	<div class="ta-card" style="margin-top: 20px; padding: 20px; background: #fff; border: 1px solid #ccd0d4; box-shadow: 0 1px 1px rgba(0,0,0,.04);">
+		<h2 style="margin-top: 0;">
+			<?php esc_html_e( 'What\'s New', 'third-audience' ); ?>
+			<?php if ( $version_info['update_available'] ) : ?>
+				<span style="color: #d63638; font-size: 14px; font-weight: normal;">
+					(<?php esc_html_e( 'Version', 'third-audience' ); ?> <?php echo esc_html( $version_info['latest_version'] ); ?>)
+				</span>
+			<?php endif; ?>
+		</h2>
+		<?php if ( ! empty( $version_info['changelog'] ) ) : ?>
+			<div style="background: #f9f9f9; padding: 15px; border-left: 4px solid #667eea; margin: 15px 0;">
+				<?php echo wp_kses_post( wpautop( $version_info['changelog'] ) ); ?>
+			</div>
+		<?php else : ?>
+			<p><?php esc_html_e( 'Loading changelog...', 'third-audience' ); ?></p>
+		<?php endif; ?>
+		<?php if ( $version_info['update_available'] && ! empty( $version_info['release_url'] ) ) : ?>
+			<p>
+				<a href="<?php echo esc_url( $version_info['release_url'] ); ?>"
+				   class="button button-primary"
+				   target="_blank"
+				   rel="noopener">
+					<?php esc_html_e( 'View Full Release Notes on GitHub', 'third-audience' ); ?>
+				</a>
+			</p>
+		<?php endif; ?>
+	</div>
+	<?php endif; ?>
+
+	<!-- Current Version Changelog -->
+	<div class="ta-card" style="margin-top: 20px; padding: 20px; background: #fff; border: 1px solid #ccd0d4; box-shadow: 0 1px 1px rgba(0,0,0,.04);">
+		<h2 style="margin-top: 0;">
+			<?php esc_html_e( 'Current Version', 'third-audience' ); ?>
+			<span style="color: #667eea; font-size: 14px; font-weight: normal;">
+				(<?php echo esc_html( $version_info['current_version'] ); ?>)
+			</span>
+		</h2>
+		<div style="background: #f0f0f1; padding: 15px; border-left: 4px solid #2271b1;">
+			<?php
+			// Display current version changelog
+			$current_changelog = '';
+			switch ( $version_info['current_version'] ) {
+				case '1.1.1':
+					$current_changelog = '
+**Bug Fix:**
+- Homepage URLs now generate correct .md URLs (e.g., `/index.md` instead of `.md`)
+
+**New Features:**
+- Customizable homepage markdown pattern (index.md, home.md, root.md, or custom)
+- Automatic fallback to latest post when no static homepage is set
+
+**Improvements:**
+- Better URL parsing to handle edge cases
+- Settings UI with pattern examples and warnings
+- JavaScript for custom pattern toggle';
+					break;
+				case '1.1.0':
+					$current_changelog = '
+**Major Features:**
+- Headless WordPress Configuration Wizard
+- Auto-detect headless setup and generate configuration snippets
+- Support for Nginx, Apache, Cloudflare, Vercel, and Next.js
+- One-click copy for server configurations
+
+**Performance:**
+- 1-hour transient cache for auto-detection
+- Rate limiting (3 tests per 5 minutes)
+- Filter hooks for extensibility';
+					break;
+				case '1.0.0':
+					$current_changelog = '
+**Initial Release:**
+- Local HTML to Markdown conversion (no external dependencies!)
+- Support for all post types
+- Pre-generation on post save
+- Bot-specific blocking and analytics
+- Cache management
+- Discovery tags for AI crawlers';
+					break;
+				default:
+					$current_changelog = esc_html__( 'Version information not available.', 'third-audience' );
+			}
+			echo wp_kses_post( wpautop( $current_changelog ) );
+			?>
+		</div>
+		<p style="margin-top: 15px;">
+			<a href="https://github.com/spcaeo/third-audience-wordpress-plugin/releases" class="button button-secondary" target="_blank" rel="noopener">
+				<?php esc_html_e( 'View All Releases on GitHub', 'third-audience' ); ?>
+			</a>
+		</p>
+	</div>
+
 	<!-- System Information -->
 	<h2><?php esc_html_e( 'System Information', 'third-audience' ); ?></h2>
 	<table class="widefat striped">
