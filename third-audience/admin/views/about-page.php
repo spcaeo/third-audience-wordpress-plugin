@@ -215,6 +215,82 @@ Accept: text/markdown
 			</p>
 		</div>
 
+		<!-- Version History -->
+		<div class="ta-card">
+			<h2><?php esc_html_e( 'Version History & Changelog', 'third-audience' ); ?></h2>
+			<p class="description">
+				<?php esc_html_e( 'Track all updates and improvements to Third Audience.', 'third-audience' ); ?>
+			</p>
+
+			<!-- Version 1.1.1 -->
+			<div class="ta-version-entry" style="border-left: 4px solid #667eea; padding-left: 20px; margin: 20px 0;">
+				<h3 style="margin: 0 0 10px 0; color: #667eea;">
+					<?php esc_html_e( 'Version 1.1.1', 'third-audience' ); ?>
+					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 21, 2026</span>
+				</h3>
+				<p><strong><?php esc_html_e( 'Bug Fix:', 'third-audience' ); ?></strong></p>
+				<ul>
+					<li><?php esc_html_e( 'Homepage URLs now generate correct .md URLs (e.g., /index.md instead of .md)', 'third-audience' ); ?></li>
+				</ul>
+				<p><strong><?php esc_html_e( 'New Features:', 'third-audience' ); ?></strong></p>
+				<ul>
+					<li><?php esc_html_e( 'Customizable homepage markdown pattern (index.md, home.md, root.md, or custom)', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Automatic fallback to latest post when no static homepage is set', 'third-audience' ); ?></li>
+				</ul>
+				<p><strong><?php esc_html_e( 'Improvements:', 'third-audience' ); ?></strong></p>
+				<ul>
+					<li><?php esc_html_e( 'Better URL parsing to handle edge cases', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Settings UI with pattern examples and warnings', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'JavaScript for custom pattern toggle', 'third-audience' ); ?></li>
+				</ul>
+			</div>
+
+			<!-- Version 1.1.0 -->
+			<div class="ta-version-entry" style="border-left: 4px solid #2271b1; padding-left: 20px; margin: 20px 0;">
+				<h3 style="margin: 0 0 10px 0; color: #2271b1;">
+					<?php esc_html_e( 'Version 1.1.0', 'third-audience' ); ?>
+					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 21, 2026</span>
+				</h3>
+				<p><strong><?php esc_html_e( 'Major Features:', 'third-audience' ); ?></strong></p>
+				<ul>
+					<li><?php esc_html_e( 'Headless WordPress Configuration Wizard', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Auto-detect headless setup and generate configuration snippets', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Support for Nginx, Apache, Cloudflare, Vercel, and Next.js', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'One-click copy for server configurations', 'third-audience' ); ?></li>
+				</ul>
+				<p><strong><?php esc_html_e( 'Performance:', 'third-audience' ); ?></strong></p>
+				<ul>
+					<li><?php esc_html_e( '1-hour transient cache for auto-detection', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Rate limiting (3 tests per 5 minutes)', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Filter hooks for extensibility', 'third-audience' ); ?></li>
+				</ul>
+			</div>
+
+			<!-- Version 1.0.0 -->
+			<div class="ta-version-entry" style="border-left: 4px solid #00a32a; padding-left: 20px; margin: 20px 0;">
+				<h3 style="margin: 0 0 10px 0; color: #00a32a;">
+					<?php esc_html_e( 'Version 1.0.0', 'third-audience' ); ?>
+					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 16, 2026</span>
+				</h3>
+				<p><strong><?php esc_html_e( 'Initial Release:', 'third-audience' ); ?></strong></p>
+				<ul>
+					<li><?php esc_html_e( 'Local HTML to Markdown conversion (no external dependencies!)', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Support for all post types', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Pre-generation on post save', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Bot-specific blocking and analytics', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Cache management', 'third-audience' ); ?></li>
+					<li><?php esc_html_e( 'Discovery tags for AI crawlers', 'third-audience' ); ?></li>
+				</ul>
+			</div>
+
+			<p style="margin-top: 30px;">
+				<a href="https://github.com/spcaeo/third-audience-wordpress-plugin/releases" class="button button-secondary" target="_blank" rel="noopener">
+					<span class="dashicons dashicons-external" style="vertical-align: middle;"></span>
+					<?php esc_html_e( 'View All Releases on GitHub', 'third-audience' ); ?>
+				</a>
+			</p>
+		</div>
+
 		<!-- Links -->
 		<div class="ta-card">
 			<h2><?php esc_html_e( 'Quick Links', 'third-audience' ); ?></h2>

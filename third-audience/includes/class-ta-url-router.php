@@ -78,9 +78,9 @@ class TA_URL_Router {
 	 * @return void
 	 */
 	public function register_rewrite_rules() {
-		// Match any URL ending in .md.
+		// Match any URL ending in .md (including homepage patterns like /index.md).
 		add_rewrite_rule(
-			'(.+)\.md$',
+			'(.*)\.md$',
 			'index.php?ta_markdown=1&ta_path=$matches[1]',
 			'top'
 		);
@@ -105,38 +105,70 @@ class TA_URL_Router {
 		$request_start_time = microtime( true );
 
 		$path = get_query_var( 'ta_path' );
-		if ( empty( $path ) ) {
-			$this->logger->warning( 'Empty path in markdown request.' );
-			$this->send_error_response( 400, 'Invalid path' );
-			return;
-		}
 
 		// Sanitize the path.
 		$path = $this->security->sanitize_text( $path );
 
-		// Build the original URL (without .md).
-		$original_url = home_url( '/' . $path );
-
-		// Basic URL validation (no need for strict Worker validation in local mode).
-		if ( empty( $original_url ) ) {
-			$this->logger->warning( 'Empty URL in markdown request.' );
-			$this->send_error_response( 400, 'Invalid URL' );
-			return;
+		// Check if this is a homepage pattern request
+		$homepage_pattern = get_option( 'ta_homepage_md_pattern', 'index.md' );
+		if ( $homepage_pattern === 'custom' ) {
+			$homepage_pattern = get_option( 'ta_homepage_md_pattern_custom', 'index.md' );
 		}
+		// Remove .md extension for comparison
+		$homepage_slug = str_replace( '.md', '', $homepage_pattern );
 
-		// Check if this URL exists as a post/page.
-		$post_id = url_to_postid( $original_url );
-		if ( ! $post_id ) {
-			// Try with trailing slash.
-			$post_id = url_to_postid( trailingslashit( $original_url ) );
-		}
+		$is_homepage_request = ( $path === $homepage_slug || empty( $path ) );
 
-		if ( ! $post_id ) {
-			$this->logger->debug( 'Post not found for markdown request.', array(
-				'url' => $original_url,
-			) );
-			$this->send_error_response( 404, 'Post not found' );
-			return;
+		// Handle homepage request
+		if ( $is_homepage_request ) {
+			$post_id = get_option( 'page_on_front' );
+			if ( ! $post_id ) {
+				// No static page set, fall back to latest post.
+				$latest_posts = get_posts( array(
+					'numberposts'      => 1,
+					'post_status'      => 'publish',
+					'suppress_filters' => false,
+				) );
+
+				if ( empty( $latest_posts ) ) {
+					$this->logger->warning( 'Homepage markdown requested but no page_on_front set and no posts found.' );
+					$this->send_error_response( 404, 'No content available for homepage' );
+					return;
+				}
+
+				$post_id = $latest_posts[0]->ID;
+				$this->logger->debug( 'Homepage markdown fallback to latest post.', array(
+					'post_id' => $post_id,
+					'title'   => $latest_posts[0]->post_title,
+				) );
+			}
+			$original_url = home_url( '/' );
+		} else {
+			// Build the original URL (without .md).
+			$original_url = home_url( '/' . $path );
+
+			// Basic URL validation (no need for strict Worker validation in local mode).
+			if ( empty( $original_url ) ) {
+				$this->logger->warning( 'Empty URL in markdown request.' );
+				$this->send_error_response( 400, 'Invalid URL' );
+				return;
+			}
+
+			// Check if this URL exists as a post/page.
+			$post_id = url_to_postid( $original_url );
+			if ( ! $post_id ) {
+				// Try with trailing slash.
+				$post_id = url_to_postid( trailingslashit( $original_url ) );
+			}
+
+			if ( ! $post_id ) {
+				$this->logger->debug( 'Post not found for markdown request.', array(
+					'url'  => $original_url,
+					'path' => $path,
+				) );
+				$this->send_error_response( 404, 'Post not found' );
+				return;
+			}
 		}
 
 		// Check if post type is enabled.

@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Define tabs.
 $tabs = array(
 	'general'       => __( 'General', 'third-audience' ),
+	'headless'      => __( 'Headless Setup', 'third-audience' ),
 	'notifications' => __( 'Notifications', 'third-audience' ),
 	'logs'          => __( 'Logs', 'third-audience' ),
 );
@@ -132,6 +133,45 @@ $security = TA_Security::get_instance();
 											<p class="description"><?php esc_html_e( 'Recommended: Pre-generates markdown on save so it\'s always instantly available for AI crawlers.', 'third-audience' ); ?></p>
 										</td>
 									</tr>
+									<tr>
+										<th scope="row">
+											<label for="ta_homepage_md_pattern">
+												<?php esc_html_e( 'Homepage Markdown Pattern', 'third-audience' ); ?>
+											</label>
+										</th>
+										<td>
+											<?php
+											$current_pattern = get_option( 'ta_homepage_md_pattern', 'index.md' );
+											$custom_pattern = get_option( 'ta_homepage_md_pattern_custom', '' );
+											?>
+											<select name="ta_homepage_md_pattern" id="ta_homepage_md_pattern" class="regular-text">
+												<option value="index.md" <?php selected( $current_pattern, 'index.md' ); ?>><?php esc_html_e( 'index.md (Recommended)', 'third-audience' ); ?></option>
+												<option value="home.md" <?php selected( $current_pattern, 'home.md' ); ?>><?php esc_html_e( 'home.md', 'third-audience' ); ?></option>
+												<option value="root.md" <?php selected( $current_pattern, 'root.md' ); ?>><?php esc_html_e( 'root.md', 'third-audience' ); ?></option>
+												<option value="custom" <?php selected( $current_pattern, 'custom' ); ?>><?php esc_html_e( 'Custom...', 'third-audience' ); ?></option>
+											</select>
+
+											<input type="text"
+												   name="ta_homepage_md_pattern_custom"
+												   id="ta_homepage_md_pattern_custom"
+												   class="regular-text"
+												   value="<?php echo esc_attr( $custom_pattern ); ?>"
+												   placeholder="<?php esc_attr_e( 'e.g., frontpage.md', 'third-audience' ); ?>"
+												   style="display:<?php echo ( 'custom' === $current_pattern ) ? 'inline-block' : 'none'; ?>; margin-top: 5px;" />
+
+											<p class="description">
+												<strong><?php esc_html_e( 'Choose how the homepage markdown URL is generated.', 'third-audience' ); ?></strong><br>
+												<?php esc_html_e( 'Examples:', 'third-audience' ); ?><br>
+												• <code>index.md</code> → <code><?php echo esc_html( home_url( '/index.md' ) ); ?></code><br>
+												• <code>home.md</code> → <code><?php echo esc_html( home_url( '/home.md' ) ); ?></code><br>
+												• <code><?php esc_html_e( 'Custom: Your own pattern', 'third-audience' ); ?></code>
+											</p>
+											<p class="description" style="color: #d63638;">
+												<strong><?php esc_html_e( 'Important:', 'third-audience' ); ?></strong>
+												<?php esc_html_e( 'After changing this setting, go to Settings → Permalinks and click "Save Changes" to flush rewrite rules.', 'third-audience' ); ?>
+											</p>
+										</td>
+									</tr>
 								</table>
 							</div>
 
@@ -204,6 +244,10 @@ $security = TA_Security::get_instance();
 					</div>
 				</div>
 			</div>
+
+		<?php elseif ( 'headless' === $current_tab ) : ?>
+			<!-- Headless Setup Tab -->
+			<?php require_once TA_PLUGIN_DIR . 'admin/views/headless-setup-tab.php'; ?>
 
 		<?php elseif ( 'notifications' === $current_tab ) : ?>
 			<!-- Notifications Tab -->
