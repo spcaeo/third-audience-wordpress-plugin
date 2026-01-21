@@ -287,13 +287,9 @@ class TA_URL_Router {
 		// Detect if this is a known bot.
 		$bot_info = $this->bot_analytics->detect_bot( $user_agent );
 
-		// If not a known bot, track as Unknown Bot (track ALL requests).
+		// Only track known AI bots - skip regular browsers.
 		if ( false === $bot_info ) {
-			$bot_info = array(
-				'type'  => 'Unknown',
-				'name'  => 'Unknown Bot',
-				'color' => '#6C757D',
-			);
+			return;
 		}
 
 		// Get referer.
