@@ -69,6 +69,7 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function init() {
+		add_action( 'admin_init', array( $this, 'handle_export_request' ), 5 ); // Priority 5 to run early.
 		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -90,6 +91,7 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
 		add_action( 'wp_ajax_ta_clear_cache', array( $this, 'ajax_clear_cache' ) );
 		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
+		add_action( 'wp_ajax_ta_clear_all_visits', array( $this, 'ajax_clear_all_visits' ) );
 	}
 
 	/**
@@ -192,6 +194,49 @@ class TA_Admin {
 				),
 			) );
 		}
+	}
+
+	/**
+	 * Handle CSV export request before any output.
+	 *
+	 * @since 2.0.5
+	 * @return void
+	 */
+	public function handle_export_request() {
+		// Only handle on bot analytics page with export action.
+		if ( ! isset( $_GET['page'] ) || 'third-audience-bot-analytics' !== $_GET['page'] ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['action'] ) || 'export' !== $_GET['action'] ) {
+			return;
+		}
+
+		// Verify nonce and capability.
+		if ( ! check_admin_referer( 'ta_export_analytics' ) ) {
+			wp_die( esc_html__( 'Invalid security token.', 'third-audience' ) );
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'third-audience' ) );
+		}
+
+		// Prepare filters.
+		$analytics = TA_Bot_Analytics::get_instance();
+		$filters   = array();
+
+		if ( ! empty( $_GET['bot_type'] ) ) {
+			$filters['bot_type'] = sanitize_text_field( wp_unslash( $_GET['bot_type'] ) );
+		}
+		if ( ! empty( $_GET['date_from'] ) ) {
+			$filters['date_from'] = sanitize_text_field( wp_unslash( $_GET['date_from'] ) );
+		}
+		if ( ! empty( $_GET['date_to'] ) ) {
+			$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
+		}
+
+		// Export and exit.
+		$analytics->export_to_csv( $filters );
 	}
 
 	/**
@@ -778,6 +823,27 @@ class TA_Admin {
 			/* translators: %d: Number of cached items cleared */
 			'message' => sprintf( __( 'Cleared %d cached items.', 'third-audience' ), $cleared ),
 			'count'   => $cleared,
+		) );
+	}
+
+	/**
+	 * AJAX handler for clearing all bot visits.
+	 *
+	 * @since 2.0.5
+	 * @return void
+	 */
+	public function ajax_clear_all_visits() {
+		$this->security->verify_ajax_request( 'bot_analytics' );
+
+		$bot_analytics = TA_Bot_Analytics::get_instance();
+		$deleted       = $bot_analytics->clear_all_visits();
+
+		$this->logger->info( 'All bot visits cleared (AJAX).', array( 'count' => $deleted ) );
+
+		wp_send_json_success( array(
+			/* translators: %d: Number of bot visits cleared */
+			'message' => sprintf( __( 'Cleared %d bot visit records.', 'third-audience' ), $deleted ),
+			'count'   => $deleted,
 		) );
 	}
 

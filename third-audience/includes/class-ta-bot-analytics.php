@@ -762,21 +762,44 @@ class TA_Bot_Analytics {
 
 		$output = fopen( 'php://output', 'w' );
 
+		// Export metadata header.
+		fputcsv( $output, array( 'Third Audience Bot Analytics Export' ) );
+		fputcsv( $output, array( 'Generated', gmdate( 'Y-m-d H:i:s' ) . ' UTC' ) );
+		fputcsv( $output, array( 'Total Records', count( $visits ) ) );
+		fputcsv( $output, array() ); // Empty row.
+
 		// CSV headers.
 		fputcsv( $output, array(
 			'ID',
 			'Bot Type',
 			'Bot Name',
+			'User Agent',
 			'URL',
 			'Post Title',
 			'Post Type',
 			'Request Method',
 			'Cache Status',
+			'Cache Explanation',
 			'Response Time (ms)',
-			'Response Size (bytes)',
+			'Response Size',
 			'IP Address',
-			'Visit Time',
+			'Referer',
+			'Country Code',
+			'Visit Time (UTC)',
 		) );
+
+		// Helper function for cache explanation.
+		$get_cache_explanation = function( $status ) {
+			$explanations = array(
+				'HIT'            => 'Served from transient cache (fast)',
+				'MISS'           => 'Generated fresh (first visit or cache expired)',
+				'PRE_GENERATED'  => 'Served from pre-generated cache (fastest)',
+				'FAILED'         => 'Content conversion failed',
+				'BLOCKED'        => 'Bot was blocked from accessing content',
+				'ERROR'          => 'An error occurred during processing',
+			);
+			return $explanations[ $status ] ?? 'Unknown status';
+		};
 
 		// CSV rows.
 		foreach ( $visits as $visit ) {
@@ -784,14 +807,18 @@ class TA_Bot_Analytics {
 				$visit['id'],
 				$visit['bot_type'],
 				$visit['bot_name'],
+				$visit['user_agent'] ?? '',
 				$visit['url'],
-				$visit['post_title'],
-				$visit['post_type'],
+				$visit['post_title'] ?? 'N/A',
+				$visit['post_type'] ?? 'N/A',
 				$visit['request_method'],
 				$visit['cache_status'],
+				$get_cache_explanation( $visit['cache_status'] ),
 				$visit['response_time'],
-				$visit['response_size'],
-				$visit['ip_address'],
+				$visit['response_size'] ? size_format( $visit['response_size'], 2 ) : 'N/A',
+				$visit['ip_address'] ?? 'N/A',
+				$visit['referer'] ?? 'Direct',
+				$visit['country_code'] ?? 'N/A',
 				$visit['visit_timestamp'],
 			) );
 		}
@@ -826,6 +853,27 @@ class TA_Bot_Analytics {
 		) );
 
 		return (int) $deleted;
+	}
+
+	/**
+	 * Clear all bot visit records.
+	 *
+	 * @since 2.0.5
+	 * @return int Number of deleted rows.
+	 */
+	public function clear_all_visits() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
+
+		$deleted = $wpdb->query( "TRUNCATE TABLE {$table_name}" );
+
+		$this->logger->info( 'All bot analytics records cleared.', array(
+			'deleted' => $count,
+		) );
+
+		return $count;
 	}
 
 	/**

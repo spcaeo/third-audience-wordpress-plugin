@@ -12,21 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $analytics = TA_Bot_Analytics::get_instance();
 
-// Handle export request.
-if ( isset( $_GET['action'] ) && 'export' === $_GET['action'] && check_admin_referer( 'ta_export_analytics' ) ) {
-	$filters = array();
-	if ( ! empty( $_GET['bot_type'] ) ) {
-		$filters['bot_type'] = sanitize_text_field( wp_unslash( $_GET['bot_type'] ) );
-	}
-	if ( ! empty( $_GET['date_from'] ) ) {
-		$filters['date_from'] = sanitize_text_field( wp_unslash( $_GET['date_from'] ) );
-	}
-	if ( ! empty( $_GET['date_to'] ) ) {
-		$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
-	}
-	$analytics->export_to_csv( $filters );
-}
-
 // Get filters from request.
 $filters = array();
 if ( ! empty( $_GET['bot_type'] ) ) {
@@ -67,6 +52,7 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 <div class="wrap ta-bot-analytics">
 	<h1 class="wp-heading-inline">
 		<?php esc_html_e( 'Bot Analytics', 'third-audience' ); ?>
+		<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
 	</h1>
 
 	<p class="description">
@@ -134,11 +120,14 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 				<div class="ta-filter-actions">
 					<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply Filters', 'third-audience' ); ?></button>
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-bot-analytics' ) ); ?>" class="button">
-						<?php esc_html_e( 'Reset', 'third-audience' ); ?>
+						<?php esc_html_e( 'Reset Filters', 'third-audience' ); ?>
 					</a>
 					<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export' ) ) ), 'ta_export_analytics' ) ); ?>" class="button">
 						<?php esc_html_e( 'Export CSV', 'third-audience' ); ?>
 					</a>
+					<button type="button" class="button button-secondary ta-clear-all-visits" style="margin-left: 10px; color: #d63638; border-color: #d63638;">
+						<?php esc_html_e( 'Clear All Visits', 'third-audience' ); ?>
+					</button>
 				</div>
 			</div>
 		</form>
@@ -316,7 +305,13 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 
 	<!-- Recent Visits Table -->
 	<div class="ta-recent-visits">
-		<h2><?php esc_html_e( 'Recent Bot Visits', 'third-audience' ); ?></h2>
+		<div class="ta-section-header">
+			<h2><?php esc_html_e( 'Recent Bot Visits', 'third-audience' ); ?></h2>
+			<button type="button" class="button button-secondary ta-cache-help-toggle">
+				<span class="dashicons dashicons-info-outline"></span>
+				<?php esc_html_e( 'Cache Status Guide', 'third-audience' ); ?>
+			</button>
+		</div>
 
 		<table class="wp-list-table widefat fixed striped">
 			<thead>
@@ -401,7 +396,109 @@ $recent_visits = $analytics->get_recent_visits( $filters, $per_page, $offset );
 		var taAnalyticsData = {
 			visitsOverTime: <?php echo wp_json_encode( array_reverse( $visits_time ) ); ?>,
 			botDistribution: <?php echo wp_json_encode( $bot_stats ); ?>,
-			period: <?php echo wp_json_encode( $time_period ); ?>
+			period: <?php echo wp_json_encode( $time_period ); ?>,
+			nonce: <?php echo wp_json_encode( wp_create_nonce( 'ta_bot_analytics' ) ); ?>
 		};
 	</script>
+</div>
+
+<!-- Cache Status Guide Modal -->
+<div class="ta-cache-modal-overlay" style="display: none;">
+	<div class="ta-cache-modal">
+		<div class="ta-cache-modal-header">
+			<h2><?php esc_html_e( 'Understanding Cache Status', 'third-audience' ); ?></h2>
+			<button type="button" class="ta-cache-modal-close" aria-label="<?php esc_attr_e( 'Close', 'third-audience' ); ?>">
+				<span class="dashicons dashicons-no-alt"></span>
+			</button>
+		</div>
+		<div class="ta-cache-modal-body">
+			<p class="ta-cache-modal-intro"><?php esc_html_e( 'Learn what each cache status means and how to optimize performance.', 'third-audience' ); ?></p>
+
+			<div class="ta-cache-status-grid">
+				<div class="ta-cache-status-card ta-cache-card-success">
+					<div class="ta-cache-card-icon">
+						<span class="dashicons dashicons-yes-alt"></span>
+					</div>
+					<div class="ta-cache-card-content">
+						<div class="ta-cache-badge ta-cache-hit">HIT</div>
+						<h4><?php esc_html_e( 'Cache Hit', 'third-audience' ); ?></h4>
+						<p><?php esc_html_e( 'Content served from transient cache. Fast response! Cache was already available from a previous request.', 'third-audience' ); ?></p>
+						<div class="ta-cache-performance">
+							<span class="dashicons dashicons-performance"></span>
+							<span><?php esc_html_e( 'Fast (1-5ms)', 'third-audience' ); ?></span>
+						</div>
+					</div>
+				</div>
+
+				<div class="ta-cache-status-card ta-cache-card-success">
+					<div class="ta-cache-card-icon">
+						<span class="dashicons dashicons-dashboard"></span>
+					</div>
+					<div class="ta-cache-card-content">
+						<div class="ta-cache-badge ta-cache-pre_generated">PRE_GENERATED</div>
+						<h4><?php esc_html_e( 'Pre-generated Cache', 'third-audience' ); ?></h4>
+						<p><?php esc_html_e( 'Content served from pre-generated post meta. Fastest response! Cache was created during post save or warmup.', 'third-audience' ); ?></p>
+						<div class="ta-cache-performance">
+							<span class="dashicons dashicons-star-filled"></span>
+							<span><?php esc_html_e( 'Fastest (<1ms)', 'third-audience' ); ?></span>
+						</div>
+					</div>
+				</div>
+
+				<div class="ta-cache-status-card ta-cache-card-warning">
+					<div class="ta-cache-card-icon">
+						<span class="dashicons dashicons-info"></span>
+					</div>
+					<div class="ta-cache-card-content">
+						<div class="ta-cache-badge ta-cache-miss">MISS</div>
+						<h4><?php esc_html_e( 'Cache Miss', 'third-audience' ); ?></h4>
+						<p><?php esc_html_e( 'Content generated fresh. Slower response. Happens on first visit, after cache expiry, or when cache was cleared.', 'third-audience' ); ?></p>
+						<div class="ta-cache-performance">
+							<span class="dashicons dashicons-clock"></span>
+							<span><?php esc_html_e( 'Slow (10-50ms)', 'third-audience' ); ?></span>
+						</div>
+						<div class="ta-cache-tip">
+							<span class="dashicons dashicons-lightbulb"></span>
+							<span>
+								<?php
+								printf(
+									/* translators: %s: link to cache browser */
+									esc_html__( 'Reduce MISS by running %s', 'third-audience' ),
+									'<a href="' . esc_url( admin_url( 'admin.php?page=third-audience-cache-browser' ) ) . '">' . esc_html__( 'Cache Warmup', 'third-audience' ) . '</a>'
+								);
+								?>
+							</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="ta-cache-status-card ta-cache-card-error">
+					<div class="ta-cache-card-icon">
+						<span class="dashicons dashicons-warning"></span>
+					</div>
+					<div class="ta-cache-card-content">
+						<div class="ta-cache-badge ta-cache-failed">FAILED</div>
+						<h4><?php esc_html_e( 'Generation Failed', 'third-audience' ); ?></h4>
+						<p><?php esc_html_e( 'Content conversion failed. Check System Health for issues with the HTML-to-Markdown converter.', 'third-audience' ); ?></p>
+						<div class="ta-cache-performance">
+							<span class="dashicons dashicons-dismiss"></span>
+							<span><?php esc_html_e( 'Error', 'third-audience' ); ?></span>
+						</div>
+						<div class="ta-cache-tip ta-cache-tip-error">
+							<span class="dashicons dashicons-sos"></span>
+							<span>
+								<?php
+								printf(
+									/* translators: %s: link to system health */
+									esc_html__( 'Review %s for errors', 'third-audience' ),
+									'<a href="' . esc_url( admin_url( 'admin.php?page=third-audience-system-health' ) ) . '">' . esc_html__( 'System Health', 'third-audience' ) . '</a>'
+								);
+								?>
+							</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>

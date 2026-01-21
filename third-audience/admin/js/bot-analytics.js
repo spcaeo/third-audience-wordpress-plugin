@@ -16,12 +16,116 @@
 		 * Initialize
 		 */
 		init: function () {
+			// Always initialize toggle and clear button, even if no chart data
+			this.initCacheHelpToggle();
+			this.initClearAllVisits();
+
+			// Only initialize charts if data is available
 			if (typeof taAnalyticsData === 'undefined') {
 				return;
 			}
 
 			this.renderVisitsChart();
 			this.renderBotDistributionChart();
+		},
+
+		/**
+		 * Initialize cache help toggle (modal dialog)
+		 */
+		initCacheHelpToggle: function () {
+			var self = this;
+
+			// Open modal on button click
+			$('.ta-cache-help-toggle').on('click', function(e) {
+				e.preventDefault();
+				self.openCacheGuideModal();
+			});
+
+			// Close modal on close button click
+			$(document).on('click', '.ta-cache-modal-close', function(e) {
+				e.preventDefault();
+				self.closeCacheGuideModal();
+			});
+
+			// Close modal on overlay click
+			$(document).on('click', '.ta-cache-modal-overlay', function(e) {
+				if (e.target === this) {
+					self.closeCacheGuideModal();
+				}
+			});
+
+			// Close modal on Escape key
+			$(document).on('keydown', function(e) {
+				if (e.key === 'Escape' && $('.ta-cache-modal-overlay').is(':visible')) {
+					self.closeCacheGuideModal();
+				}
+			});
+		},
+
+		/**
+		 * Open cache guide modal
+		 */
+		openCacheGuideModal: function() {
+			$('.ta-cache-modal-overlay').fadeIn(200);
+			$('body').addClass('ta-modal-open');
+		},
+
+		/**
+		 * Close cache guide modal
+		 */
+		closeCacheGuideModal: function() {
+			$('.ta-cache-modal-overlay').fadeOut(200);
+			$('body').removeClass('ta-modal-open');
+		},
+
+		/**
+		 * Initialize clear all visits button
+		 */
+		initClearAllVisits: function() {
+			var self = this;
+
+			$('.ta-clear-all-visits').on('click', function(e) {
+				e.preventDefault();
+				self.handleClearAllVisits();
+			});
+		},
+
+		/**
+		 * Handle clear all visits button click
+		 */
+		handleClearAllVisits: function() {
+			var self = this;
+
+			if (!confirm('Are you sure you want to clear all bot visit records? This action cannot be undone.')) {
+				return;
+			}
+
+			var $button = $('.ta-clear-all-visits');
+			var originalText = $button.text();
+			$button.prop('disabled', true).text('Clearing...');
+
+			$.ajax({
+				url: ajaxurl,
+				type: 'POST',
+				data: {
+					action: 'ta_clear_all_visits',
+					nonce: taAnalyticsData ? taAnalyticsData.nonce : ''
+				},
+				success: function(response) {
+					if (response.success) {
+						alert(response.data.message);
+						// Reload the page to show updated data
+						window.location.reload();
+					} else {
+						alert('Error: ' + (response.data.message || 'Failed to clear visits'));
+						$button.prop('disabled', false).text(originalText);
+					}
+				},
+				error: function() {
+					alert('Error: Failed to communicate with server');
+					$button.prop('disabled', false).text(originalText);
+				}
+			});
 		},
 
 		/**
