@@ -232,6 +232,26 @@ class TA_Admin {
 				),
 			) );
 		}
+
+		// Bot Management page.
+		if ( 'bot-analytics_page_third-audience-bot-management' === $hook ) {
+			wp_enqueue_style(
+				'ta-bot-management',
+				TA_PLUGIN_URL . 'admin/css/bot-management.css',
+				array(),
+				TA_VERSION
+			);
+		}
+
+		// System Health page.
+		if ( 'bot-analytics_page_third-audience-system-health' === $hook ) {
+			wp_enqueue_style(
+				'ta-system-health',
+				TA_PLUGIN_URL . 'admin/css/system-health.css',
+				array(),
+				TA_VERSION
+			);
+		}
 	}
 
 	/**

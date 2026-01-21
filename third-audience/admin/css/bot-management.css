@@ -1,0 +1,563 @@
+/**
+ * Bot Management Page - Apple Style
+ *
+ * @package ThirdAudience
+ * @since   2.1.0
+ */
+
+/* ========================================
+   PAGE CONTAINER
+   ======================================== */
+
+.ta-bot-management {
+	margin: 20px 20px 20px 0;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.ta-bot-management .wp-heading-inline {
+	font-size: 28px;
+	font-weight: 600;
+	color: #1d1d1f;
+	letter-spacing: -0.5px;
+	margin-bottom: 8px;
+}
+
+.ta-bot-management .description {
+	font-size: 14px;
+	color: #86868b;
+	margin-bottom: 24px;
+	line-height: 1.5;
+}
+
+/* ========================================
+   CARDS - Apple Style
+   ======================================== */
+
+.ta-card {
+	background: #ffffff;
+	border: none;
+	border-radius: 16px;
+	padding: 32px;
+	margin: 24px 0;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-card:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.ta-card-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: 24px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ta-card-title {
+	font-size: 22px;
+	font-weight: 600;
+	color: #1d1d1f;
+	margin: 0;
+	letter-spacing: -0.5px;
+}
+
+.ta-card-subtitle {
+	font-size: 14px;
+	color: #86868b;
+	margin: 6px 0 0;
+	font-weight: 400;
+	line-height: 1.5;
+}
+
+/* ========================================
+   FORMS - Apple Style
+   ======================================== */
+
+.ta-form-group {
+	margin-bottom: 20px;
+}
+
+.ta-checkbox-label {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	cursor: pointer;
+	padding: 16px;
+	background: #f5f5f7;
+	border-radius: 12px;
+	transition: all 0.2s ease;
+}
+
+.ta-checkbox-label:hover {
+	background: #e5e5ea;
+}
+
+.ta-checkbox-label input[type="checkbox"] {
+	margin: 4px 0 0 0;
+	width: 18px;
+	height: 18px;
+	cursor: pointer;
+}
+
+.ta-checkbox-text {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.ta-checkbox-text strong {
+	font-size: 15px;
+	font-weight: 600;
+	color: #1d1d1f;
+	letter-spacing: -0.2px;
+}
+
+.ta-form-help {
+	font-size: 13px;
+	color: #86868b;
+	line-height: 1.5;
+	font-weight: 400;
+}
+
+.ta-form-input {
+	width: 100%;
+	padding: 10px 14px;
+	font-size: 14px;
+	border: 1px solid #d1d1d6;
+	border-radius: 8px;
+	background: #ffffff;
+	color: #1d1d1f;
+	transition: all 0.2s ease;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.ta-form-input:focus {
+	outline: none;
+	border-color: #007aff;
+	box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.ta-form-input::placeholder {
+	color: #aeaeb2;
+}
+
+/* ========================================
+   TABLES - Apple Style
+   ======================================== */
+
+.ta-table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	background: #ffffff;
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+.ta-table thead th {
+	background: #f5f5f7;
+	padding: 14px 16px;
+	text-align: left;
+	font-size: 12px;
+	font-weight: 600;
+	color: #646970;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.ta-table tbody td {
+	padding: 14px 16px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+	font-size: 14px;
+	color: #1d1d1f;
+	vertical-align: middle;
+}
+
+.ta-table tbody tr:last-child td {
+	border-bottom: none;
+}
+
+.ta-table tbody tr:hover {
+	background: #f9f9f9;
+	transition: background 0.2s ease;
+}
+
+.ta-no-data {
+	text-align: center;
+	padding: 60px 20px !important;
+	color: #8c8f94;
+	font-style: italic;
+	font-size: 14px;
+}
+
+/* ========================================
+   CODE BADGES & INLINE ELEMENTS
+   ======================================== */
+
+.ta-code-badge {
+	display: inline-block;
+	padding: 4px 8px;
+	background: rgba(0, 122, 255, 0.08);
+	color: #007aff;
+	border-radius: 6px;
+	font-size: 12px;
+	font-family: "SF Mono", Monaco, "Cascadia Code", "Courier New", monospace;
+	font-weight: 500;
+	letter-spacing: -0.2px;
+}
+
+.ta-ttl-badge {
+	display: inline-block;
+	padding: 4px 10px;
+	background: rgba(52, 199, 89, 0.08);
+	color: #34c759;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.ta-country-list {
+	font-size: 13px;
+	color: #1d1d1f;
+}
+
+.ta-response-time {
+	font-family: "SF Mono", Monaco, "Courier New", monospace;
+	font-size: 12px;
+	color: #646970;
+	font-weight: 500;
+}
+
+.ta-time-ago {
+	font-size: 13px;
+	color: #86868b;
+}
+
+/* ========================================
+   PRIORITY SELECT - Apple Style
+   ======================================== */
+
+.ta-priority-select {
+	padding: 6px 12px;
+	border-radius: 8px;
+	border: 1px solid #d1d1d6;
+	font-size: 13px;
+	font-weight: 600;
+	min-width: 110px;
+	background: #ffffff;
+	transition: all 0.2s ease;
+	cursor: pointer;
+}
+
+.ta-priority-select:focus {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.ta-priority-select.ta-priority-high {
+	color: #007aff;
+	border-color: rgba(0, 122, 255, 0.3);
+	background: rgba(0, 122, 255, 0.04);
+}
+
+.ta-priority-select.ta-priority-medium {
+	color: #34c759;
+	border-color: rgba(52, 199, 89, 0.3);
+	background: rgba(52, 199, 89, 0.04);
+}
+
+.ta-priority-select.ta-priority-low {
+	color: #ff9500;
+	border-color: rgba(255, 149, 0, 0.3);
+	background: rgba(255, 149, 0, 0.04);
+}
+
+.ta-priority-select.ta-priority-blocked {
+	color: #ff3b30;
+	border-color: rgba(255, 59, 48, 0.3);
+	background: rgba(255, 59, 48, 0.04);
+}
+
+/* ========================================
+   BADGES - Apple Style
+   ======================================== */
+
+.ta-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 5px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	border-radius: 6px;
+	letter-spacing: 0.2px;
+}
+
+.ta-badge-success {
+	background: rgba(52, 199, 89, 0.1);
+	color: #34c759;
+}
+
+.ta-badge-warning {
+	background: rgba(255, 149, 0, 0.1);
+	color: #ff9500;
+}
+
+.ta-badge-error {
+	background: rgba(255, 59, 48, 0.1);
+	color: #ff3b30;
+}
+
+.ta-badge-info {
+	background: rgba(0, 122, 255, 0.1);
+	color: #007aff;
+}
+
+/* ========================================
+   NOTICES - Apple Style
+   ======================================== */
+
+.ta-notice {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 16px 20px;
+	border-radius: 12px;
+	margin: 20px 0;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.ta-notice p {
+	margin: 0;
+}
+
+.ta-notice-success {
+	background: rgba(52, 199, 89, 0.08);
+	color: #1d8b3a;
+}
+
+.ta-notice-success .dashicons {
+	color: #34c759;
+}
+
+.ta-notice-warning {
+	background: rgba(255, 149, 0, 0.08);
+	color: #cc7700;
+}
+
+.ta-notice-warning .dashicons {
+	color: #ff9500;
+}
+
+.ta-notice-error {
+	background: rgba(255, 59, 48, 0.08);
+	color: #d70015;
+}
+
+.ta-notice-error .dashicons {
+	color: #ff3b30;
+}
+
+.ta-notice-info {
+	background: rgba(0, 122, 255, 0.08);
+	color: #0051d5;
+}
+
+.ta-notice-info .dashicons {
+	color: #007aff;
+}
+
+.ta-notice .dashicons {
+	flex-shrink: 0;
+	margin-top: 2px;
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+}
+
+/* ========================================
+   BUTTONS - Apple Style
+   ======================================== */
+
+.ta-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 20px;
+	border-radius: 8px;
+	font-weight: 500;
+	font-size: 14px;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+	letter-spacing: -0.2px;
+	border: none;
+	cursor: pointer;
+}
+
+.button-primary.ta-btn {
+	background: #007aff;
+	color: #ffffff;
+	box-shadow: 0 1px 3px rgba(0, 122, 255, 0.3);
+}
+
+.button-primary.ta-btn:hover,
+.button-primary.ta-btn:focus {
+	background: #0051d5;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+	color: #ffffff;
+}
+
+.button-primary.ta-btn:active {
+	transform: translateY(0);
+	box-shadow: 0 1px 2px rgba(0, 122, 255, 0.3);
+}
+
+.button-secondary.ta-btn {
+	background: #f5f5f7;
+	color: #1d1d1f;
+	border: 1px solid #d1d1d6;
+}
+
+.button-secondary.ta-btn:hover,
+.button-secondary.ta-btn:focus {
+	background: #e5e5ea;
+	border-color: #007aff;
+	transform: translateY(-1px);
+	color: #1d1d1f;
+}
+
+.button-secondary.ta-btn .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+/* ========================================
+   RATE LIMITS TABLE
+   ======================================== */
+
+.ta-rate-limits-table {
+	margin-top: 0;
+}
+
+.ta-rate-limit-input {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.ta-rate-limit-input .ta-form-input {
+	max-width: 150px;
+}
+
+.ta-input-help {
+	font-size: 12px;
+	color: #86868b;
+	font-weight: 400;
+}
+
+/* ========================================
+   CUSTOM BOTS TABLE
+   ======================================== */
+
+.ta-custom-bots-table tbody tr {
+	animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.ta-custom-bots-table .ta-form-input {
+	margin: 0;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.ta-text-gray {
+	color: #86868b;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media screen and (max-width: 1280px) {
+	.ta-table {
+		font-size: 13px;
+	}
+
+	.ta-table thead th,
+	.ta-table tbody td {
+		padding: 12px 14px;
+	}
+}
+
+@media screen and (max-width: 782px) {
+	.ta-bot-management {
+		margin: 10px 10px 10px 0;
+	}
+
+	.ta-card {
+		padding: 20px;
+		border-radius: 12px;
+	}
+
+	.ta-card-header {
+		flex-direction: column;
+		margin-bottom: 20px;
+		padding-bottom: 16px;
+	}
+
+	.ta-card-title {
+		font-size: 20px;
+	}
+
+	.ta-table {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.ta-table thead th,
+	.ta-table tbody td {
+		padding: 10px 12px;
+		font-size: 12px;
+		white-space: nowrap;
+	}
+
+	.ta-priority-select {
+		min-width: 90px;
+		font-size: 12px;
+		padding: 5px 10px;
+	}
+
+	.ta-rate-limit-input .ta-form-input {
+		max-width: 100%;
+	}
+
+	.button.ta-btn {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.ta-checkbox-label {
+		padding: 14px;
+	}
+}

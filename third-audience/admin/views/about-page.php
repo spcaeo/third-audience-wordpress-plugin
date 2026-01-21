@@ -11,12 +11,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 ?>
 
-<div class="wrap">
-	<h1><?php esc_html_e( 'About Third Audience', 'third-audience' ); ?></h1>
+<div class="wrap ta-about-page">
+	<h1 class="wp-heading-inline">
+		<?php esc_html_e( 'About Third Audience', 'third-audience' ); ?>
+		<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
+	</h1>
+
+	<p class="description">
+		<?php esc_html_e( 'AI-optimized content delivery for WordPress. Serving the third audience with lightning-fast, privacy-first Markdown conversion.', 'third-audience' ); ?>
+	</p>
 
 	<div class="ta-about-container">
 		<!-- Hero Section -->
 		<div class="ta-card ta-hero">
+			<div class="ta-hero-icon">
+				<span class="dashicons dashicons-admin-users"></span>
+			</div>
 			<h2><?php esc_html_e( 'Serving the Third Audience', 'third-audience' ); ?></h2>
 			<p class="ta-lead">
 				<?php esc_html_e( 'For two decades, we built websites for two audiences: humans and search engines. Today, there\'s a third audience that\'s rapidly growing: AI agents and crawlers.', 'third-audience' ); ?>
@@ -115,37 +125,59 @@ Accept: text/markdown
 		<div class="ta-card">
 			<h2><?php esc_html_e( 'Key Features', 'third-audience' ); ?></h2>
 
-			<h3>🚀 <?php esc_html_e( 'Lightning Fast Local Conversion', 'third-audience' ); ?></h3>
-			<ul>
-				<li><?php esc_html_e( 'All HTML-to-Markdown conversion happens on your server', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Zero network latency (1-4ms response times)', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'No external API dependencies or API keys required', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Pre-generation option for instant delivery', 'third-audience' ); ?></li>
-			</ul>
+			<div class="ta-features-grid">
+				<div class="ta-feature-item">
+					<div class="ta-feature-icon ta-feature-icon-performance">
+						<span class="dashicons dashicons-performance"></span>
+					</div>
+					<h3><?php esc_html_e( 'Lightning Fast Local Conversion', 'third-audience' ); ?></h3>
+					<ul>
+						<li><?php esc_html_e( 'All HTML-to-Markdown conversion happens on your server', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Zero network latency (1-4ms response times)', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'No external API dependencies or API keys required', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Pre-generation option for instant delivery', 'third-audience' ); ?></li>
+					</ul>
+				</div>
 
-			<h3>🤖 <?php esc_html_e( 'Comprehensive Bot Detection & Analytics', 'third-audience' ); ?></h3>
-			<ul>
-				<li><?php esc_html_e( 'Tracks visits from Claude, ChatGPT, Perplexity, Google Gemini, and more', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Real-time analytics dashboard showing bot behavior', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Bot blocking capabilities with granular control', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'IP address and country tracking', 'third-audience' ); ?></li>
-			</ul>
+				<div class="ta-feature-item">
+					<div class="ta-feature-icon ta-feature-icon-bot">
+						<span class="dashicons dashicons-admin-users"></span>
+					</div>
+					<h3><?php esc_html_e( 'Comprehensive Bot Detection & Analytics', 'third-audience' ); ?></h3>
+					<ul>
+						<li><?php esc_html_e( 'Tracks visits from Claude, ChatGPT, Perplexity, Google Gemini, and more', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Real-time analytics dashboard showing bot behavior', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Bot blocking capabilities with granular control', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'IP address and country tracking', 'third-audience' ); ?></li>
+					</ul>
+				</div>
 
-			<h3>🔒 <?php esc_html_e( 'Privacy-First Architecture', 'third-audience' ); ?></h3>
-			<ul>
-				<li><?php esc_html_e( 'Your content never leaves your server', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'No data sent to external services', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Self-contained PHP-based conversion', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Enterprise-grade for deployment at scale', 'third-audience' ); ?></li>
-			</ul>
+				<div class="ta-feature-item">
+					<div class="ta-feature-icon ta-feature-icon-privacy">
+						<span class="dashicons dashicons-lock"></span>
+					</div>
+					<h3><?php esc_html_e( 'Privacy-First Architecture', 'third-audience' ); ?></h3>
+					<ul>
+						<li><?php esc_html_e( 'Your content never leaves your server', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'No data sent to external services', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Self-contained PHP-based conversion', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Enterprise-grade for deployment at scale', 'third-audience' ); ?></li>
+					</ul>
+				</div>
 
-			<h3>🎯 <?php esc_html_e( 'Enterprise-Grade Health Monitoring', 'third-audience' ); ?></h3>
-			<ul>
-				<li><?php esc_html_e( 'Real-time system health checks', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Automatic library detection', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'User-friendly error messages for non-technical users', 'third-audience' ); ?></li>
-				<li><?php esc_html_e( 'Comprehensive troubleshooting guides', 'third-audience' ); ?></li>
-			</ul>
+				<div class="ta-feature-item">
+					<div class="ta-feature-icon ta-feature-icon-health">
+						<span class="dashicons dashicons-heart"></span>
+					</div>
+					<h3><?php esc_html_e( 'Enterprise-Grade Health Monitoring', 'third-audience' ); ?></h3>
+					<ul>
+						<li><?php esc_html_e( 'Real-time system health checks', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Automatic library detection', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'User-friendly error messages for non-technical users', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Comprehensive troubleshooting guides', 'third-audience' ); ?></li>
+					</ul>
+				</div>
+			</div>
 		</div>
 
 		<!-- Technical Architecture -->
@@ -201,16 +233,21 @@ Accept: text/markdown
 
 		<!-- Credits -->
 		<div class="ta-card ta-credits">
+			<div class="ta-credits-icon">
+				<span class="dashicons dashicons-heart"></span>
+			</div>
 			<h2><?php esc_html_e( 'Credits', 'third-audience' ); ?></h2>
-			<p>
-				<strong><?php esc_html_e( 'Developed by:', 'third-audience' ); ?></strong>
-				<a href="https://labsmedia.com" target="_blank" rel="noopener"><?php esc_html_e( 'Labs Media', 'third-audience' ); ?></a>
-			</p>
-			<p>
-				<strong><?php esc_html_e( 'Inspired by:', 'third-audience' ); ?></strong>
-				<a href="https://dri.es/the-third-audience" target="_blank" rel="noopener"><?php esc_html_e( 'Dries Buytaert\'s article "The Third Audience"', 'third-audience' ); ?></a>
-			</p>
-			<p>
+			<div class="ta-credits-grid">
+				<div class="ta-credit-item">
+					<h3><?php esc_html_e( 'Developed by', 'third-audience' ); ?></h3>
+					<a href="https://labsmedia.com" target="_blank" rel="noopener"><?php esc_html_e( 'Labs Media', 'third-audience' ); ?></a>
+				</div>
+				<div class="ta-credit-item">
+					<h3><?php esc_html_e( 'Inspired by', 'third-audience' ); ?></h3>
+					<a href="https://dri.es/the-third-audience" target="_blank" rel="noopener"><?php esc_html_e( 'Dries Buytaert\'s article "The Third Audience"', 'third-audience' ); ?></a>
+				</div>
+			</div>
+			<p class="ta-credits-message">
 				<?php esc_html_e( 'This plugin was created to make the "third audience" concept accessible to all WordPress users. Special thanks to Dries for introducing this important shift in how we think about web content optimization.', 'third-audience' ); ?>
 			</p>
 		</div>
@@ -292,252 +329,507 @@ Accept: text/markdown
 		</div>
 
 		<!-- Links -->
-		<div class="ta-card">
+		<div class="ta-card ta-quick-links">
 			<h2><?php esc_html_e( 'Quick Links', 'third-audience' ); ?></h2>
-			<p>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-bot-analytics' ) ); ?>" class="button button-primary">
-					<?php esc_html_e( 'View Bot Analytics', 'third-audience' ); ?>
+			<div class="ta-links-grid">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-bot-analytics' ) ); ?>" class="ta-link-card">
+					<div class="ta-link-icon" style="background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);">
+						<span class="dashicons dashicons-chart-bar"></span>
+					</div>
+					<div class="ta-link-content">
+						<strong><?php esc_html_e( 'Bot Analytics', 'third-audience' ); ?></strong>
+						<span><?php esc_html_e( 'View bot visits and statistics', 'third-audience' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2"></span>
 				</a>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-system-health' ) ); ?>" class="button">
-					<?php esc_html_e( 'System Health', 'third-audience' ); ?>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-system-health' ) ); ?>" class="ta-link-card">
+					<div class="ta-link-icon" style="background: linear-gradient(135deg, #34c759 0%, #30a14e 100%);">
+						<span class="dashicons dashicons-heart"></span>
+					</div>
+					<div class="ta-link-content">
+						<strong><?php esc_html_e( 'System Health', 'third-audience' ); ?></strong>
+						<span><?php esc_html_e( 'Check plugin health status', 'third-audience' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2"></span>
 				</a>
-				<a href="<?php echo esc_url( admin_url( 'options-general.php?page=third-audience' ) ); ?>" class="button">
-					<?php esc_html_e( 'Settings', 'third-audience' ); ?>
+				<a href="<?php echo esc_url( admin_url( 'options-general.php?page=third-audience' ) ); ?>" class="ta-link-card">
+					<div class="ta-link-icon" style="background: linear-gradient(135deg, #5856d6 0%, #5e5ce6 100%);">
+						<span class="dashicons dashicons-admin-settings"></span>
+					</div>
+					<div class="ta-link-content">
+						<strong><?php esc_html_e( 'Settings', 'third-audience' ); ?></strong>
+						<span><?php esc_html_e( 'Configure plugin options', 'third-audience' ); ?></span>
+					</div>
+					<span class="dashicons dashicons-arrow-right-alt2"></span>
 				</a>
-			</p>
+			</div>
 		</div>
 	</div>
 </div>
 
 <style>
-.ta-about-container {
-	max-width: 1200px;
-	margin: 20px 0;
+/* Apple-Style About Page - Matching Bot Analytics Design */
+
+/* Container */
+.ta-about-page {
+	margin: 20px 20px 20px 0;
 }
 
+.ta-about-page .wp-heading-inline {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.ta-about-page .description {
+	margin-top: 8px;
+	font-size: 14px;
+	color: #86868b;
+	line-height: 1.5;
+}
+
+.ta-about-container {
+	max-width: 1200px;
+	margin: 24px 0;
+}
+
+/* Card Base - Apple Style */
 .ta-card {
-	background: #fff;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-	padding: 30px 40px;
-	margin-bottom: 24px;
-	box-shadow: 0 1px 3px rgba(0,0,0,.08);
-	transition: transform 0.15s ease, box-shadow 0.15s ease;
+	background: #ffffff;
+	border: none;
+	border-radius: 16px;
+	padding: 32px 36px;
+	margin-bottom: 20px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ta-card:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(0,0,0,.12);
+	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+	transform: translateY(-2px);
 }
 
+/* Hero Section - Apple Style */
 .ta-hero {
-	background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
-	color: #1e293b;
-	border: 1px solid #cbd5e1;
-	border-left: 6px solid #3b82f6;
-	padding: 50px 40px;
+	background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
+	border: none;
+	padding: 48px 40px;
 	position: relative;
 	overflow: hidden;
+	text-align: center;
 }
 
-.ta-hero::before {
-	content: '';
-	position: absolute;
-	top: -50px;
-	right: -50px;
-	width: 200px;
-	height: 200px;
-	background: radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%);
-	border-radius: 50%;
+.ta-hero-icon {
+	display: inline-flex;
+	width: 64px;
+	height: 64px;
+	background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
+	border-radius: 16px;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 20px;
+}
+
+.ta-hero-icon .dashicons {
+	color: #fff;
+	font-size: 36px;
+	width: 36px;
+	height: 36px;
 }
 
 .ta-hero h2 {
-	color: #1e40af;
-	margin-top: 0;
-	font-size: 2.2em;
-	font-weight: 700;
+	margin: 0 0 16px 0;
+	font-size: 32px;
+	font-weight: 600;
+	color: #1d1d1f;
 	letter-spacing: -0.5px;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
 }
 
 .ta-lead {
-	font-size: 1.25em;
-	line-height: 1.7;
-	margin-bottom: 20px;
+	font-size: 18px;
+	line-height: 1.6;
+	margin-bottom: 16px;
 	font-weight: 500;
-	color: #334155;
+	color: #1d1d1f;
 }
 
+.ta-hero p {
+	color: #86868b;
+	line-height: 1.6;
+	font-size: 15px;
+	margin: 12px auto;
+	max-width: 900px;
+}
+
+/* Typography - Apple SF Pro Style */
 .ta-card h2 {
-	margin-top: 0;
-	font-size: 1.6em;
-	font-weight: 700;
-	color: #0f172a;
-	border-bottom: 3px solid #3b82f6;
-	padding-bottom: 12px;
-	letter-spacing: -0.3px;
+	margin: 0 0 24px 0;
+	font-size: 22px;
+	font-weight: 600;
+	color: #1d1d1f;
+	letter-spacing: -0.4px;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+	padding-bottom: 16px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .ta-card h3 {
-	margin-top: 24px;
-	margin-bottom: 12px;
-	font-size: 1.15em;
+	margin: 20px 0 12px 0;
+	font-size: 17px;
 	font-weight: 600;
-	color: #0f172a;
-	display: flex;
-	align-items: center;
-	gap: 8px;
+	color: #1d1d1f;
+	letter-spacing: -0.3px;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.ta-card p {
+	color: #86868b;
+	line-height: 1.6;
+	font-size: 15px;
+	margin: 12px 0;
 }
 
 .ta-card ul,
 .ta-card ol {
-	margin-left: 24px;
-	line-height: 1.9;
+	margin: 12px 0 12px 24px;
+	line-height: 1.7;
 }
 
 .ta-card li {
-	margin-bottom: 10px;
-	color: #475569;
-}
-
-.ta-card p {
-	color: #475569;
-	line-height: 1.8;
+	margin-bottom: 8px;
+	color: #86868b;
+	font-size: 14px;
 }
 
 .ta-card pre {
-	background: #f1f5f9 !important;
-	border: 1px solid #cbd5e1 !important;
-	border-left: 4px solid #3b82f6 !important;
+	background: #f5f5f7 !important;
+	border: 1px solid rgba(0, 0, 0, 0.08) !important;
 	padding: 20px !important;
-	border-radius: 6px !important;
-	font-size: 0.9em;
+	border-radius: 12px !important;
+	font-size: 13px;
 	line-height: 1.6;
-	color: #1e293b !important;
+	color: #1d1d1f !important;
+	font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+	overflow-x: auto;
 }
 
 .ta-card code {
-	color: #0f172a;
-	background: #f1f5f9;
-	padding: 2px 6px;
-	border-radius: 3px;
+	color: #1d1d1f;
+	background: #f5f5f7;
+	padding: 3px 6px;
+	border-radius: 5px;
 	font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-	font-size: 0.9em;
+	font-size: 13px;
 }
 
+/* Features Grid - Apple Style */
+.ta-features-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 20px;
+	margin-top: 24px;
+}
+
+.ta-feature-item {
+	background: #f5f5f7;
+	border-radius: 12px;
+	padding: 24px;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-feature-item:hover {
+	background: #ffffff;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.ta-feature-icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 16px;
+}
+
+.ta-feature-icon .dashicons {
+	color: #fff;
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+}
+
+.ta-feature-icon-performance {
+	background: linear-gradient(135deg, #ff9500 0%, #ff6b00 100%);
+}
+
+.ta-feature-icon-bot {
+	background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
+}
+
+.ta-feature-icon-privacy {
+	background: linear-gradient(135deg, #34c759 0%, #30a14e 100%);
+}
+
+.ta-feature-icon-health {
+	background: linear-gradient(135deg, #ff3b30 0%, #d70015 100%);
+}
+
+.ta-feature-item h3 {
+	margin: 0 0 12px 0;
+	font-size: 16px;
+}
+
+.ta-feature-item ul {
+	margin-left: 20px;
+}
+
+/* Credits Section - Apple Style */
 .ta-credits {
-	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-	border-left: 4px solid #3b82f6;
-	border-radius: 8px;
+	background: #f5f5f7;
+	text-align: center;
+	position: relative;
 }
 
-.ta-credits p {
-	margin: 12px 0;
-	color: #475569;
+.ta-credits-icon {
+	width: 56px;
+	height: 56px;
+	background: linear-gradient(135deg, #ff3b30 0%, #d70015 100%);
+	border-radius: 14px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 20px;
 }
 
-.ta-credits a {
-	color: #2563eb;
-	text-decoration: none;
-	font-weight: 600;
-	transition: color 0.2s ease;
+.ta-credits-icon .dashicons {
+	color: #fff;
+	font-size: 32px;
+	width: 32px;
+	height: 32px;
 }
 
-.ta-credits a:hover {
-	color: #1d4ed8;
-	text-decoration: underline;
-}
-
-.ta-version-entry {
-	border-left: 4px solid #3b82f6;
-	padding-left: 24px;
+.ta-credits-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 24px;
 	margin: 24px 0;
-	transition: border-color 0.2s ease;
+}
+
+.ta-credit-item h3 {
+	font-size: 14px;
+	color: #86868b;
+	margin: 0 0 8px 0;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	font-weight: 500;
+}
+
+.ta-credit-item a {
+	color: #007aff;
+	text-decoration: none;
+	font-size: 17px;
+	font-weight: 600;
+	transition: opacity 0.2s;
+}
+
+.ta-credit-item a:hover {
+	opacity: 0.7;
+}
+
+.ta-credits-message {
+	color: #86868b !important;
+	font-size: 14px !important;
+	line-height: 1.6 !important;
+	margin-top: 20px !important;
+}
+
+/* Quick Links - Apple Style */
+.ta-quick-links {
+	background: #ffffff;
+}
+
+.ta-links-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 16px;
+	margin-top: 20px;
+}
+
+.ta-link-card {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 20px;
+	background: #f5f5f7;
+	border-radius: 12px;
+	text-decoration: none;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-link-card:hover {
+	background: #ffffff;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.ta-link-icon {
+	width: 48px;
+	height: 48px;
+	border-radius: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.ta-link-icon .dashicons {
+	color: #fff;
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+}
+
+.ta-link-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.ta-link-content strong {
+	font-size: 16px;
+	font-weight: 600;
+	color: #1d1d1f;
+	letter-spacing: -0.2px;
+}
+
+.ta-link-content span {
+	font-size: 13px;
+	color: #86868b;
+	font-weight: 400;
+}
+
+.ta-link-card .dashicons-arrow-right-alt2 {
+	color: #86868b;
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+	flex-shrink: 0;
+	transition: transform 0.2s;
+}
+
+.ta-link-card:hover .dashicons-arrow-right-alt2 {
+	transform: translateX(4px);
+}
+
+/* Version History */
+.ta-version-entry {
+	border-left: 4px solid #007aff;
+	padding-left: 20px;
+	margin: 20px 0;
+	transition: all 0.2s;
 }
 
 .ta-version-entry:hover {
-	border-left-color: #2563eb;
+	border-left-color: #0051d5;
 }
 
 .ta-version-entry h3 {
 	margin: 0 0 12px 0;
-	color: #1e40af;
+	color: #1d1d1f;
+	font-size: 18px;
 	font-weight: 600;
+}
+
+.ta-version-entry h3 span {
+	font-size: 14px;
+	color: #86868b;
+	font-weight: 400;
+}
+
+.ta-version-entry p strong {
+	color: #1d1d1f;
 }
 
 .ta-version-entry ul {
 	margin-top: 8px;
 }
 
+/* Buttons - Apple Style */
 .button-primary {
-	background: #3b82f6 !important;
-	border-color: #3b82f6 !important;
-	text-shadow: none !important;
-	box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2) !important;
+	background: #007aff !important;
+	border: none !important;
+	border-radius: 8px !important;
+	box-shadow: 0 2px 4px rgba(0, 122, 255, 0.3) !important;
 	font-weight: 500 !important;
-	padding: 8px 20px !important;
-	transition: all 0.2s ease !important;
+	padding: 10px 20px !important;
+	height: auto !important;
+	line-height: 1.4 !important;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .button-primary:hover {
-	background: #2563eb !important;
-	border-color: #2563eb !important;
-	box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3) !important;
+	background: #0051d5 !important;
+	box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4) !important;
 	transform: translateY(-1px);
 }
 
 .button-secondary {
-	border-color: #cbd5e1 !important;
-	color: #475569 !important;
-	transition: all 0.2s ease !important;
+	border: 1px solid #d1d1d6 !important;
+	border-radius: 8px !important;
+	color: #1d1d1f !important;
+	background: #ffffff !important;
+	font-weight: 500 !important;
+	padding: 10px 20px !important;
+	height: auto !important;
+	line-height: 1.4 !important;
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .button-secondary:hover {
-	border-color: #94a3b8 !important;
-	color: #1e293b !important;
+	background: #f5f5f7 !important;
+	border-color: #007aff !important;
+	transform: translateY(-1px);
 }
 
-/* Icon badges for features */
-.ta-card h3::before {
-	content: attr(data-icon);
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: 28px;
-	height: 28px;
-	background: #eff6ff;
-	border-radius: 6px;
-	font-size: 16px;
-}
-
-/* Smooth scroll */
-html {
-	scroll-behavior: smooth;
-}
-
-/* Technical flow diagram enhancement */
+/* Technical flow diagram */
 .ta-card div[style*="font-family: monospace"] {
-	background: #f8fafc;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
+	background: #f5f5f7 !important;
+	border: 1px solid rgba(0, 0, 0, 0.08) !important;
+	border-radius: 12px !important;
 	font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
 }
 
-/* Responsive design */
+/* Responsive Design */
 @media (max-width: 782px) {
 	.ta-card {
-		padding: 20px 24px;
+		padding: 24px 20px;
+		border-radius: 12px;
 	}
 
 	.ta-hero {
-		padding: 30px 24px;
+		padding: 32px 20px;
 	}
 
 	.ta-hero h2 {
-		font-size: 1.8em;
+		font-size: 26px;
 	}
 
 	.ta-lead {
-		font-size: 1.1em;
+		font-size: 16px;
+	}
+
+	.ta-features-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.ta-links-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.ta-credits-grid {
+		grid-template-columns: 1fr;
 	}
 }
 </style>
