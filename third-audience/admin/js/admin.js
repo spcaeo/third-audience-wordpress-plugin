@@ -23,6 +23,7 @@
 		init: function() {
 			this.bindEvents();
 			this.setupPasswordToggle();
+			this.setupHomepagePatternToggle();
 		},
 
 		/**
@@ -67,6 +68,30 @@
 					}
 				});
 			});
+		},
+
+		/**
+		 * Setup homepage pattern dropdown toggle for custom input.
+		 */
+		setupHomepagePatternToggle: function() {
+			var $select = $('#ta_homepage_md_pattern');
+			var $customInput = $('#ta_homepage_md_pattern_custom');
+
+			if ($select.length && $customInput.length) {
+				// Handle dropdown change
+				$select.on('change', function() {
+					if ($(this).val() === 'custom') {
+						$customInput.show().focus();
+					} else {
+						$customInput.hide();
+					}
+				});
+
+				// Trigger on page load if custom is selected
+				if ($select.val() === 'custom') {
+					$customInput.show();
+				}
+			}
 		},
 
 		/**

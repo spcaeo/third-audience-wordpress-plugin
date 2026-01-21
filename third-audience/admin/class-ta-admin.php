@@ -246,6 +246,19 @@ class TA_Admin {
 			'sanitize_callback' => 'rest_sanitize_boolean',
 			'default'           => true,
 		) );
+
+		// Homepage markdown pattern.
+		register_setting( 'ta_settings', 'ta_homepage_md_pattern', array(
+			'type'              => 'string',
+			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
+			'default'           => 'index.md',
+		) );
+
+		register_setting( 'ta_settings', 'ta_homepage_md_pattern_custom', array(
+			'type'              => 'string',
+			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
+			'default'           => '',
+		) );
 	}
 
 	/**
