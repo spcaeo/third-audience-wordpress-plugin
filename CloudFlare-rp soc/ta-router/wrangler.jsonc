@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ta-router",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "2ae5520e1d676b54e0fa598f4940dc9f",
+
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "bfb19ab9639a4bf6957ab69d9c3a3f54"
+    }
+  ],
+
+  "vars": {
+    "ENVIRONMENT": "production"
+  }
+}

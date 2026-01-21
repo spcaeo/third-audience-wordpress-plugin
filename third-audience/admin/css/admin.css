@@ -1,0 +1,234 @@
+/**
+ * Third Audience Admin Styles
+ *
+ * Additional styles for the admin interface.
+ * Main styles are inline in settings-page.php for simplicity.
+ *
+ * @package ThirdAudience
+ * @since   1.1.0
+ */
+
+/* Loading States */
+.ta-loading {
+	position: relative;
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+.ta-loading::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 20px;
+	height: 20px;
+	margin: -10px 0 0 -10px;
+	border: 2px solid #f3f3f3;
+	border-top: 2px solid #0073aa;
+	border-radius: 50%;
+	animation: ta-spin 1s linear infinite;
+}
+
+@keyframes ta-spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* Button States */
+.button.ta-btn-loading {
+	position: relative;
+	color: transparent !important;
+}
+
+.button.ta-btn-loading::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 14px;
+	height: 14px;
+	margin: -7px 0 0 -7px;
+	border: 2px solid rgba(0, 0, 0, 0.2);
+	border-top-color: #444;
+	border-radius: 50%;
+	animation: ta-spin 0.6s linear infinite;
+}
+
+/* Toast Notifications */
+.ta-toast {
+	position: fixed;
+	bottom: 30px;
+	right: 30px;
+	padding: 12px 24px;
+	background: #1d2327;
+	color: #fff;
+	border-radius: 4px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	z-index: 100000;
+	opacity: 0;
+	transform: translateY(20px);
+	transition: opacity 0.3s, transform 0.3s;
+}
+
+.ta-toast.ta-toast-visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.ta-toast.ta-toast-success {
+	background: #00a32a;
+}
+
+.ta-toast.ta-toast-error {
+	background: #d63638;
+}
+
+/* Password Toggle */
+.ta-password-field {
+	position: relative;
+	display: inline-block;
+}
+
+.ta-password-toggle {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	transform: translateY(-50%);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	color: #666;
+}
+
+.ta-password-toggle:hover {
+	color: #0073aa;
+}
+
+/* Collapsible Sections */
+.ta-collapsible-header {
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.ta-collapsible-header::after {
+	content: '\f140';
+	font-family: dashicons;
+	transition: transform 0.2s;
+}
+
+.ta-collapsible.ta-collapsed .ta-collapsible-header::after {
+	transform: rotate(-90deg);
+}
+
+.ta-collapsible.ta-collapsed .ta-collapsible-content {
+	display: none;
+}
+
+/* Improved Table Styles */
+.ta-errors-table tbody tr:hover {
+	background-color: #f6f7f7;
+}
+
+.ta-errors-table .alternate {
+	background-color: #fff;
+}
+
+/* Animation for new items */
+@keyframes ta-highlight {
+	0% { background-color: #fff3cd; }
+	100% { background-color: transparent; }
+}
+
+.ta-new-item {
+	animation: ta-highlight 2s ease-out;
+}
+
+/* Tooltip Styles */
+.ta-tooltip {
+	position: relative;
+	display: inline-block;
+}
+
+.ta-tooltip .ta-tooltip-text {
+	visibility: hidden;
+	width: 200px;
+	background-color: #1d2327;
+	color: #fff;
+	text-align: center;
+	border-radius: 4px;
+	padding: 8px;
+	position: absolute;
+	z-index: 1;
+	bottom: 125%;
+	left: 50%;
+	margin-left: -100px;
+	opacity: 0;
+	transition: opacity 0.3s;
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.ta-tooltip .ta-tooltip-text::after {
+	content: '';
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	margin-left: -5px;
+	border-width: 5px;
+	border-style: solid;
+	border-color: #1d2327 transparent transparent transparent;
+}
+
+.ta-tooltip:hover .ta-tooltip-text {
+	visibility: visible;
+	opacity: 1;
+}
+
+/* Progress Bar */
+.ta-progress {
+	width: 100%;
+	height: 4px;
+	background: #e0e0e0;
+	border-radius: 2px;
+	overflow: hidden;
+	margin: 10px 0;
+}
+
+.ta-progress-bar {
+	height: 100%;
+	background: #0073aa;
+	transition: width 0.3s;
+}
+
+/* Accessibility Improvements */
+.ta-card:focus-within {
+	box-shadow: 0 0 0 2px #0073aa;
+}
+
+.ta-checkbox-label input:focus {
+	box-shadow: 0 0 0 2px #0073aa;
+	outline: none;
+}
+
+/* Dark Mode Support (if WordPress admin dark mode is enabled) */
+@media (prefers-color-scheme: dark) {
+	body.admin-color-modern .ta-card {
+		background: #23282d;
+		border-color: #3c4043;
+	}
+
+	body.admin-color-modern .ta-card h2 {
+		border-bottom-color: #3c4043;
+	}
+
+	body.admin-color-modern .ta-stat {
+		background: #32373c;
+	}
+
+	body.admin-color-modern .ta-url-display {
+		background: #32373c;
+	}
+}

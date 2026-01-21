@@ -1,0 +1,648 @@
+/**
+ * Third Audience Admin Styles - Enterprise Edition
+ *
+ * Comprehensive admin interface styles with dark mode support,
+ * animations, and accessibility improvements.
+ *
+ * @package ThirdAudience
+ * @since   1.2.0
+ */
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.ta-loading {
+	position: relative;
+	pointer-events: none;
+	opacity: 0.7;
+}
+
+.ta-loading::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 20px;
+	height: 20px;
+	margin: -10px 0 0 -10px;
+	border: 2px solid #f3f3f3;
+	border-top: 2px solid #0073aa;
+	border-radius: 50%;
+	animation: ta-spin 1s linear infinite;
+}
+
+@keyframes ta-spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Button States
+   ========================================================================== */
+
+.button.ta-btn-loading {
+	position: relative;
+	color: transparent !important;
+}
+
+.button.ta-btn-loading::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 14px;
+	height: 14px;
+	margin: -7px 0 0 -7px;
+	border: 2px solid rgba(0, 0, 0, 0.2);
+	border-top-color: #444;
+	border-radius: 50%;
+	animation: ta-spin 0.6s linear infinite;
+}
+
+.ta-button-group {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.ta-button-group .button {
+	margin: 0;
+}
+
+/* ==========================================================================
+   Toast Notifications
+   ========================================================================== */
+
+.ta-toast {
+	position: fixed;
+	bottom: 30px;
+	right: 30px;
+	padding: 12px 24px;
+	background: #1d2327;
+	color: #fff;
+	border-radius: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	z-index: 100000;
+	opacity: 0;
+	transform: translateY(20px);
+	transition: opacity 0.3s, transform 0.3s;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	max-width: 400px;
+}
+
+.ta-toast.ta-toast-visible {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.ta-toast.ta-toast-success {
+	background: #00a32a;
+}
+
+.ta-toast.ta-toast-error {
+	background: #d63638;
+}
+
+.ta-toast.ta-toast-info {
+	background: #0073aa;
+}
+
+.ta-toast .dashicons {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+.ta-toast-message {
+	flex: 1;
+}
+
+/* ==========================================================================
+   Password Toggle
+   ========================================================================== */
+
+.ta-password-field {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+}
+
+.ta-password-field input {
+	padding-right: 40px !important;
+}
+
+.ta-password-toggle {
+	position: absolute;
+	right: 8px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 4px;
+	color: #666;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ta-password-toggle:hover {
+	color: #0073aa;
+}
+
+.ta-password-toggle:focus {
+	outline: 2px solid #0073aa;
+	outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Form Validation
+   ========================================================================== */
+
+.ta-field-error {
+	border-color: #d63638 !important;
+	box-shadow: 0 0 0 1px #d63638 !important;
+}
+
+.ta-field-feedback {
+	display: block;
+	font-size: 12px;
+	margin-top: 4px;
+}
+
+.ta-feedback-error {
+	color: #d63638;
+}
+
+.ta-form-dirty .submit input[type="submit"]::after {
+	content: ' *';
+}
+
+/* ==========================================================================
+   Health Indicator
+   ========================================================================== */
+
+.ta-health-indicator {
+	display: inline-block;
+	padding: 4px 12px;
+	border-radius: 12px;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	margin-left: 10px;
+	vertical-align: middle;
+}
+
+.ta-health-healthy {
+	background: #d4edda;
+	color: #155724;
+}
+
+.ta-health-degraded {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.ta-health-unhealthy {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+.ta-health-unknown {
+	background: #e2e3e5;
+	color: #6c757d;
+}
+
+/* ==========================================================================
+   Modal Dialog
+   ========================================================================== */
+
+.ta-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 100001;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	animation: ta-fade-in 0.2s ease;
+}
+
+@keyframes ta-fade-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+.ta-modal-content {
+	background: #fff;
+	border-radius: 8px;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+	max-width: 700px;
+	width: 100%;
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+	animation: ta-slide-up 0.3s ease;
+}
+
+@keyframes ta-slide-up {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.ta-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 20px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+.ta-modal-header h3 {
+	margin: 0;
+	font-size: 16px;
+}
+
+.ta-modal-close {
+	background: none;
+	border: none;
+	font-size: 24px;
+	cursor: pointer;
+	color: #666;
+	padding: 0;
+	line-height: 1;
+}
+
+.ta-modal-close:hover {
+	color: #d63638;
+}
+
+.ta-modal-body {
+	padding: 20px;
+	overflow-y: auto;
+	flex: 1;
+}
+
+.ta-modal-body pre {
+	background: #f6f7f7;
+	padding: 15px;
+	border-radius: 4px;
+	font-size: 12px;
+	overflow-x: auto;
+	margin: 0;
+}
+
+.ta-modal-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	padding: 16px 20px;
+	border-top: 1px solid #e0e0e0;
+}
+
+/* ==========================================================================
+   Bulk Operations
+   ========================================================================== */
+
+.ta-bulk-operations {
+	margin-top: 20px;
+}
+
+.ta-bulk-operations p {
+	color: #666;
+	margin-top: 0;
+}
+
+/* ==========================================================================
+   Collapsible Sections
+   ========================================================================== */
+
+.ta-collapsible-header {
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	user-select: none;
+}
+
+.ta-collapsible-header::after {
+	content: '\f140';
+	font-family: dashicons;
+	transition: transform 0.2s;
+}
+
+.ta-collapsible.ta-collapsed .ta-collapsible-header::after {
+	transform: rotate(-90deg);
+}
+
+.ta-collapsible.ta-collapsed .ta-collapsible-content {
+	display: none;
+}
+
+/* ==========================================================================
+   Table Styles
+   ========================================================================== */
+
+.ta-errors-table tbody tr:hover {
+	background-color: #f6f7f7;
+}
+
+.ta-errors-table .alternate {
+	background-color: #fff;
+}
+
+.ta-errors-table td {
+	vertical-align: top;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes ta-highlight {
+	0% { background-color: #fff3cd; }
+	100% { background-color: transparent; }
+}
+
+.ta-new-item {
+	animation: ta-highlight 2s ease-out;
+}
+
+@keyframes ta-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.6; }
+}
+
+.ta-processing {
+	animation: ta-pulse 1.5s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   Tooltip Styles
+   ========================================================================== */
+
+.ta-tooltip {
+	position: relative;
+	display: inline-block;
+}
+
+.ta-tooltip .ta-tooltip-text {
+	visibility: hidden;
+	width: 200px;
+	background-color: #1d2327;
+	color: #fff;
+	text-align: center;
+	border-radius: 4px;
+	padding: 8px;
+	position: absolute;
+	z-index: 1;
+	bottom: 125%;
+	left: 50%;
+	margin-left: -100px;
+	opacity: 0;
+	transition: opacity 0.3s;
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.ta-tooltip .ta-tooltip-text::after {
+	content: '';
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	margin-left: -5px;
+	border-width: 5px;
+	border-style: solid;
+	border-color: #1d2327 transparent transparent transparent;
+}
+
+.ta-tooltip:hover .ta-tooltip-text {
+	visibility: visible;
+	opacity: 1;
+}
+
+/* ==========================================================================
+   Progress Bar
+   ========================================================================== */
+
+.ta-progress {
+	width: 100%;
+	height: 4px;
+	background: #e0e0e0;
+	border-radius: 2px;
+	overflow: hidden;
+	margin: 10px 0;
+}
+
+.ta-progress-bar {
+	height: 100%;
+	background: linear-gradient(90deg, #0073aa, #00a0d2);
+	transition: width 0.3s ease;
+}
+
+.ta-progress-indeterminate .ta-progress-bar {
+	width: 30%;
+	animation: ta-progress-slide 1.5s infinite;
+}
+
+@keyframes ta-progress-slide {
+	0% { transform: translateX(-100%); }
+	100% { transform: translateX(400%); }
+}
+
+/* ==========================================================================
+   Status Badges
+   ========================================================================== */
+
+.ta-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+}
+
+.ta-badge-success {
+	background: #d4edda;
+	color: #155724;
+}
+
+.ta-badge-warning {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.ta-badge-error {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+.ta-badge-info {
+	background: #d1ecf1;
+	color: #0c5460;
+}
+
+/* ==========================================================================
+   Accessibility Improvements
+   ========================================================================== */
+
+.ta-card:focus-within {
+	box-shadow: 0 0 0 2px #0073aa;
+}
+
+.ta-checkbox-label input:focus {
+	box-shadow: 0 0 0 2px #0073aa;
+	outline: none;
+}
+
+/* Skip link for keyboard navigation */
+.ta-skip-link {
+	position: absolute;
+	top: -40px;
+	left: 0;
+	background: #0073aa;
+	color: #fff;
+	padding: 8px;
+	z-index: 100000;
+}
+
+.ta-skip-link:focus {
+	top: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+	.ta-card {
+		border-width: 2px;
+	}
+
+	.ta-status-badge,
+	.ta-badge {
+		border: 1px solid currentColor;
+	}
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media screen and (max-width: 782px) {
+	.ta-toast {
+		left: 20px;
+		right: 20px;
+		bottom: 20px;
+		max-width: none;
+	}
+
+	.ta-modal {
+		padding: 10px;
+	}
+
+	.ta-modal-content {
+		max-height: 90vh;
+	}
+
+	.ta-button-group {
+		flex-direction: column;
+	}
+
+	.ta-button-group .button {
+		width: 100%;
+		text-align: center;
+	}
+}
+
+/* ==========================================================================
+   Dark Mode Support
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+	body.admin-color-modern .ta-card {
+		background: #23282d;
+		border-color: #3c4043;
+	}
+
+	body.admin-color-modern .ta-card h2 {
+		border-bottom-color: #3c4043;
+		color: #f0f0f1;
+	}
+
+	body.admin-color-modern .ta-stat {
+		background: #32373c;
+	}
+
+	body.admin-color-modern .ta-stat-value {
+		color: #f0f0f1;
+	}
+
+	body.admin-color-modern .ta-url-display {
+		background: #32373c;
+		color: #f0f0f1;
+	}
+
+	body.admin-color-modern .ta-modal-content {
+		background: #23282d;
+		color: #f0f0f1;
+	}
+
+	body.admin-color-modern .ta-modal-header,
+	body.admin-color-modern .ta-modal-footer {
+		border-color: #3c4043;
+	}
+
+	body.admin-color-modern .ta-modal-body pre {
+		background: #32373c;
+		color: #f0f0f1;
+	}
+
+	body.admin-color-modern .ta-errors-table tbody tr:hover {
+		background-color: #32373c;
+	}
+
+	body.admin-color-modern .ta-progress {
+		background: #3c4043;
+	}
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+	.ta-toast,
+	.ta-modal,
+	.ta-bulk-operations,
+	.ta-button-group,
+	.ta-password-toggle {
+		display: none !important;
+	}
+
+	.ta-card {
+		break-inside: avoid;
+		box-shadow: none;
+		border: 1px solid #ccc;
+	}
+}
