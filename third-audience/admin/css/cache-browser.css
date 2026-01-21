@@ -1,17 +1,17 @@
 /**
- * Cache Browser Styles
+ * Cache Browser Styles - Apple Design System
  *
  * @package ThirdAudience
  * @since   1.6.0
  */
 
-/* Help Panel */
+/* Help Panel - Apple Style */
 .ta-help-panel {
-	background: #e7f3ff;
-	border-left: 4px solid #2271b1;
-	padding: 20px;
-	margin: 20px 0;
-	border-radius: 4px;
+	background: rgba(0, 122, 255, 0.06);
+	border-left: 3px solid #007aff;
+	padding: 20px 24px;
+	margin: 24px 0;
+	border-radius: 12px;
 }
 
 .ta-help-panel h3 {
@@ -92,22 +92,32 @@
 	font-size: 13px;
 }
 
-/* Warmup Section */
+/* Warmup Section - Apple Style */
 .ta-warmup-section {
-	background: #fff;
-	border: 1px solid #c3c4c7;
-	border-radius: 4px;
-	padding: 20px;
-	margin: 20px 0;
+	background: #ffffff;
+	border: none;
+	border-radius: 16px;
+	padding: 28px;
+	margin: 24px 0;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-warmup-section:hover {
+	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+	transform: translateY(-2px);
 }
 
 .ta-warmup-section h3 {
 	margin-top: 0;
-	margin-bottom: 10px;
+	margin-bottom: 12px;
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	color: #1d2327;
+	gap: 10px;
+	color: #1d1d1f;
+	font-size: 20px;
+	font-weight: 600;
+	letter-spacing: -0.4px;
 }
 
 .ta-warmup-section .description {
@@ -150,49 +160,68 @@
 }
 
 .ta-warmup-progress .progress-bar {
-	height: 30px;
-	background: #f0f0f1;
-	border-radius: 4px;
+	height: 8px;
+	background: #e5e5ea;
+	border-radius: 10px;
 	overflow: hidden;
-	margin-bottom: 10px;
+	margin-bottom: 12px;
 }
 
 .ta-warmup-progress .progress-fill {
 	height: 100%;
-	background: linear-gradient(90deg, #2271b1, #135e96);
-	transition: width 0.3s ease;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: #fff;
-	font-size: 13px;
-	font-weight: 600;
+	background: linear-gradient(90deg, #007aff, #0051d5);
+	transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+	border-radius: 10px;
+	position: relative;
+}
+
+.ta-warmup-progress .progress-fill::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+	animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+	0% { transform: translateX(-100%); }
+	100% { transform: translateX(100%); }
 }
 
 .ta-warmup-progress .progress-text {
 	display: flex;
 	justify-content: space-between;
 	font-size: 13px;
-	color: #646970;
+	color: #86868b;
+	margin-top: 8px;
 }
 
 .ta-warmup-progress .progress-text #ta-warmup-percentage {
 	font-weight: 600;
-	color: #2271b1;
+	color: #007aff;
 }
 
-/* Bulk Actions Bar */
+/* Bulk Actions Bar - Apple Style */
 .ta-bulk-actions-bar {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin: 20px 0;
-	padding: 15px;
-	background: #f6f7f7;
-	border: 1px solid #c3c4c7;
-	border-radius: 4px;
+	margin: 24px 0;
+	padding: 16px 20px;
+	background: #ffffff;
+	border: none;
+	border-radius: 12px;
 	flex-wrap: wrap;
-	gap: 10px;
+	gap: 12px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ta-bulk-actions-bar:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .ta-bulk-actions-bar > div {
