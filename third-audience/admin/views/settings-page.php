@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $tabs = array(
 	'general'       => __( 'General', 'third-audience' ),
 	'headless'      => __( 'Headless Setup', 'third-audience' ),
+	'webhooks'      => __( 'Webhooks', 'third-audience' ),
 	'notifications' => __( 'Notifications', 'third-audience' ),
 	'logs'          => __( 'Logs', 'third-audience' ),
 );
@@ -392,6 +393,160 @@ $security = TA_Security::get_instance();
 		<?php elseif ( 'headless' === $current_tab ) : ?>
 			<!-- Headless Setup Tab -->
 			<?php require_once TA_PLUGIN_DIR . 'admin/views/headless-setup-tab.php'; ?>
+
+		<?php elseif ( 'webhooks' === $current_tab ) : ?>
+			<!-- Webhooks Tab -->
+			<div class="ta-tab-content ta-tab-webhooks">
+				<div class="ta-settings-layout">
+					<div class="ta-settings-main">
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<?php $security->nonce_field( 'save_webhook_settings' ); ?>
+							<input type="hidden" name="action" value="ta_save_webhook_settings" />
+
+							<div class="ta-card">
+								<h2><?php esc_html_e( 'Webhook Configuration', 'third-audience' ); ?></h2>
+								<p class="description">
+									<?php esc_html_e( 'Configure webhooks to receive real-time notifications about AI bot visits and events.', 'third-audience' ); ?>
+								</p>
+
+								<table class="form-table" role="presentation">
+									<tr>
+										<th scope="row"><?php esc_html_e( 'Enable Webhooks', 'third-audience' ); ?></th>
+										<td>
+											<label class="ta-checkbox-label">
+												<input type="checkbox" name="ta_webhooks_enabled" value="1"
+													   <?php checked( get_option( 'ta_webhooks_enabled', false ) ); ?> />
+												<?php esc_html_e( 'Enable webhook notifications', 'third-audience' ); ?>
+											</label>
+											<p class="description"><?php esc_html_e( 'Check this box to enable webhooks. You must also configure a webhook URL below.', 'third-audience' ); ?></p>
+										</td>
+									</tr>
+									<tr>
+										<th scope="row">
+											<label for="ta_webhook_url"><?php esc_html_e( 'Webhook URL', 'third-audience' ); ?></label>
+										</th>
+										<td>
+											<input type="url" name="ta_webhook_url" id="ta_webhook_url" class="regular-text"
+												   value="<?php echo esc_attr( get_option( 'ta_webhook_url', '' ) ); ?>"
+												   placeholder="https://example.com/webhook" />
+											<p class="description">
+												<?php esc_html_e( 'The URL where webhooks will be sent. Should be a valid HTTPS endpoint.', 'third-audience' ); ?>
+											</p>
+										</td>
+									</tr>
+								</table>
+
+								<?php submit_button( __( 'Save Webhook Settings', 'third-audience' ) ); ?>
+							</div>
+						</form>
+
+						<div class="ta-card">
+							<h2><?php esc_html_e( 'Webhook Events', 'third-audience' ); ?></h2>
+							<p class="description"><?php esc_html_e( 'The following events will trigger webhooks when enabled:', 'third-audience' ); ?></p>
+
+							<table class="ta-info-table" style="margin-top: 15px;">
+								<tr>
+									<td style="font-weight: 600; width: 30%;">markdown.accessed</td>
+									<td><?php esc_html_e( 'Fired when a bot accesses markdown content', 'third-audience' ); ?></td>
+								</tr>
+								<tr style="background: #f9f9f9;">
+									<td colspan="2">
+										<code style="font-size: 12px; background: #f6f7f7; padding: 4px 8px; display: inline-block;">
+											bot_type, bot_name, url, post_id, post_title, cache_status, response_time
+										</code>
+									</td>
+								</tr>
+								<tr style="height: 10px;"></tr>
+								<tr>
+									<td style="font-weight: 600;">bot.detected</td>
+									<td><?php esc_html_e( 'Fired when a new bot visits for the first time (once per 24 hours per bot)', 'third-audience' ); ?></td>
+								</tr>
+								<tr style="background: #f9f9f9;">
+									<td colspan="2">
+										<code style="font-size: 12px; background: #f6f7f7; padding: 4px 8px; display: inline-block;">
+											bot_type, bot_name, bot_color
+										</code>
+									</td>
+								</tr>
+							</table>
+
+							<h3 style="margin-top: 20px; margin-bottom: 10px;"><?php esc_html_e( 'Example Webhook Payload', 'third-audience' ); ?></h3>
+							<pre style="background: #f6f7f7; padding: 12px; border-radius: 4px; overflow-x: auto; font-size: 12px;"><code>{
+  "event": "markdown.accessed",
+  "timestamp": "2025-01-21T10:30:00+00:00",
+  "site_url": "https://example.com",
+  "data": {
+    "bot_type": "GPTBot",
+    "bot_name": "GPT (OpenAI)",
+    "url": "https://example.com/my-post.md",
+    "post_id": 123,
+    "post_title": "My Article",
+    "cache_status": "MISS",
+    "response_time": 245
+  }
+}</code></pre>
+						</div>
+
+						<div class="ta-card">
+							<h2><?php esc_html_e( 'Security Notes', 'third-audience' ); ?></h2>
+							<ul style="padding-left: 20px;">
+								<li><?php esc_html_e( 'Always use HTTPS for webhook URLs', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Verify the origin of webhook requests (User-Agent header contains "Third Audience")', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Implement request timeout handling (webhooks timeout after 10 seconds)', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'The webhook URL is stored unencrypted - keep it secret like a password', 'third-audience' ); ?></li>
+							</ul>
+						</div>
+					</div>
+
+					<div class="ta-settings-sidebar">
+						<!-- Test Webhook Card -->
+						<div class="ta-card">
+							<h2><?php esc_html_e( 'Test Webhook', 'third-audience' ); ?></h2>
+							<p><?php esc_html_e( 'Send a test webhook to your endpoint.', 'third-audience' ); ?></p>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline">
+								<?php $security->nonce_field( 'test_webhook' ); ?>
+								<input type="hidden" name="action" value="ta_test_webhook" />
+								<button type="submit" class="button button-secondary" id="ta-test-webhook-btn">
+									<?php esc_html_e( 'Send Test Webhook', 'third-audience' ); ?>
+								</button>
+							</form>
+							<div id="ta-webhook-test-result" style="margin-top: 15px; display: none;">
+								<div id="ta-webhook-test-message" style="padding: 10px; border-radius: 4px;"></div>
+							</div>
+						</div>
+
+						<!-- Webhook Status Card -->
+						<div class="ta-card">
+							<h2><?php esc_html_e( 'Webhook Status', 'third-audience' ); ?></h2>
+							<table class="ta-info-table">
+								<tr>
+									<td><?php esc_html_e( 'Status:', 'third-audience' ); ?></td>
+									<td>
+										<?php if ( get_option( 'ta_webhooks_enabled', false ) ) : ?>
+											<span class="ta-status-badge ta-status-success"><?php esc_html_e( 'Enabled', 'third-audience' ); ?></span>
+										<?php else : ?>
+											<span class="ta-status-badge"><?php esc_html_e( 'Disabled', 'third-audience' ); ?></span>
+										<?php endif; ?>
+									</td>
+								</tr>
+								<tr>
+									<td><?php esc_html_e( 'Webhook URL:', 'third-audience' ); ?></td>
+									<td>
+										<?php
+										$webhook_url = get_option( 'ta_webhook_url', '' );
+										if ( ! empty( $webhook_url ) ) {
+											echo '<code style="word-break: break-all; font-size: 11px;">' . esc_html( $webhook_url ) . '</code>';
+										} else {
+											echo '<span class="ta-status-badge ta-status-warning">' . esc_html__( 'Not configured', 'third-audience' ) . '</span>';
+										}
+										?>
+									</td>
+								</tr>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
 
 		<?php elseif ( 'notifications' === $current_tab ) : ?>
 			<!-- Notifications Tab -->

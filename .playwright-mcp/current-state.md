@@ -1,0 +1,589 @@
+### New console messages
+- [LOG] JQMIGRATE: Migrate is installed, version 3.4.1 @ http://localhost:8080/wp-admin/load-scripts.p...
+
+### Downloads
+- Downloaded file bot-analytics-2026-01-21-18-36-05.csv to /Users/rakesh/Desktop/Projects/third-audience-jeel/.playwright-mcp/bot-analytics-2026-01-21-18-36-05.csv
+- Downloaded file bot-analytics-2026-01-21-18-36-17.csv to /Users/rakesh/Desktop/Projects/third-audience-jeel/.playwright-mcp/bot-analytics-2026-01-21-18-36-17.csv
+
+### Open tabs
+- 0: (current) [Bot Analytics ‹ Third Audience Test — WordPress] (http://localhost:8080/wp-admin/admin.php?page=third-audience-bot-analytics)
+- 1: [Third Audience Test] (http://localhost:8080/)
+- 2: [] (https://www.monocubed.com/home.md)
+
+### Page state
+- Page URL: http://localhost:8080/wp-admin/admin.php?page=third-audience-bot-analytics
+- Page Title: Bot Analytics ‹ Third Audience Test — WordPress
+- Page Snapshot:
+```yaml
+- generic [ref=e2]:
+  - navigation "Main menu":
+    - link "Skip to main content" [ref=e3] [cursor=pointer]:
+      - /url: "#wpbody-content"
+    - link "Skip to toolbar" [ref=e4] [cursor=pointer]:
+      - /url: "#wp-toolbar"
+    - list [ref=e7]:
+      - listitem [ref=e8]:
+        - link "Dashboard" [ref=e9] [cursor=pointer]:
+          - /url: index.php
+          - generic [ref=e10]: 
+          - generic [ref=e11]: Dashboard
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link "Home" [ref=e14] [cursor=pointer]:
+              - /url: index.php
+          - listitem [ref=e15]:
+            - link "Updates" [ref=e16] [cursor=pointer]:
+              - /url: update-core.php
+      - listitem [ref=e17]
+      - listitem [ref=e19]:
+        - link "Posts" [ref=e20] [cursor=pointer]:
+          - /url: edit.php
+          - generic [ref=e21]: 
+          - generic [ref=e22]: Posts
+        - list [ref=e23]:
+          - listitem [ref=e24]:
+            - link "All Posts" [ref=e25] [cursor=pointer]:
+              - /url: edit.php
+          - listitem [ref=e26]:
+            - link "Add Post" [ref=e27] [cursor=pointer]:
+              - /url: post-new.php
+          - listitem [ref=e28]:
+            - link "Categories" [ref=e29] [cursor=pointer]:
+              - /url: edit-tags.php?taxonomy=category
+          - listitem [ref=e30]:
+            - link "Tags" [ref=e31] [cursor=pointer]:
+              - /url: edit-tags.php?taxonomy=post_tag
+      - listitem [ref=e32]:
+        - link "Media" [ref=e33] [cursor=pointer]:
+          - /url: upload.php
+          - generic [ref=e34]: 
+          - generic [ref=e35]: Media
+        - list [ref=e36]:
+          - listitem [ref=e37]:
+            - link "Library" [ref=e38] [cursor=pointer]:
+              - /url: upload.php
+          - listitem [ref=e39]:
+            - link "Add Media File" [ref=e40] [cursor=pointer]:
+              - /url: media-new.php
+      - listitem [ref=e41]:
+        - link "Pages" [ref=e42] [cursor=pointer]:
+          - /url: edit.php?post_type=page
+          - generic [ref=e43]: 
+          - generic [ref=e44]: Pages
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "All Pages" [ref=e47] [cursor=pointer]:
+              - /url: edit.php?post_type=page
+          - listitem [ref=e48]:
+            - link "Add Page" [ref=e49] [cursor=pointer]:
+              - /url: post-new.php?post_type=page
+      - listitem [ref=e50]:
+        - link "Comments" [ref=e51] [cursor=pointer]:
+          - /url: edit-comments.php
+          - generic [ref=e52]: 
+          - generic [ref=e53]: Comments
+      - listitem [ref=e54]:
+        - link "Bot Analytics" [ref=e55] [cursor=pointer]:
+          - /url: admin.php?page=third-audience-bot-analytics
+          - generic [ref=e56]: 
+          - generic [ref=e57]: Bot Analytics
+        - list [ref=e58]:
+          - listitem [ref=e59]:
+            - link "Bot Analytics" [ref=e60] [cursor=pointer]:
+              - /url: admin.php?page=third-audience-bot-analytics
+          - listitem [ref=e61]:
+            - link "Bot Management" [ref=e62] [cursor=pointer]:
+              - /url: admin.php?page=third-audience-bot-management
+          - listitem [ref=e63]:
+            - link "Cache Browser" [ref=e64] [cursor=pointer]:
+              - /url: admin.php?page=third-audience-cache-browser
+          - listitem [ref=e65]:
+            - link "System Health" [ref=e66] [cursor=pointer]:
+              - /url: admin.php?page=third-audience-system-health
+          - listitem [ref=e67]:
+            - link "About" [ref=e68] [cursor=pointer]:
+              - /url: admin.php?page=third-audience-about
+      - listitem [ref=e69]
+      - listitem [ref=e71]:
+        - link "Appearance" [ref=e72] [cursor=pointer]:
+          - /url: themes.php
+          - generic [ref=e73]: 
+          - generic [ref=e74]: Appearance
+        - list [ref=e75]:
+          - listitem [ref=e76]:
+            - link "Themes" [ref=e77] [cursor=pointer]:
+              - /url: themes.php
+          - listitem [ref=e78]:
+            - link "Editor" [ref=e79] [cursor=pointer]:
+              - /url: site-editor.php
+      - listitem [ref=e80]:
+        - link "Plugins" [ref=e81] [cursor=pointer]:
+          - /url: plugins.php
+          - generic [ref=e82]: 
+          - generic [ref=e83]: Plugins
+        - list [ref=e84]:
+          - listitem [ref=e85]:
+            - link "Installed Plugins" [ref=e86] [cursor=pointer]:
+              - /url: plugins.php
+          - listitem [ref=e87]:
+            - link "Add Plugin" [ref=e88] [cursor=pointer]:
+              - /url: plugin-install.php
+      - listitem [ref=e89]:
+        - link "Users" [ref=e90] [cursor=pointer]:
+          - /url: users.php
+          - generic [ref=e91]: 
+          - generic [ref=e92]: Users
+        - list [ref=e93]:
+          - listitem [ref=e94]:
+            - link "All Users" [ref=e95] [cursor=pointer]:
+              - /url: users.php
+          - listitem [ref=e96]:
+            - link "Add User" [ref=e97] [cursor=pointer]:
+              - /url: user-new.php
+          - listitem [ref=e98]:
+            - link "Profile" [ref=e99] [cursor=pointer]:
+              - /url: profile.php
+      - listitem [ref=e100]:
+        - link "Tools" [ref=e101] [cursor=pointer]:
+          - /url: tools.php
+          - generic [ref=e102]: 
+          - generic [ref=e103]: Tools
+        - list [ref=e104]:
+          - listitem [ref=e105]:
+            - link "Available Tools" [ref=e106] [cursor=pointer]:
+              - /url: tools.php
+          - listitem [ref=e107]:
+            - link "Import" [ref=e108] [cursor=pointer]:
+              - /url: import.php
+          - listitem [ref=e109]:
+            - link "Export" [ref=e110] [cursor=pointer]:
+              - /url: export.php
+          - listitem [ref=e111]:
+            - link "Site Health" [ref=e112] [cursor=pointer]:
+              - /url: site-health.php
+          - listitem [ref=e113]:
+            - link "Export Personal Data" [ref=e114] [cursor=pointer]:
+              - /url: export-personal-data.php
+          - listitem [ref=e115]:
+            - link "Erase Personal Data" [ref=e116] [cursor=pointer]:
+              - /url: erase-personal-data.php
+          - listitem [ref=e117]:
+            - link "Theme File Editor" [ref=e118] [cursor=pointer]:
+              - /url: theme-editor.php
+          - listitem [ref=e119]:
+            - link "Plugin File Editor" [ref=e120] [cursor=pointer]:
+              - /url: plugin-editor.php
+      - listitem [ref=e121]:
+        - link "Settings" [ref=e122] [cursor=pointer]:
+          - /url: options-general.php
+          - generic [ref=e123]: 
+          - generic [ref=e124]: Settings
+        - list [ref=e125]:
+          - listitem [ref=e126]:
+            - link "General" [ref=e127] [cursor=pointer]:
+              - /url: options-general.php
+          - listitem [ref=e128]:
+            - link "Writing" [ref=e129] [cursor=pointer]:
+              - /url: options-writing.php
+          - listitem [ref=e130]:
+            - link "Reading" [ref=e131] [cursor=pointer]:
+              - /url: options-reading.php
+          - listitem [ref=e132]:
+            - link "Discussion" [ref=e133] [cursor=pointer]:
+              - /url: options-discussion.php
+          - listitem [ref=e134]:
+            - link "Media" [ref=e135] [cursor=pointer]:
+              - /url: options-media.php
+          - listitem [ref=e136]:
+            - link "Permalinks" [ref=e137] [cursor=pointer]:
+              - /url: options-permalink.php
+          - listitem [ref=e138]:
+            - link "Privacy" [ref=e139] [cursor=pointer]:
+              - /url: options-privacy.php
+          - listitem [ref=e140]:
+            - link "Third Audience" [ref=e141] [cursor=pointer]:
+              - /url: options-general.php?page=third-audience
+      - listitem [ref=e142]:
+        - button "Collapse Main menu" [expanded] [ref=e143] [cursor=pointer]:
+          - generic [ref=e145]: Collapse Menu
+  - generic [ref=e146]:
+    - generic [ref=e147]:
+      - navigation "Toolbar":
+        - menu:
+          - group [ref=e148]:
+            - menuitem "About WordPress" [ref=e149] [cursor=pointer]:
+              - generic [ref=e151]: About WordPress
+          - group [ref=e152]:
+            - menuitem "Third Audience Test" [ref=e153] [cursor=pointer]
+          - group [ref=e154]:
+            - menuitem "0 Comments in moderation" [ref=e155] [cursor=pointer]:
+              - generic [ref=e157]: "0"
+              - generic [ref=e158]: 0 Comments in moderation
+          - group [ref=e159]:
+            - menuitem "New" [ref=e160] [cursor=pointer]:
+              - generic [ref=e162]: New
+        - menu [ref=e163]:
+          - group [ref=e164]:
+            - menuitem "Howdy, admin" [ref=e165] [cursor=pointer]
+    - main [ref=e166]:
+      - generic [ref=e168]:
+        - heading "Bot Analytics v2.0.5" [level=1] [ref=e169]
+        - paragraph [ref=e170]: Track and analyze AI bot visits to your markdown content without requiring server logs.
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: From
+            - textbox "From" [ref=e176]
+          - generic [ref=e177]:
+            - generic [ref=e178]: To
+            - textbox "To" [ref=e179]
+          - generic [ref=e180]:
+            - generic [ref=e181]: Bot Type
+            - combobox "Bot Type" [ref=e182] [cursor=pointer]:
+              - option "All Bots" [selected]
+              - option "Claude (Anthropic)"
+              - option "GPT (OpenAI)"
+              - option "ChatGPT User"
+              - option "Perplexity"
+              - option "ByteDance AI"
+              - option "Anthropic AI"
+              - option "Cohere"
+              - option "Google Gemini"
+              - option "Meta AI"
+              - option "Apple Intelligence"
+          - generic [ref=e183]:
+            - generic [ref=e184]: Post Type
+            - combobox "Post Type" [ref=e185] [cursor=pointer]:
+              - option "All Types" [selected]
+              - option "Posts"
+              - option "Pages"
+              - option "Media"
+          - generic [ref=e186]:
+            - generic [ref=e187]: Cache Status
+            - combobox "Cache Status" [ref=e188] [cursor=pointer]:
+              - option "All" [selected]
+              - option "Hit"
+              - option "Miss"
+              - option "Pre-Generated"
+          - generic [ref=e189]:
+            - generic [ref=e190]: Search
+            - textbox "Search" [ref=e191]:
+              - /placeholder: URL, title, or user agent...
+          - generic [ref=e192]:
+            - button "Apply Filters" [ref=e193] [cursor=pointer]
+            - link "Reset" [ref=e194] [cursor=pointer]:
+              - /url: http://localhost:8080/wp-admin/admin.php?page=third-audience-bot-analytics
+            - link "Export CSV" [ref=e195] [cursor=pointer]:
+              - /url: /wp-admin/admin.php?page=third-audience-bot-analytics&action=export&_wpnonce=915539cf4e
+        - generic [ref=e196]:
+          - generic [ref=e197]:
+            - generic [ref=e199]: 
+            - generic [ref=e200]:
+              - heading "16" [level=3] [ref=e201]
+              - paragraph [ref=e202]: Total Bot Visits
+              - generic [ref=e203]:
+                - text: 16 today
+                - generic [ref=e204]: ↑ 100%
+          - generic [ref=e205]:
+            - generic [ref=e207]: 
+            - generic [ref=e208]:
+              - heading "4" [level=3] [ref=e209]
+              - paragraph [ref=e210]: Unique Pages Crawled
+              - text: By 3 bots
+          - generic [ref=e211]:
+            - generic [ref=e213]: 
+            - generic [ref=e214]:
+              - heading "87.5%" [level=3] [ref=e215]
+              - paragraph [ref=e216]: Cache Hit Rate
+              - text: "Avg: 2ms"
+          - generic [ref=e217]:
+            - generic [ref=e219]: 
+            - generic [ref=e220]:
+              - heading "15.54 KB" [level=3] [ref=e221]
+              - paragraph [ref=e222]: Total Bandwidth
+              - text: 994.50 B per visit
+        - generic [ref=e225]:
+          - heading "Visits Over Time" [level=2] [ref=e226]
+          - combobox [ref=e228] [cursor=pointer]:
+            - option "Hourly"
+            - option "Daily" [selected]
+            - option "Weekly"
+            - option "Monthly"
+        - generic [ref=e231]:
+          - generic [ref=e232]:
+            - heading "Bot Distribution" [level=2] [ref=e234]
+            - generic [ref=e237]:
+              - generic [ref=e238]:
+                - generic [ref=e240]: Unknown Bot
+                - generic [ref=e241]: 14 visits
+              - generic [ref=e242]:
+                - generic [ref=e244]: Claude (Anthropic)
+                - generic [ref=e245]: 1 visits
+              - generic [ref=e246]:
+                - generic [ref=e248]: GPT (OpenAI)
+                - generic [ref=e249]: 1 visits
+          - generic [ref=e250]:
+            - heading "Top Crawled Pages" [level=2] [ref=e252]
+            - table [ref=e254]:
+              - rowgroup [ref=e255]:
+                - row "Page Type Visits Bots Avg Time" [ref=e256]:
+                  - columnheader "Page" [ref=e257]
+                  - columnheader "Type" [ref=e258]
+                  - columnheader "Visits" [ref=e259]
+                  - columnheader "Bots" [ref=e260]
+                  - columnheader "Avg Time" [ref=e261]
+              - rowgroup [ref=e262]:
+                - row "Sample Page page 7 1 3ms" [ref=e263]:
+                  - cell "Sample Page" [ref=e264]:
+                    - link "Sample Page" [ref=e265] [cursor=pointer]:
+                      - /url: http://localhost:8080/
+                  - cell "page" [ref=e266]
+                  - cell "7" [ref=e267]:
+                    - strong [ref=e268]: "7"
+                  - cell "1" [ref=e269]
+                  - cell "3ms" [ref=e270]
+                - row "Comprehensive Local Conversion Test post 6 2 1ms" [ref=e271]:
+                  - cell "Comprehensive Local Conversion Test" [ref=e272]:
+                    - link "Comprehensive Local Conversion Test" [ref=e273] [cursor=pointer]:
+                      - /url: http://localhost:8080/comprehensive-local-conversion-test
+                  - cell "post" [ref=e274]
+                  - cell "6" [ref=e275]:
+                    - strong [ref=e276]: "6"
+                  - cell "2" [ref=e277]
+                  - cell "1ms" [ref=e278]
+                - row "AI-Optimized Markdown Test post 2 1 2ms" [ref=e279]:
+                  - cell "AI-Optimized Markdown Test" [ref=e280]:
+                    - link "AI-Optimized Markdown Test" [ref=e281] [cursor=pointer]:
+                      - /url: http://localhost:8080/ai-optimized-markdown-test
+                  - cell "post" [ref=e282]
+                  - cell "2" [ref=e283]:
+                    - strong [ref=e284]: "2"
+                  - cell "1" [ref=e285]
+                  - cell "2ms" [ref=e286]
+                - row "Test Local Conversion post 1 1 9ms" [ref=e287]:
+                  - cell "Test Local Conversion" [ref=e288]:
+                    - link "Test Local Conversion" [ref=e289] [cursor=pointer]:
+                      - /url: http://localhost:8080/test-local-conversion
+                  - cell "post" [ref=e290]
+                  - cell "1" [ref=e291]:
+                    - strong [ref=e292]: "1"
+                  - cell "1" [ref=e293]
+                  - cell "9ms" [ref=e294]
+        - generic [ref=e295]:
+          - generic [ref=e296]:
+            - heading "Recent Bot Visits" [level=2] [ref=e297]
+            - button " Understanding Cache Status" [ref=e298] [cursor=pointer]:
+              - generic [ref=e299]: 
+              - text: Understanding Cache Status
+          - text:  
+          - table [ref=e300]:
+            - rowgroup [ref=e301]:
+              - row "ID Bot Page Type Cache Response Time" [ref=e302]:
+                - columnheader "ID" [ref=e303]
+                - columnheader "Bot" [ref=e304]
+                - columnheader "Page" [ref=e305]
+                - columnheader "Type" [ref=e306]
+                - columnheader "Cache" [ref=e307]
+                - columnheader "Response" [ref=e308]
+                - columnheader "Time" [ref=e309]
+            - rowgroup [ref=e310]:
+              - row "16 Unknown Bot Comprehensive Local Conversion Test post PRE_GENERATED 1ms 14 minutes ago" [ref=e311]:
+                - cell "16" [ref=e312]
+                - cell "Unknown Bot" [ref=e313]:
+                  - generic [ref=e314]: Unknown Bot
+                - cell "Comprehensive Local Conversion Test" [ref=e315]:
+                  - link "Comprehensive Local Conversion Test" [ref=e316] [cursor=pointer]:
+                    - /url: http://localhost:8080/comprehensive-local-conversion-test
+                - cell "post" [ref=e317]
+                - cell "PRE_GENERATED" [ref=e318]:
+                  - generic [ref=e319]: PRE_GENERATED
+                - cell "1ms" [ref=e320]
+                - cell "14 minutes ago" [ref=e321]
+              - row "15 Unknown Bot Sample Page page HIT 1ms 32 minutes ago" [ref=e322]:
+                - cell "15" [ref=e323]
+                - cell "Unknown Bot" [ref=e324]:
+                  - generic [ref=e325]: Unknown Bot
+                - cell "Sample Page" [ref=e326]:
+                  - link "Sample Page" [ref=e327] [cursor=pointer]:
+                    - /url: http://localhost:8080/
+                - cell "page" [ref=e328]
+                - cell "HIT" [ref=e329]:
+                  - generic [ref=e330]: HIT
+                - cell "1ms" [ref=e331]
+                - cell "32 minutes ago" [ref=e332]
+              - row "14 Unknown Bot Sample Page page HIT 1ms 60 minutes ago" [ref=e333]:
+                - cell "14" [ref=e334]
+                - cell "Unknown Bot" [ref=e335]:
+                  - generic [ref=e336]: Unknown Bot
+                - cell "Sample Page" [ref=e337]:
+                  - link "Sample Page" [ref=e338] [cursor=pointer]:
+                    - /url: http://localhost:8080/
+                - cell "page" [ref=e339]
+                - cell "HIT" [ref=e340]:
+                  - generic [ref=e341]: HIT
+                - cell "1ms" [ref=e342]
+                - cell "60 minutes ago" [ref=e343]
+              - row "13 Unknown Bot Sample Page page HIT 1ms 60 minutes ago" [ref=e344]:
+                - cell "13" [ref=e345]
+                - cell "Unknown Bot" [ref=e346]:
+                  - generic [ref=e347]: Unknown Bot
+                - cell "Sample Page" [ref=e348]:
+                  - link "Sample Page" [ref=e349] [cursor=pointer]:
+                    - /url: http://localhost:8080/
+                - cell "page" [ref=e350]
+                - cell "HIT" [ref=e351]:
+                  - generic [ref=e352]: HIT
+                - cell "1ms" [ref=e353]
+                - cell "60 minutes ago" [ref=e354]
+              - row "12 Unknown Bot Sample Page page HIT 1ms 1 hour ago" [ref=e355]:
+                - cell "12" [ref=e356]
+                - cell "Unknown Bot" [ref=e357]:
+                  - generic [ref=e358]: Unknown Bot
+                - cell "Sample Page" [ref=e359]:
+                  - link "Sample Page" [ref=e360] [cursor=pointer]:
+                    - /url: http://localhost:8080/
+                - cell "page" [ref=e361]
+                - cell "HIT" [ref=e362]:
+                  - generic [ref=e363]: HIT
+                - cell "1ms" [ref=e364]
+                - cell "1 hour ago" [ref=e365]
+              - row "11 Unknown Bot Sample Page page HIT 1ms 1 hour ago" [ref=e366]:
+                - cell "11" [ref=e367]
+                - cell "Unknown Bot" [ref=e368]:
+                  - generic [ref=e369]: Unknown Bot
+                - cell "Sample Page" [ref=e370]:
+                  - link "Sample Page" [ref=e371] [cursor=pointer]:
+                    - /url: http://localhost:8080/
+                - cell "page" [ref=e372]
+                - cell "HIT" [ref=e373]:
+                  - generic [ref=e374]: HIT
+                - cell "1ms" [ref=e375]
+                - cell "1 hour ago" [ref=e376]
+              - row "10 Unknown Bot AI-Optimized Markdown Test post PRE_GENERATED 2ms 1 hour ago" [ref=e377]:
+                - cell "10" [ref=e378]
+                - cell "Unknown Bot" [ref=e379]:
+                  - generic [ref=e380]: Unknown Bot
+                - cell "AI-Optimized Markdown Test" [ref=e381]:
+                  - link "AI-Optimized Markdown Test" [ref=e382] [cursor=pointer]:
+                    - /url: http://localhost:8080/ai-optimized-markdown-test
+                - cell "post" [ref=e383]
+                - cell "PRE_GENERATED" [ref=e384]:
+                  - generic [ref=e385]: PRE_GENERATED
+                - cell "2ms" [ref=e386]
+                - cell "1 hour ago" [ref=e387]
+              - row "9 Unknown Bot AI-Optimized Markdown Test post PRE_GENERATED 1ms 1 hour ago" [ref=e388]:
+                - cell "9" [ref=e389]
+                - cell "Unknown Bot" [ref=e390]:
+                  - generic [ref=e391]: Unknown Bot
+                - cell "AI-Optimized Markdown Test" [ref=e392]:
+                  - link "AI-Optimized Markdown Test" [ref=e393] [cursor=pointer]:
+                    - /url: http://localhost:8080/ai-optimized-markdown-test
+                - cell "post" [ref=e394]
+                - cell "PRE_GENERATED" [ref=e395]:
+                  - generic [ref=e396]: PRE_GENERATED
+                - cell "1ms" [ref=e397]
+                - cell "1 hour ago" [ref=e398]
+              - row "8 Unknown Bot Comprehensive Local Conversion Test post PRE_GENERATED 3ms 2 hours ago" [ref=e399]:
+                - cell "8" [ref=e400]
+                - cell "Unknown Bot" [ref=e401]:
+                  - generic [ref=e402]: Unknown Bot
+                - cell "Comprehensive Local Conversion Test" [ref=e403]:
+                  - link "Comprehensive Local Conversion Test" [ref=e404] [cursor=pointer]:
+                    - /url: http://localhost:8080/comprehensive-local-conversion-test
+                - cell "post" [ref=e405]
+                - cell "PRE_GENERATED" [ref=e406]:
+                  - generic [ref=e407]: PRE_GENERATED
+                - cell "3ms" [ref=e408]
+                - cell "2 hours ago" [ref=e409]
+              - row "7 Unknown Bot Sample Page page HIT 1ms 2 hours ago" [ref=e410]:
+                - cell "7" [ref=e411]
+                - cell "Unknown Bot" [ref=e412]:
+                  - generic [ref=e413]: Unknown Bot
+                - cell "Sample Page" [ref=e414]:
+                  - link "Sample Page" [ref=e415] [cursor=pointer]:
+                    - /url: http://localhost:8080/
+                - cell "page" [ref=e416]
+                - cell "HIT" [ref=e417]:
+                  - generic [ref=e418]: HIT
+                - cell "1ms" [ref=e419]
+                - cell "2 hours ago" [ref=e420]
+              - row "6 Unknown Bot Sample Page page MISS 13ms 2 hours ago" [ref=e421]:
+                - cell "6" [ref=e422]
+                - cell "Unknown Bot" [ref=e423]:
+                  - generic [ref=e424]: Unknown Bot
+                - cell "Sample Page" [ref=e425]:
+                  - link "Sample Page" [ref=e426] [cursor=pointer]:
+                    - /url: http://localhost:8080/
+                - cell "page" [ref=e427]
+                - cell "MISS" [ref=e428]:
+                  - generic [ref=e429]: MISS
+                - cell "13ms" [ref=e430]
+                - cell "2 hours ago" [ref=e431]
+              - row "5 GPT (OpenAI) Comprehensive Local Conversion Test post PRE_GENERATED 1ms 4 hours ago" [ref=e432]:
+                - cell "5" [ref=e433]
+                - cell "GPT (OpenAI)" [ref=e434]:
+                  - generic [ref=e435]: GPT (OpenAI)
+                - cell "Comprehensive Local Conversion Test" [ref=e436]:
+                  - link "Comprehensive Local Conversion Test" [ref=e437] [cursor=pointer]:
+                    - /url: http://localhost:8080/comprehensive-local-conversion-test
+                - cell "post" [ref=e438]
+                - cell "PRE_GENERATED" [ref=e439]:
+                  - generic [ref=e440]: PRE_GENERATED
+                - cell "1ms" [ref=e441]
+                - cell "4 hours ago" [ref=e442]
+              - row "4 Unknown Bot Comprehensive Local Conversion Test post PRE_GENERATED 1ms 4 hours ago" [ref=e443]:
+                - cell "4" [ref=e444]
+                - cell "Unknown Bot" [ref=e445]:
+                  - generic [ref=e446]: Unknown Bot
+                - cell "Comprehensive Local Conversion Test" [ref=e447]:
+                  - link "Comprehensive Local Conversion Test" [ref=e448] [cursor=pointer]:
+                    - /url: http://localhost:8080/comprehensive-local-conversion-test
+                - cell "post" [ref=e449]
+                - cell "PRE_GENERATED" [ref=e450]:
+                  - generic [ref=e451]: PRE_GENERATED
+                - cell "1ms" [ref=e452]
+                - cell "4 hours ago" [ref=e453]
+              - row "3 Unknown Bot Comprehensive Local Conversion Test post PRE_GENERATED 1ms 4 hours ago" [ref=e454]:
+                - cell "3" [ref=e455]
+                - cell "Unknown Bot" [ref=e456]:
+                  - generic [ref=e457]: Unknown Bot
+                - cell "Comprehensive Local Conversion Test" [ref=e458]:
+                  - link "Comprehensive Local Conversion Test" [ref=e459] [cursor=pointer]:
+                    - /url: http://localhost:8080/comprehensive-local-conversion-test
+                - cell "post" [ref=e460]
+                - cell "PRE_GENERATED" [ref=e461]:
+                  - generic [ref=e462]: PRE_GENERATED
+                - cell "1ms" [ref=e463]
+                - cell "4 hours ago" [ref=e464]
+              - row "2 Unknown Bot Comprehensive Local Conversion Test post PRE_GENERATED 1ms 4 hours ago" [ref=e465]:
+                - cell "2" [ref=e466]
+                - cell "Unknown Bot" [ref=e467]:
+                  - generic [ref=e468]: Unknown Bot
+                - cell "Comprehensive Local Conversion Test" [ref=e469]:
+                  - link "Comprehensive Local Conversion Test" [ref=e470] [cursor=pointer]:
+                    - /url: http://localhost:8080/comprehensive-local-conversion-test
+                - cell "post" [ref=e471]
+                - cell "PRE_GENERATED" [ref=e472]:
+                  - generic [ref=e473]: PRE_GENERATED
+                - cell "1ms" [ref=e474]
+                - cell "4 hours ago" [ref=e475]
+              - row "1 Claude (Anthropic) Test Local Conversion post MISS 9ms 4 hours ago" [ref=e476]:
+                - cell "1" [ref=e477]
+                - cell "Claude (Anthropic)" [ref=e478]:
+                  - generic [ref=e479]: Claude (Anthropic)
+                - cell "Test Local Conversion" [ref=e480]:
+                  - link "Test Local Conversion" [ref=e481] [cursor=pointer]:
+                    - /url: http://localhost:8080/test-local-conversion
+                - cell "post" [ref=e482]
+                - cell "MISS" [ref=e483]:
+                  - generic [ref=e484]: MISS
+                - cell "9ms" [ref=e485]
+                - cell "4 hours ago" [ref=e486]
+  - contentinfo [ref=e487]:
+    - paragraph [ref=e488]:
+      - generic [ref=e489]:
+        - text: Thank you for creating with
+        - link "WordPress" [ref=e490] [cursor=pointer]:
+          - /url: https://wordpress.org/
+        - text: .
+    - paragraph [ref=e491]: Version 6.9
+```
