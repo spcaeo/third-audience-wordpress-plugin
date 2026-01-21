@@ -18,6 +18,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Handles headless WordPress detection and configuration.
  *
+ * Features:
+ * - Auto-detection with 1-hour cache for performance
+ * - Configuration generation for Nginx, Apache, Cloudflare, Vercel, Next.js
+ * - Rate-limited testing (3 tests per 5 minutes)
+ * - Extensible via filter hooks
+ *
+ * Filter Hooks:
+ * - ta_headless_server_config: Add custom server types
+ * - ta_headless_server_config_output: Modify any config output
+ *
  * @since 1.1.0
  */
 class TA_Headless_Wizard {
@@ -57,9 +67,19 @@ class TA_Headless_Wizard {
 	 * Detect if WordPress is running in headless mode.
 	 *
 	 * @since 1.1.0
+	 * @param bool $force Force detection, bypass cache.
 	 * @return array Detection results.
 	 */
-	public function detect_headless_mode() {
+	public function detect_headless_mode( $force = false ) {
+		// Check cache first (1-hour transient for performance).
+		$cache_key = 'ta_headless_detection';
+		if ( ! $force ) {
+			$cached = get_transient( $cache_key );
+			if ( false !== $cached ) {
+				return $cached;
+			}
+		}
+
 		$indicators = array();
 
 		// Check 1: REST API usage vs HTML requests.
@@ -101,11 +121,16 @@ class TA_Headless_Wizard {
 		$is_headless = $indicators['rest_api_heavy'] || $indicators['headless_theme'] ||
 		               $indicators['headless_plugins'] || $indicators['separate_frontend'];
 
-		return array(
+		$results = array(
 			'is_headless' => $is_headless,
 			'confidence'  => $this->calculate_confidence( $indicators ),
 			'indicators'  => $indicators,
 		);
+
+		// Cache for 1 hour to improve performance.
+		set_transient( $cache_key, $results, HOUR_IN_SECONDS );
+
+		return $results;
 	}
 
 	/**
@@ -174,22 +199,42 @@ class TA_Headless_Wizard {
 
 		$config = wp_parse_args( $config, $defaults );
 
+		$snippet = '';
+
 		switch ( $server_type ) {
 			case 'nginx':
-				return $this->generate_nginx_config( $config );
+				$snippet = $this->generate_nginx_config( $config );
+				break;
 
 			case 'apache':
-				return $this->generate_apache_config( $config );
+				$snippet = $this->generate_apache_config( $config );
+				break;
 
 			case 'cloudflare':
-				return $this->generate_cloudflare_config( $config );
+				$snippet = $this->generate_cloudflare_config( $config );
+				break;
 
 			case 'vercel':
-				return $this->generate_vercel_config( $config );
+				$snippet = $this->generate_vercel_config( $config );
+				break;
 
 			default:
-				return '';
+				// Allow third-party extensions to add custom server types.
+				$snippet = apply_filters( 'ta_headless_server_config', '', $server_type, $config );
+				break;
 		}
+
+		/**
+		 * Filter the generated server configuration snippet.
+		 *
+		 * Allows modification of built-in configs or addition of custom server types.
+		 *
+		 * @since 1.1.0
+		 * @param string $snippet     The configuration snippet.
+		 * @param string $server_type The server type.
+		 * @param array  $config      Configuration parameters.
+		 */
+		return apply_filters( 'ta_headless_server_config_output', $snippet, $server_type, $config );
 	}
 
 	/**
@@ -429,6 +474,9 @@ NEXTJS;
 		$result = update_option( self::SETTINGS_OPTION, $sanitized, false );
 
 		if ( $result ) {
+			// Clear detection cache since settings changed.
+			delete_transient( 'ta_headless_detection' );
+
 			$this->logger->info( 'Headless settings updated.', $sanitized );
 		}
 
@@ -442,6 +490,26 @@ NEXTJS;
 	 * @return array Test results.
 	 */
 	public function test_configuration() {
+		// Rate limiting: Allow only 3 tests per 5 minutes per user.
+		$user_id = get_current_user_id();
+		$rate_limit_key = 'ta_headless_test_' . $user_id;
+		$test_count = get_transient( $rate_limit_key );
+
+		if ( false === $test_count ) {
+			$test_count = 0;
+		}
+
+		if ( $test_count >= 3 ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Rate limit exceeded. Please wait 5 minutes before testing again.', 'third-audience' ),
+				'tests'   => array(),
+			);
+		}
+
+		// Increment rate limit counter.
+		set_transient( $rate_limit_key, $test_count + 1, 5 * MINUTE_IN_SECONDS );
+
 		$settings = $this->get_settings();
 		$results = array(
 			'success' => false,
