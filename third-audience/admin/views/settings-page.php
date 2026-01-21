@@ -23,6 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Define tabs.
 $tabs = array(
 	'general'       => __( 'General', 'third-audience' ),
+	'headless'      => __( 'Headless Setup', 'third-audience' ),
 	'notifications' => __( 'Notifications', 'third-audience' ),
 	'logs'          => __( 'Logs', 'third-audience' ),
 );
@@ -204,6 +205,10 @@ $security = TA_Security::get_instance();
 					</div>
 				</div>
 			</div>
+
+		<?php elseif ( 'headless' === $current_tab ) : ?>
+			<!-- Headless Setup Tab -->
+			<?php require_once TA_PLUGIN_DIR . 'admin/views/headless-setup-tab.php'; ?>
 
 		<?php elseif ( 'notifications' === $current_tab ) : ?>
 			<!-- Notifications Tab -->

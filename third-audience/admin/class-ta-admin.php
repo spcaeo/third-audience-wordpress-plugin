@@ -73,6 +73,7 @@ class TA_Admin {
 		add_action( 'admin_post_ta_save_smtp_settings', array( $this, 'handle_save_smtp_settings' ) );
 		add_action( 'admin_post_ta_save_notification_settings', array( $this, 'handle_save_notification_settings' ) );
 		add_action( 'admin_post_ta_save_bot_config', array( $this, 'handle_save_bot_config' ) );
+		add_action( 'admin_post_ta_save_headless_settings', array( $this, 'handle_save_headless_settings' ) );
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
@@ -617,6 +618,56 @@ class TA_Admin {
 			)
 		);
 		exit;
+	}
+
+	/**
+	 * Handle save headless settings action.
+	 *
+	 * @since 1.1.0
+	 * @return void
+	 */
+	public function handle_save_headless_settings() {
+		$this->security->verify_admin_capability();
+		$this->security->verify_nonce_or_die( 'save_headless_settings' );
+
+		// Get wizard instance.
+		$wizard = new TA_Headless_Wizard();
+
+		// Sanitize and prepare settings.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$settings = array(
+			'enabled'      => ! empty( $_POST['ta_headless_enabled'] ),
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			'frontend_url' => isset( $_POST['ta_headless_frontend_url'] ) ? esc_url_raw( wp_unslash( $_POST['ta_headless_frontend_url'] ) ) : '',
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			'framework'    => isset( $_POST['ta_headless_framework'] ) ? $this->security->sanitize_text( wp_unslash( $_POST['ta_headless_framework'] ) ) : 'nextjs',
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
+			'server_type'  => isset( $_POST['ta_headless_server_type'] ) ? $this->security->sanitize_text( wp_unslash( $_POST['ta_headless_server_type'] ) ) : 'nginx',
+		);
+
+		// Validate frontend URL if enabled.
+		if ( $settings['enabled'] && empty( $settings['frontend_url'] ) ) {
+			add_settings_error(
+				'ta_messages',
+				'ta_headless_url_required',
+				__( 'Frontend URL is required when headless mode is enabled.', 'third-audience' ),
+				'error'
+			);
+			$this->redirect_to_settings( 'headless' );
+			return;
+		}
+
+		// Save settings.
+		$wizard->save_settings( $settings );
+
+		add_settings_error(
+			'ta_messages',
+			'ta_headless_saved',
+			__( 'Headless settings saved successfully.', 'third-audience' ),
+			'success'
+		);
+
+		$this->redirect_to_settings( 'headless' );
 	}
 
 	/**

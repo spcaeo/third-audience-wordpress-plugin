@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with local conversion - no external dependencies!
- * Version: 2.0.0
+ * Version: 1.1.0
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,14 +27,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '2.0.0' );
+define( 'TA_VERSION', '1.1.0' );
 
 /**
  * Database version for migrations.
  *
  * @since 1.1.0
  */
-define( 'TA_DB_VERSION', '2.0.0' );
+define( 'TA_DB_VERSION', '1.1.0' );
 
 /**
  * Minimum PHP version required.
@@ -670,6 +670,32 @@ function ta_ajax_dismiss_update_notice() {
 	wp_send_json_success();
 }
 add_action( 'wp_ajax_ta_dismiss_update_notice', 'ta_ajax_dismiss_update_notice' );
+
+/**
+ * AJAX handler to test headless configuration.
+ *
+ * @since 1.1.0
+ * @return void
+ */
+function ta_ajax_test_headless_config() {
+	check_ajax_referer( 'ta_test_headless', '_ajax_nonce' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Permission denied.', 'third-audience' ) ) );
+		return;
+	}
+
+	// Get wizard instance and run tests.
+	$wizard  = new TA_Headless_Wizard();
+	$results = $wizard->test_configuration();
+
+	if ( $results['success'] ) {
+		wp_send_json_success( $results );
+	} else {
+		wp_send_json_error( $results );
+	}
+}
+add_action( 'wp_ajax_ta_test_headless_config', 'ta_ajax_test_headless_config' );
 
 /**
  * Add async/defer attributes to plugin scripts.

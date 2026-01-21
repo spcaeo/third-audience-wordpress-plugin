@@ -135,6 +135,7 @@ class TA_Autoloader {
 			// Health check and updates
 			'TA_Health_Check'        => 'includes/class-ta-health-check.php',
 			'TA_Update_Checker'      => 'includes/class-ta-update-checker.php',
+			'TA_Headless_Wizard'     => 'includes/class-ta-headless-wizard.php',
 
 			// Admin classes
 			'TA_Admin'               => 'admin/class-ta-admin.php',
