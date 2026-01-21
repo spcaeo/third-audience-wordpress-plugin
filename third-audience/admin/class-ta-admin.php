@@ -187,6 +187,16 @@ class TA_Admin {
 			'third-audience-bot-management',
 			array( $this, 'render_bot_management_page' )
 		);
+
+		// System Health submenu.
+		add_submenu_page(
+			'third-audience-bot-analytics',
+			__( 'System Health', 'third-audience' ),
+			__( 'System Health', 'third-audience' ),
+			'manage_options',
+			'third-audience-system-health',
+			array( $this, 'render_system_health_page' )
+		);
 	}
 
 	/**
@@ -372,6 +382,18 @@ class TA_Admin {
 		$this->security->verify_admin_capability();
 
 		include TA_PLUGIN_DIR . 'admin/views/bot-management-page.php';
+	}
+
+	/**
+	 * Render system health page.
+	 *
+	 * @since 2.0.0
+	 * @return void
+	 */
+	public function render_system_health_page() {
+		$this->security->verify_admin_capability();
+
+		include TA_PLUGIN_DIR . 'admin/views/system-health-page.php';
 	}
 
 	/**

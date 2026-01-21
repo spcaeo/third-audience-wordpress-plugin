@@ -1,0 +1,23 @@
+{
+    "name": "third-audience/third-audience",
+    "description": "Enterprise WordPress plugin for serving AI-optimized markdown content to bots",
+    "type": "wordpress-plugin",
+    "license": "GPL-3.0-or-later",
+    "require": {
+        "php": ">=7.4",
+        "league/html-to-markdown": "^5.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "ThirdAudience\\": "includes/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    }
+}

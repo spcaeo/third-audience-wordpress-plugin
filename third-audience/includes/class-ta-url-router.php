@@ -30,11 +30,11 @@ class TA_URL_Router {
 	private $cache_manager;
 
 	/**
-	 * API Client instance.
+	 * Local Converter instance.
 	 *
-	 * @var TA_API_Client
+	 * @var TA_Local_Converter
 	 */
-	private $api_client;
+	private $converter;
 
 	/**
 	 * Security instance.
@@ -65,7 +65,7 @@ class TA_URL_Router {
 	 */
 	public function __construct( $cache_manager ) {
 		$this->cache_manager = $cache_manager;
-		$this->api_client    = new TA_API_Client();
+		$this->converter     = new TA_Local_Converter();
 		$this->security      = TA_Security::get_instance();
 		$this->logger        = TA_Logger::get_instance();
 		$this->bot_analytics = TA_Bot_Analytics::get_instance();
@@ -117,13 +117,9 @@ class TA_URL_Router {
 		// Build the original URL (without .md).
 		$original_url = home_url( '/' . $path );
 
-		// Validate the URL.
-		$validated_url = $this->security->validate_url_for_worker( $original_url );
-		if ( is_wp_error( $validated_url ) ) {
-			$this->logger->warning( 'Invalid URL in markdown request.', array(
-				'path'  => $path,
-				'error' => $validated_url->get_error_message(),
-			) );
+		// Basic URL validation (no need for strict Worker validation in local mode).
+		if ( empty( $original_url ) ) {
+			$this->logger->warning( 'Empty URL in markdown request.' );
 			$this->send_error_response( 400, 'Invalid URL' );
 			return;
 		}
@@ -208,19 +204,20 @@ class TA_URL_Router {
 			return;
 		}
 
-		// Fetch from worker.
+		// Convert locally.
 		$start_time = microtime( true );
-		$markdown   = $this->fetch_markdown( $original_url );
+		$markdown   = $this->fetch_markdown( $post_id );
 
 		if ( false === $markdown ) {
 			$this->logger->error( 'Failed to convert content to markdown.', array(
-				'url' => $original_url,
+				'post_id' => $post_id,
+				'url'     => $original_url,
 			) );
 
 			// Track the failed conversion attempt.
 			$this->track_bot_visit( $original_url, $post, 'FAILED', $request_start_time, 0 );
 
-			$this->send_error_response( 502, 'Failed to convert content' );
+			$this->send_error_response( 500, 'Failed to convert content' );
 			return;
 		}
 
@@ -291,87 +288,37 @@ class TA_URL_Router {
 	}
 
 	/**
-	 * Fetch markdown from the worker.
+	 * Convert post to markdown locally.
 	 *
-	 * @since 1.0.0
-	 * @param string $url The URL to convert.
+	 * @since 2.0.0
+	 * @param int $post_id The post ID to convert.
 	 * @return string|false The markdown content or false on failure.
 	 */
-	private function fetch_markdown( $url ) {
-		// Get worker from router (or use direct worker URL).
-		$worker_url = $this->api_client->get_worker_url();
-		if ( ! $worker_url ) {
-			$this->logger->error( 'Failed to get worker URL.' );
+	private function fetch_markdown( $post_id ) {
+		// Check if converter library is available.
+		if ( ! TA_Local_Converter::is_library_available() ) {
+			$this->logger->error( 'HTML to Markdown library is not installed.' );
 			return false;
 		}
 
-		// Validate worker URL.
-		$validated_worker = $this->security->validate_url_for_worker( $worker_url );
-		if ( is_wp_error( $validated_worker ) ) {
-			$this->logger->error( 'Invalid worker URL.', array(
-				'url'   => $worker_url,
-				'error' => $validated_worker->get_error_message(),
+		// Convert post to markdown.
+		$markdown = $this->converter->convert_post( $post_id, array(
+			'include_frontmatter'    => true,
+			'extract_main_content'   => true,
+			'include_title'          => true,
+			'include_excerpt'        => true,
+			'include_featured_image' => true,
+		) );
+
+		if ( is_wp_error( $markdown ) ) {
+			$this->logger->error( 'Local conversion failed.', array(
+				'post_id' => $post_id,
+				'error'   => $markdown->get_error_message(),
 			) );
 			return false;
 		}
 
-		// Call worker to convert.
-		$response = wp_remote_post(
-			$validated_worker . '/convert',
-			array(
-				'timeout' => 30,
-				'headers' => array(
-					'Content-Type' => 'application/json',
-					'Accept'       => 'text/markdown',
-				),
-				'body'    => wp_json_encode( array(
-					'url'     => $url,
-					'options' => array(
-						'include_frontmatter'  => true,
-						'extract_main_content' => true,
-					),
-				) ),
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			$this->logger->error( 'Worker request failed.', array(
-				'url'   => $url,
-				'error' => $response->get_error_message(),
-			) );
-
-			// Trigger notification.
-			do_action( 'ta_worker_connection_failed', $worker_url, $response );
-
-			return false;
-		}
-
-		$status_code = wp_remote_retrieve_response_code( $response );
-		if ( 200 !== $status_code ) {
-			$this->logger->warning( 'Worker returned non-200 status.', array(
-				'url'    => $url,
-				'status' => $status_code,
-			) );
-			return false;
-		}
-
-		$body = wp_remote_retrieve_body( $response );
-
-		// Check if response is JSON (error) or markdown (success).
-		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
-		if ( false !== strpos( $content_type, 'application/json' ) ) {
-			$data = json_decode( $body, true );
-			if ( ! empty( $data['markdown'] ) ) {
-				return $data['markdown'];
-			}
-			$this->logger->warning( 'Worker returned error in JSON.', array(
-				'url'   => $url,
-				'error' => $data['error']['message'] ?? 'Unknown',
-			) );
-			return false;
-		}
-
-		return $body;
+		return $markdown;
 	}
 
 	/**

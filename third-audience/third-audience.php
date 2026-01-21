@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
- * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot)
- * Version: 1.3.0
+ * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with local conversion - no external dependencies!
+ * Version: 2.0.0
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,14 +27,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '1.3.0' );
+define( 'TA_VERSION', '2.0.0' );
 
 /**
  * Database version for migrations.
  *
  * @since 1.1.0
  */
-define( 'TA_DB_VERSION', '1.3.0' );
+define( 'TA_DB_VERSION', '2.0.0' );
 
 /**
  * Minimum PHP version required.
@@ -143,6 +143,11 @@ if ( ! ta_check_php_version() || ! ta_check_wp_version() ) {
 
 // Load autoloader for lazy loading of classes.
 require_once TA_PLUGIN_DIR . 'includes/autoload.php';
+
+// Load Composer autoloader for third-party libraries.
+if ( file_exists( TA_PLUGIN_DIR . 'vendor/autoload.php' ) ) {
+	require_once TA_PLUGIN_DIR . 'vendor/autoload.php';
+}
 
 /**
  * Initialize the plugin.
