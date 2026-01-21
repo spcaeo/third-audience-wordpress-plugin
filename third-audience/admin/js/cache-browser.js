@@ -17,6 +17,7 @@
 		init: function() {
 			this.bindEvents();
 			this.loadWarmupStats();
+			this.initFilters();
 		},
 
 		bindEvents: function() {
@@ -29,6 +30,106 @@
 			$('#ta-modal-close, #ta-modal').on('click', this.closeModal);
 			$('#ta-warmup-all-btn').on('click', this.handleWarmup.bind(this));
 			$('#ta-warmup-cancel-btn').on('click', this.handleCancelWarmup.bind(this));
+
+			// Filter events.
+			$('.ta-toggle-filters').on('click', this.toggleFilters.bind(this));
+			$('.ta-size-preset').on('click', this.handleSizePreset.bind(this));
+			$('.ta-date-preset').on('click', this.handleDatePreset.bind(this));
+			$('#ta-clear-filters').on('click', this.clearFilters.bind(this));
+
+			// Sorting events.
+			$('.ta-sortable').on('click', this.handleSort.bind(this));
+		},
+
+		initFilters: function() {
+			// Check if filters are active and show panel if so.
+			var urlParams = new URLSearchParams(window.location.search);
+			var hasFilters = urlParams.has('status') || urlParams.has('size_min') ||
+			                 urlParams.has('size_max') || urlParams.has('date_from') ||
+			                 urlParams.has('date_to');
+
+			if (hasFilters) {
+				$('.ta-filters-content').show();
+				$('.ta-toggle-filters .dashicons').removeClass('dashicons-arrow-down-alt2')
+					.addClass('dashicons-arrow-up-alt2');
+			}
+		},
+
+		toggleFilters: function(e) {
+			e.preventDefault();
+			$('.ta-filters-content').slideToggle(300);
+			$('.ta-toggle-filters .dashicons').toggleClass('dashicons-arrow-down-alt2 dashicons-arrow-up-alt2');
+		},
+
+		handleSizePreset: function(e) {
+			e.preventDefault();
+			var $btn = $(e.currentTarget);
+			var min = $btn.data('min');
+			var max = $btn.data('max');
+
+			$('#ta-filter-size-min').val(min);
+			$('#ta-filter-size-max').val(max);
+		},
+
+		handleDatePreset: function(e) {
+			e.preventDefault();
+			var $btn = $(e.currentTarget);
+			var preset = $btn.data('preset');
+			var today = new Date();
+			var dateTo = this.formatDate(today);
+			var dateFrom;
+
+			switch (preset) {
+				case '24h':
+					dateFrom = this.formatDate(new Date(today.getTime() - 24 * 60 * 60 * 1000));
+					break;
+				case '7d':
+					dateFrom = this.formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
+					break;
+				case '30d':
+					dateFrom = this.formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000));
+					break;
+			}
+
+			$('#ta-filter-date-from').val(dateFrom);
+			$('#ta-filter-date-to').val(dateTo);
+		},
+
+		formatDate: function(date) {
+			var year = date.getFullYear();
+			var month = String(date.getMonth() + 1).padStart(2, '0');
+			var day = String(date.getDate()).padStart(2, '0');
+			return year + '-' + month + '-' + day;
+		},
+
+		clearFilters: function(e) {
+			e.preventDefault();
+			window.location.href = '?page=third-audience-cache-browser';
+		},
+
+		handleSort: function(e) {
+			var $th = $(e.currentTarget);
+			var column = $th.data('column');
+			var currentOrderBy = this.getUrlParam('orderby');
+			var currentOrder = this.getUrlParam('order') || 'DESC';
+			var newOrder = 'DESC';
+
+			// If clicking the same column, toggle order.
+			if (column === currentOrderBy) {
+				newOrder = currentOrder === 'DESC' ? 'ASC' : 'DESC';
+			}
+
+			// Build URL with sorting params.
+			var url = new URL(window.location.href);
+			url.searchParams.set('orderby', column);
+			url.searchParams.set('order', newOrder);
+
+			window.location.href = url.toString();
+		},
+
+		getUrlParam: function(param) {
+			var urlParams = new URLSearchParams(window.location.search);
+			return urlParams.get(param);
 		},
 
 		handleSelectAll: function() {
