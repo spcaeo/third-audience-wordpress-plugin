@@ -10,7 +10,7 @@
    ======================================== */
 
 .ta-bot-management {
-	margin: 12px 12px 12px 0;
+	margin: 8px 0;
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
@@ -511,7 +511,7 @@
 
 @media screen and (max-width: 782px) {
 	.ta-bot-management {
-		margin: 10px 10px 10px 0;
+		margin: 8px 0;
 	}
 
 	.ta-card {
@@ -561,3 +561,10 @@
 		padding: 8px;
 	}
 }
+
+/* Ultra compact overrides */
+.wrap { margin: 8px 8px 8px 0 !important; }
+.ta-card { margin-bottom: 8px !important; }
+.ta-summary-grid { gap: 8px !important; }
+.ta-table td, .ta-table th { padding: 6px 8px !important; }
+.ta-stat { padding: 8px !important; }
