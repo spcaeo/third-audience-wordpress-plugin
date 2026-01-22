@@ -427,6 +427,40 @@
 	color: #ff3b30;
 }
 
+/* === IP Verification Badges === */
+.ta-ip-verify-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+}
+
+.ta-ip-verify-badge .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+}
+
+.ta-ip-verified {
+	background: rgba(52, 199, 89, 0.15);
+	color: #34c759;
+}
+
+.ta-ip-unverified {
+	background: rgba(255, 149, 0, 0.15);
+	color: #ff9500;
+}
+
+.ta-ip-failed {
+	background: rgba(255, 59, 48, 0.15);
+	color: #ff3b30;
+}
+
 /* === Location & Response Time === */
 .ta-location {
 	font-weight: 600;
@@ -775,6 +809,32 @@
 
 .ta-insight-warning .dashicons {
 	color: #ff9500;
+}
+
+/* === Citation Rate Badges (v2.7.0) === */
+.ta-citation-rate-badge {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 700;
+	text-align: center;
+	min-width: 45px;
+}
+
+.ta-citation-rate-high {
+	background: rgba(52, 199, 89, 0.15);
+	color: #34c759;
+}
+
+.ta-citation-rate-medium {
+	background: rgba(255, 149, 0, 0.15);
+	color: #ff9500;
+}
+
+.ta-citation-rate-low {
+	background: rgba(255, 59, 48, 0.15);
+	color: #ff3b30;
 }
 
 @media (max-width: 600px) {

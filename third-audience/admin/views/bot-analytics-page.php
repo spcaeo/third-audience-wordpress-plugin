@@ -47,6 +47,13 @@ $top_bots_session  = $analytics->get_top_bots_by_metric( 'pages_per_session', 10
 $crawl_budget_day  = $analytics->get_crawl_budget_metrics( null, 'day' );
 $crawl_budget_hour = $analytics->get_crawl_budget_metrics( null, 'hour' );
 
+// Citation Performance (v2.7.0).
+$citation_data = $analytics->get_citation_to_crawl_ratio( $filters, 10 );
+
+// Content Performance Analysis (v2.7.0).
+$content_performance = $analytics->get_content_performance_analysis( $filters );
+$optimal_length      = $analytics->get_optimal_content_length();
+
 // Rate limiting.
 $rate_limiter      = new TA_Rate_Limiter();
 $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
@@ -104,6 +111,17 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-label"><?php esc_html_e( 'Avg Response', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo $summary['avg_response_time']; ?><span style="font-size: 14px;">ms</span></div>
 				<div class="ta-hero-meta">Average response time</div>
+			</div>
+		</div>
+
+		<div class="ta-hero-card">
+			<div class="ta-hero-icon">
+				<span class="dashicons dashicons-yes-alt"></span>
+			</div>
+			<div class="ta-hero-content">
+				<div class="ta-hero-label"><?php esc_html_e( 'Verified Bots', 'third-audience' ); ?></div>
+				<div class="ta-hero-value"><?php echo $summary['ip_verified_percentage']; ?>%</div>
+				<div class="ta-hero-meta"><?php echo number_format( $summary['ip_verified_count'] ); ?> verified visits</div>
 			</div>
 		</div>
 	</div>
@@ -506,6 +524,232 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		</div>
 	</div>
 
+	<!-- Citation Performance (v2.7.0) -->
+	<div class="ta-card" style="margin-top: 20px;">
+		<div class="ta-card-header">
+			<h2>
+				<span class="dashicons dashicons-admin-links"></span>
+				<?php esc_html_e( 'Citation Performance', 'third-audience' ); ?>
+			</h2>
+			<p class="description" style="margin: 8px 0 0 0;">
+				<?php esc_html_e( 'Pages crawled by AI bots vs. cited by AI platforms', 'third-audience' ); ?>
+			</p>
+		</div>
+		<div class="ta-card-body">
+			<?php if ( empty( $citation_data ) ) : ?>
+				<p class="ta-no-data"><?php esc_html_e( 'No citation data yet. Citations are tracked when users click links from AI platforms (ChatGPT, Perplexity, etc.).', 'third-audience' ); ?></p>
+			<?php else : ?>
+				<table class="ta-table ta-table-compact">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
+							<th style="text-align: right;"><?php esc_html_e( 'Crawls', 'third-audience' ); ?></th>
+							<th style="text-align: right;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
+							<th style="text-align: right;"><?php esc_html_e( 'Rate', 'third-audience' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $citation_data as $page ) : ?>
+							<?php
+							$citation_rate_percent = round( $page['citation_rate'] * 100, 1 );
+
+							// Color coding based on citation rate.
+							if ( $citation_rate_percent >= 50 ) {
+								$rate_class = 'ta-citation-rate-high';
+								$rate_color = '#34c759';
+							} elseif ( $citation_rate_percent >= 20 ) {
+								$rate_class = 'ta-citation-rate-medium';
+								$rate_color = '#ff9500';
+							} else {
+								$rate_class = 'ta-citation-rate-low';
+								$rate_color = '#ff3b30';
+							}
+							?>
+							<tr>
+								<td>
+									<a href="<?php echo esc_url( $page['url'] ); ?>" target="_blank" class="ta-page-link">
+										<?php echo esc_html( wp_trim_words( $page['post_title'] ?? $page['url'], 8 ) ); ?>
+									</a>
+								</td>
+								<td style="text-align: right;">
+									<strong><?php echo number_format( $page['crawls'] ); ?></strong>
+								</td>
+								<td style="text-align: right;">
+									<?php echo number_format( $page['citations'] ); ?>
+								</td>
+								<td style="text-align: right;">
+									<span class="ta-citation-rate-badge <?php echo esc_attr( $rate_class ); ?>" style="color: <?php echo esc_attr( $rate_color ); ?>;">
+										<?php echo esc_html( $citation_rate_percent ); ?>%
+									</span>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+
+				<!-- Insight Box -->
+				<div style="margin-top: 16px; padding: 12px; background: #f9f9fb; border-left: 3px solid #007aff; border-radius: 4px;">
+					<p style="margin: 0; font-size: 13px; color: #646970;">
+						<span class="dashicons dashicons-info" style="font-size: 16px; vertical-align: middle;"></span>
+						<strong><?php esc_html_e( 'What does this mean?', 'third-audience' ); ?></strong>
+						<?php esc_html_e( ' A low citation rate means your content is being crawled but not cited. Focus on improving content quality, adding structured data, or building topical authority.', 'third-audience' ); ?>
+					</p>
+				</div>
+			<?php endif; ?>
+		</div>
+	</div>
+
+<!-- Content Performance Insights (v2.7.0) -->
+<div class="ta-card" style="margin-top: 20px;">
+	<div class="ta-card-header">
+		<h2>
+			<span class="dashicons dashicons-media-document"></span>
+			<?php esc_html_e( 'Content Performance Insights', 'third-audience' ); ?>
+		</h2>
+		<p class="description" style="margin: 8px 0 0 0;">
+			<?php esc_html_e( 'Content characteristics correlated with citation rates', 'third-audience' ); ?>
+		</p>
+	</div>
+	<div class="ta-card-body">
+		<?php if ( $content_performance['cited_posts']['total_count'] === 0 && $content_performance['crawled_posts']['total_count'] === 0 ) : ?>
+			<p class="ta-no-data"><?php esc_html_e( 'No content metrics yet. Content analysis happens automatically when AI bots crawl your site.', 'third-audience' ); ?></p>
+		<?php else : ?>
+			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+				<!-- Cited Posts Stats -->
+				<div style="padding: 16px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+					<h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0369a1;">
+						<span class="dashicons dashicons-yes-alt" style="font-size: 16px; vertical-align: middle;"></span>
+						<?php esc_html_e( 'Cited Posts', 'third-audience' ); ?>
+					</h4>
+					<table class="ta-table ta-table-borderless" style="margin: 0;">
+						<tbody>
+							<tr>
+								<td><?php esc_html_e( 'Avg Word Count', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_word_count'] ); ?></strong> words</td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Avg Headings', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_heading_count'], 1 ); ?></strong></td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Avg Images', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_image_count'], 1 ); ?></strong></td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Schema Markup', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['cited_posts']['schema_percentage'], 1 ); ?>%</strong></td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Avg Freshness', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_freshness_days'] ); ?></strong> days</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Crawled Posts Stats -->
+				<div style="padding: 16px; background: #fef9f3; border-radius: 8px; border: 1px solid #fed7aa;">
+					<h4 style="margin: 0 0 12px 0; font-size: 14px; color: #c2410c;">
+						<span class="dashicons dashicons-search" style="font-size: 16px; vertical-align: middle;"></span>
+						<?php esc_html_e( 'Crawled Posts', 'third-audience' ); ?>
+					</h4>
+					<table class="ta-table ta-table-borderless" style="margin: 0;">
+						<tbody>
+							<tr>
+								<td><?php esc_html_e( 'Avg Word Count', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_word_count'] ); ?></strong> words</td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Avg Headings', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_heading_count'], 1 ); ?></strong></td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Avg Images', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_image_count'], 1 ); ?></strong></td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Schema Markup', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['crawled_posts']['schema_percentage'], 1 ); ?>%</strong></td>
+							</tr>
+							<tr>
+								<td><?php esc_html_e( 'Avg Freshness', 'third-audience' ); ?></td>
+								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_freshness_days'] ); ?></strong> days</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<!-- Key Insights -->
+			<div style="margin-top: 16px;">
+				<h4 style="margin: 0 0 12px 0; font-size: 14px;">
+					<span class="dashicons dashicons-lightbulb"></span>
+					<?php esc_html_e( 'Key Insights', 'third-audience' ); ?>
+				</h4>
+				<ul class="ta-insights-list">
+					<?php if ( $optimal_length['optimal_range'] !== 'N/A' ) : ?>
+						<li class="ta-insight-good">
+							<span class="dashicons dashicons-yes-alt"></span>
+							<?php
+							printf(
+								/* translators: 1: word count range, 2: citation count */
+								esc_html__( 'Optimal content length: %1$s words (%2$s citations)', 'third-audience' ),
+								'<strong>' . esc_html( $optimal_length['optimal_range'] ) . '</strong>',
+								'<strong>' . number_format( $optimal_length['citation_count'] ) . '</strong>'
+							);
+							?>
+						</li>
+					<?php endif; ?>
+
+					<?php if ( $content_performance['cited_posts']['avg_word_count'] > 0 && $content_performance['crawled_posts']['avg_word_count'] > 0 ) : ?>
+						<?php
+						$word_count_diff = $content_performance['cited_posts']['avg_word_count'] - $content_performance['crawled_posts']['avg_word_count'];
+						?>
+						<li class="<?php echo $word_count_diff > 0 ? 'ta-insight-good' : 'ta-insight-warning'; ?>">
+							<span class="dashicons dashicons-<?php echo $word_count_diff > 0 ? 'yes-alt' : 'info'; ?>"></span>
+							<?php
+							if ( $word_count_diff > 0 ) {
+								printf(
+									/* translators: %s: word count difference */
+									esc_html__( 'Cited posts are %s words longer on average', 'third-audience' ),
+									'<strong>' . number_format( abs( $word_count_diff ) ) . '</strong>'
+								);
+							} else {
+								esc_html_e( 'Consider writing longer, more comprehensive content', 'third-audience' );
+							}
+							?>
+						</li>
+					<?php endif; ?>
+
+					<?php if ( $content_performance['schema_multiplier'] > 1.5 ) : ?>
+						<li class="ta-insight-good">
+							<span class="dashicons dashicons-yes-alt"></span>
+							<?php
+							printf(
+								/* translators: %s: schema multiplier */
+								esc_html__( 'Posts with schema markup get %sx more citations', 'third-audience' ),
+								'<strong>' . number_format( $content_performance['schema_multiplier'], 1 ) . '</strong>'
+							);
+							?>
+						</li>
+					<?php elseif ( $content_performance['cited_posts']['schema_percentage'] < 50 ) : ?>
+						<li class="ta-insight-warning">
+							<span class="dashicons dashicons-warning"></span>
+							<?php esc_html_e( 'Consider adding schema.org markup to improve citation rates', 'third-audience' ); ?>
+						</li>
+					<?php endif; ?>
+
+					<?php if ( $content_performance['cited_posts']['avg_freshness_days'] < $content_performance['crawled_posts']['avg_freshness_days'] ) : ?>
+						<li class="ta-insight-good">
+							<span class="dashicons dashicons-yes-alt"></span>
+							<?php esc_html_e( 'Fresh content performs better - keep your posts updated!', 'third-audience' ); ?>
+						</li>
+					<?php endif; ?>
+				</ul>
+			</div>
+		<?php endif; ?>
+	</div>
+</div>
 	<!-- Activity Timeline Chart -->
 	<div class="ta-card">
 		<div class="ta-card-header">
@@ -542,6 +786,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 						<th><?php esc_html_e( 'Bot', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Location', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'IP Status', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Cache', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Response', 'third-audience' ); ?></th>
 					</tr>
@@ -549,7 +794,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<tbody id="ta-activity-tbody">
 					<?php if ( empty( $recent_visits ) ) : ?>
 						<tr>
-							<td colspan="6" class="ta-no-data"><?php esc_html_e( 'No activity yet', 'third-audience' ); ?></td>
+							<td colspan="7" class="ta-no-data"><?php esc_html_e( 'No activity yet', 'third-audience' ); ?></td>
 						</tr>
 					<?php else : ?>
 						<?php
@@ -585,6 +830,35 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 									<?php else : ?>
 										-
 									<?php endif; ?>
+								</td>
+								<td>
+									<?php
+									// IP Verification Badge (v2.7.0).
+									if ( isset( $visit['ip_verified'] ) ) {
+										if ( 1 === (int) $visit['ip_verified'] ) {
+											$verify_class = 'ta-ip-verified';
+											$verify_icon  = 'dashicons-yes-alt';
+											$verify_title = sprintf(
+												/* translators: %s: verification method */
+												esc_attr__( 'Verified via %s', 'third-audience' ),
+												$visit['ip_verification_method'] ?? 'IP'
+											);
+										} elseif ( 0 === (int) $visit['ip_verified'] ) {
+											$verify_class = 'ta-ip-failed';
+											$verify_icon  = 'dashicons-dismiss';
+											$verify_title = esc_attr__( 'Failed verification', 'third-audience' );
+										} else {
+											$verify_class = 'ta-ip-unverified';
+											$verify_icon  = 'dashicons-minus';
+											$verify_title = esc_attr__( 'Not verified', 'third-audience' );
+										}
+										?>
+									<span class="ta-ip-verify-badge <?php echo esc_attr( $verify_class ); ?>" title="<?php echo $verify_title; ?>">
+										<span class="dashicons <?php echo esc_attr( $verify_icon ); ?>"></span>
+									</span>
+									<?php } else { ?>
+										-
+									<?php } ?>
 								</td>
 								<td>
 									<span class="ta-cache-badge ta-cache-<?php echo esc_attr( strtolower( $visit['cache_status'] ) ); ?>">

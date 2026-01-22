@@ -34,7 +34,7 @@ class TA_Bot_Analytics {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '1.2.0';
+	const DB_VERSION = '2.7.0';
 
 	/**
 	 * Option name for database version.
@@ -133,6 +133,13 @@ class TA_Bot_Analytics {
 	private $pipeline = null;
 
 	/**
+	 * IP Verifier instance.
+	 *
+	 * @var TA_IP_Verifier|null
+	 */
+	private $ip_verifier = null;
+
+	/**
 	 * Singleton instance.
 	 *
 	 * @var TA_Bot_Analytics|null
@@ -170,6 +177,11 @@ class TA_Bot_Analytics {
 			$known_detector     = new TA_Known_Pattern_Detector( $wpdb );
 			$heuristic_detector = new TA_Heuristic_Detector();
 			$this->pipeline     = new TA_Bot_Detection_Pipeline( $known_detector, $heuristic_detector );
+		}
+
+		// Initialize IP verifier.
+		if ( class_exists( 'TA_IP_Verifier' ) ) {
+			$this->ip_verifier = TA_IP_Verifier::get_instance();
 		}
 
 		$this->maybe_create_table();
@@ -305,6 +317,64 @@ class TA_Bot_Analytics {
 
 			if ( ! $migration_success_v12 ) {
 				$this->logger->error( 'Migration to v1.2.0 failed for detection columns.' );
+			}
+		}
+
+		// Migration for v2.7.0: Add IP verification columns.
+		if ( version_compare( $installed_version, '2.7.0', '<' ) ) {
+			$migration_success_v27 = true;
+
+			$columns_to_add_v27 = array(
+				'ip_verified'            => "ALTER TABLE {$table_name} ADD COLUMN ip_verified tinyint(1) DEFAULT NULL AFTER confidence_score",
+				'ip_verification_method' => "ALTER TABLE {$table_name} ADD COLUMN ip_verification_method varchar(50) DEFAULT NULL AFTER ip_verified",
+				'content_word_count'     => "ALTER TABLE {$table_name} ADD COLUMN content_word_count int(11) DEFAULT NULL AFTER ip_verification_method",
+				'content_heading_count'  => "ALTER TABLE {$table_name} ADD COLUMN content_heading_count int(11) DEFAULT NULL AFTER content_word_count",
+				'content_image_count'    => "ALTER TABLE {$table_name} ADD COLUMN content_image_count int(11) DEFAULT NULL AFTER content_heading_count",
+				'content_has_schema'     => "ALTER TABLE {$table_name} ADD COLUMN content_has_schema tinyint(1) DEFAULT 0 AFTER content_image_count",
+				'content_freshness_days' => "ALTER TABLE {$table_name} ADD COLUMN content_freshness_days int(11) DEFAULT NULL AFTER content_has_schema",
+			);
+
+			foreach ( $columns_to_add_v27 as $column_name => $alter_sql ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$column_exists = $wpdb->get_results(
+					"SHOW COLUMNS FROM {$table_name} LIKE '{$column_name}'"
+				);
+
+				if ( empty( $column_exists ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+					$result = $wpdb->query( $alter_sql );
+
+					if ( false === $result ) {
+						$migration_success_v27 = false;
+						$this->logger->error( "Failed to add column {$column_name}", array(
+							'error' => $wpdb->last_error,
+						) );
+					}
+				}
+			}
+
+			// Add index for ip_verified.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$index_exists = $wpdb->get_results(
+				"SHOW INDEX FROM {$table_name} WHERE Key_name = 'ip_verified'"
+			);
+
+			if ( empty( $index_exists ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$result = $wpdb->query( "ALTER TABLE {$table_name} ADD INDEX ip_verified (ip_verified)" );
+
+				if ( false === $result ) {
+					$migration_success_v27 = false;
+					$this->logger->error( 'Failed to add index ip_verified', array(
+						'error' => $wpdb->last_error,
+					) );
+				}
+			}
+
+			if ( $migration_success_v27 ) {
+				$this->logger->info( 'Migration to v2.7.0 completed successfully (IP verification).' );
+			} else {
+				$this->logger->error( 'Migration to v2.7.0 failed for IP verification columns.' );
 			}
 		}
 
@@ -860,29 +930,37 @@ class TA_Bot_Analytics {
 		$ip_address   = $this->get_client_ip();
 		$country_code = $ip_address ? $this->get_geolocation( $ip_address ) : null;
 
+		// Verify bot IP (if verifier is available and IP exists).
+		$ip_verification = array( 'verified' => null, 'method' => null );
+		if ( null !== $this->ip_verifier && $ip_address ) {
+			$ip_verification = $this->ip_verifier->verify_bot_ip( $data['bot_type'], $ip_address );
+		}
+
 		$insert_data = array(
-			'bot_type'         => sanitize_text_field( $data['bot_type'] ),
-			'bot_name'         => sanitize_text_field( $data['bot_name'] ?? '' ),
-			'user_agent'       => sanitize_text_field( $data['user_agent'] ?? '' ),
-			'url'              => esc_url_raw( $data['url'] ),
-			'post_id'          => isset( $data['post_id'] ) ? absint( $data['post_id'] ) : null,
-			'post_type'        => isset( $data['post_type'] ) ? sanitize_text_field( $data['post_type'] ) : null,
-			'post_title'       => isset( $data['post_title'] ) ? sanitize_text_field( $data['post_title'] ) : null,
-			'request_method'   => sanitize_text_field( $data['request_method'] ?? 'md_url' ),
-			'cache_status'     => sanitize_text_field( $data['cache_status'] ?? 'MISS' ),
-			'response_time'    => isset( $data['response_time'] ) ? absint( $data['response_time'] ) : null,
-			'response_size'    => isset( $data['response_size'] ) ? absint( $data['response_size'] ) : null,
-			'ip_address'       => $ip_address,
-			'referer'          => isset( $data['referer'] ) ? esc_url_raw( $data['referer'] ) : null,
-			'country_code'     => $country_code,
-			'traffic_type'     => sanitize_text_field( $data['traffic_type'] ?? 'bot_crawl' ),
-			'ai_platform'      => isset( $data['ai_platform'] ) ? sanitize_text_field( $data['ai_platform'] ) : null,
-			'search_query'     => isset( $data['search_query'] ) ? sanitize_text_field( $data['search_query'] ) : null,
-			'referer_source'   => isset( $data['referer_source'] ) ? sanitize_text_field( $data['referer_source'] ) : null,
-			'referer_medium'   => isset( $data['referer_medium'] ) ? sanitize_text_field( $data['referer_medium'] ) : null,
-			'detection_method' => isset( $data['detection_method'] ) ? sanitize_text_field( $data['detection_method'] ) : 'legacy',
-			'confidence_score' => isset( $data['confidence_score'] ) ? floatval( $data['confidence_score'] ) : null,
-			'visit_timestamp'  => current_time( 'mysql' ),
+			'bot_type'               => sanitize_text_field( $data['bot_type'] ),
+			'bot_name'               => sanitize_text_field( $data['bot_name'] ?? '' ),
+			'user_agent'             => sanitize_text_field( $data['user_agent'] ?? '' ),
+			'url'                    => esc_url_raw( $data['url'] ),
+			'post_id'                => isset( $data['post_id'] ) ? absint( $data['post_id'] ) : null,
+			'post_type'              => isset( $data['post_type'] ) ? sanitize_text_field( $data['post_type'] ) : null,
+			'post_title'             => isset( $data['post_title'] ) ? sanitize_text_field( $data['post_title'] ) : null,
+			'request_method'         => sanitize_text_field( $data['request_method'] ?? 'md_url' ),
+			'cache_status'           => sanitize_text_field( $data['cache_status'] ?? 'MISS' ),
+			'response_time'          => isset( $data['response_time'] ) ? absint( $data['response_time'] ) : null,
+			'response_size'          => isset( $data['response_size'] ) ? absint( $data['response_size'] ) : null,
+			'ip_address'             => $ip_address,
+			'referer'                => isset( $data['referer'] ) ? esc_url_raw( $data['referer'] ) : null,
+			'country_code'           => $country_code,
+			'traffic_type'           => sanitize_text_field( $data['traffic_type'] ?? 'bot_crawl' ),
+			'ai_platform'            => isset( $data['ai_platform'] ) ? sanitize_text_field( $data['ai_platform'] ) : null,
+			'search_query'           => isset( $data['search_query'] ) ? sanitize_text_field( $data['search_query'] ) : null,
+			'referer_source'         => isset( $data['referer_source'] ) ? sanitize_text_field( $data['referer_source'] ) : null,
+			'referer_medium'         => isset( $data['referer_medium'] ) ? sanitize_text_field( $data['referer_medium'] ) : null,
+			'detection_method'       => isset( $data['detection_method'] ) ? sanitize_text_field( $data['detection_method'] ) : 'legacy',
+			'confidence_score'       => isset( $data['confidence_score'] ) ? floatval( $data['confidence_score'] ) : null,
+			'ip_verified'            => $ip_verification['verified'],
+			'ip_verification_method' => $ip_verification['method'],
+			'visit_timestamp'        => current_time( 'mysql' ),
 		);
 
 		$format = array(
@@ -907,8 +985,32 @@ class TA_Bot_Analytics {
 			'%s', // referer_medium
 			'%s', // detection_method
 			'%f', // confidence_score
+			'%d', // ip_verified
+			'%s', // ip_verification_method
 			'%s', // visit_timestamp
 		);
+
+		// Analyze content metrics if post_id is available.
+		$post_id = isset( $data['post_id'] ) ? absint( $data['post_id'] ) : null;
+		if ( $post_id && class_exists( 'TA_Content_Analyzer' ) ) {
+			$content_analyzer = TA_Content_Analyzer::get_instance();
+			$metrics          = $content_analyzer->analyze_post( $post_id );
+
+			if ( $metrics ) {
+				$insert_data['content_word_count']     = $metrics['word_count'];
+				$insert_data['content_heading_count']  = $metrics['heading_count'];
+				$insert_data['content_image_count']    = $metrics['image_count'];
+				$insert_data['content_has_schema']     = $metrics['has_schema'];
+				$insert_data['content_freshness_days'] = $metrics['freshness_days'];
+
+				// Add format specs for new columns.
+				$format[] = '%d'; // content_word_count
+				$format[] = '%d'; // content_heading_count
+				$format[] = '%d'; // content_image_count
+				$format[] = '%d'; // content_has_schema
+				$format[] = '%d'; // content_freshness_days
+			}
+		}
 
 	$result = $wpdb->insert( $table_name, $insert_data, $format );
 
@@ -1369,23 +1471,43 @@ class TA_Bot_Analytics {
 		$where = $this->build_where_clause( $filters );
 
 		$summary = array(
-			'total_visits'         => 0,
-			'unique_pages'         => 0,
-			'unique_bots'          => 0,
-			'cache_hit_rate'       => 0,
-			'avg_response_time'    => 0,
-			'total_bandwidth'      => 0,
-			'visits_today'         => 0,
-			'visits_yesterday'     => 0,
-			'visits_this_week'     => 0,
-			'visits_this_month'    => 0,
-			'trend_percentage'     => 0,
+			'total_visits'           => 0,
+			'unique_pages'           => 0,
+			'unique_bots'            => 0,
+			'cache_hit_rate'         => 0,
+			'avg_response_time'      => 0,
+			'total_bandwidth'        => 0,
+			'visits_today'           => 0,
+			'visits_yesterday'       => 0,
+			'visits_this_week'       => 0,
+			'visits_this_month'      => 0,
+			'trend_percentage'       => 0,
+			'ip_verified_percentage' => 0,
+			'ip_verified_count'      => 0,
+			'ip_failed_count'        => 0,
 		);
 
 		// Total visits.
 		$summary['total_visits'] = (int) $wpdb->get_var(
 			"SELECT COUNT(*) FROM {$table_name} {$where}"
 		);
+
+		// IP Verification stats (v2.7.0).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$ip_verified_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$table_name} {$where} AND ip_verified = 1"
+		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$ip_failed_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$table_name} {$where} AND ip_verified = 0"
+		);
+
+		$summary['ip_verified_count'] = $ip_verified_count;
+		$summary['ip_failed_count']   = $ip_failed_count;
+
+		if ( $summary['total_visits'] > 0 ) {
+			$summary['ip_verified_percentage'] = round( ( $ip_verified_count / $summary['total_visits'] ) * 100, 1 );
+		}
 
 		// Unique pages.
 		$summary['unique_pages'] = (int) $wpdb->get_var(
@@ -1520,6 +1642,74 @@ class TA_Bot_Analytics {
 			),
 			ARRAY_A
 		);
+	}
+
+	/**
+	 * Get citation-to-crawl ratio for pages.
+	 *
+	 * Shows which content is being crawled by bots but NOT cited by AI platforms.
+	 * Higher ratio = better citation performance.
+	 *
+	 * @since 2.7.0
+	 * @param array $filters Optional filters.
+	 * @param int   $limit   Number of results.
+	 * @return array Citation rate data by URL.
+	 */
+	public function get_citation_to_crawl_ratio( $filters = array(), $limit = 20 ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		// Build WHERE clause (but we need to exclude traffic_type from base filters).
+		$where_conditions = array( '1=1' );
+
+		if ( ! empty( $filters['date_from'] ) ) {
+			$where_conditions[] = $wpdb->prepare( 'DATE(visit_timestamp) >= %s', $filters['date_from'] );
+		}
+
+		if ( ! empty( $filters['date_to'] ) ) {
+			$where_conditions[] = $wpdb->prepare( 'DATE(visit_timestamp) <= %s', $filters['date_to'] );
+		}
+
+		if ( ! empty( $filters['search'] ) ) {
+			$search             = '%' . $wpdb->esc_like( $filters['search'] ) . '%';
+			$where_conditions[] = $wpdb->prepare(
+				'(url LIKE %s OR post_title LIKE %s)',
+				$search,
+				$search
+			);
+		}
+
+		$where_sql = 'WHERE ' . implode( ' AND ', $where_conditions );
+
+		// Query: Count crawls vs citations per URL.
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					url,
+					post_title,
+					COUNT(CASE WHEN traffic_type = 'bot_crawl' THEN 1 END) as crawls,
+					COUNT(CASE WHEN traffic_type = 'citation_click' THEN 1 END) as citations,
+					(COUNT(CASE WHEN traffic_type = 'citation_click' THEN 1 END) * 1.0 /
+					 NULLIF(COUNT(CASE WHEN traffic_type = 'bot_crawl' THEN 1 END), 0)) as citation_rate
+				FROM {$table_name}
+				{$where_sql}
+				GROUP BY url, post_title
+				HAVING crawls > 0
+				ORDER BY crawls DESC
+				LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+
+		// Format results.
+		foreach ( $results as &$result ) {
+			$result['crawls']        = (int) $result['crawls'];
+			$result['citations']     = (int) $result['citations'];
+			$result['citation_rate'] = $result['citation_rate'] ? round( (float) $result['citation_rate'], 3 ) : 0;
+		}
+
+		return $results;
 	}
 
 	/**
@@ -2144,6 +2334,137 @@ class TA_Bot_Analytics {
 	 */
 	public static function get_known_bots() {
 		return self::$known_bots;
+	}
+
+	/**
+	 * Get content performance analysis.
+	 *
+	 * Correlates content metrics with citation rates to identify
+	 * what content characteristics perform best.
+	 *
+	 * @since 2.7.0
+	 * @param array $filters Optional filters.
+	 * @return array Content performance analysis.
+	 */
+	public function get_content_performance_analysis( $filters = array() ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		$where = $this->build_where_clause( $filters );
+
+		// Get avg metrics for cited posts (AI citation traffic).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$cited_stats = $wpdb->get_row(
+			"SELECT
+				AVG(content_word_count) as avg_word_count,
+				AVG(content_heading_count) as avg_heading_count,
+				AVG(content_image_count) as avg_image_count,
+				AVG(content_freshness_days) as avg_freshness_days,
+				SUM(CASE WHEN content_has_schema = 1 THEN 1 ELSE 0 END) as schema_count,
+				COUNT(*) as total_count
+			FROM {$table_name}
+			{$where} AND traffic_type = 'citation_click' AND content_word_count IS NOT NULL",
+			ARRAY_A
+		);
+
+		// Get avg metrics for crawled posts (bot_crawl traffic).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$crawled_stats = $wpdb->get_row(
+			"SELECT
+				AVG(content_word_count) as avg_word_count,
+				AVG(content_heading_count) as avg_heading_count,
+				AVG(content_image_count) as avg_image_count,
+				AVG(content_freshness_days) as avg_freshness_days,
+				SUM(CASE WHEN content_has_schema = 1 THEN 1 ELSE 0 END) as schema_count,
+				COUNT(*) as total_count
+			FROM {$table_name}
+			{$where} AND traffic_type = 'bot_crawl' AND content_word_count IS NOT NULL",
+			ARRAY_A
+		);
+
+		// Calculate citation multiplier.
+		$cited_count    = absint( $cited_stats['total_count'] ?? 0 );
+		$crawled_count  = absint( $crawled_stats['total_count'] ?? 0 );
+		$citation_rate  = $crawled_count > 0 ? round( ( $cited_count / $crawled_count ) * 100, 2 ) : 0;
+
+		$cited_schema_rate = $cited_count > 0
+			? round( ( absint( $cited_stats['schema_count'] ?? 0 ) / $cited_count ) * 100, 1 )
+			: 0;
+
+		$crawled_schema_rate = $crawled_count > 0
+			? round( ( absint( $crawled_stats['schema_count'] ?? 0 ) / $crawled_count ) * 100, 1 )
+			: 0;
+
+		$schema_multiplier = $crawled_schema_rate > 0
+			? round( $cited_schema_rate / $crawled_schema_rate, 1 )
+			: 0;
+
+		return array(
+			'cited_posts'    => array(
+				'avg_word_count'     => round( floatval( $cited_stats['avg_word_count'] ?? 0 ) ),
+				'avg_heading_count'  => round( floatval( $cited_stats['avg_heading_count'] ?? 0 ), 1 ),
+				'avg_image_count'    => round( floatval( $cited_stats['avg_image_count'] ?? 0 ), 1 ),
+				'avg_freshness_days' => round( floatval( $cited_stats['avg_freshness_days'] ?? 0 ) ),
+				'schema_percentage'  => $cited_schema_rate,
+				'total_count'        => $cited_count,
+			),
+			'crawled_posts'  => array(
+				'avg_word_count'     => round( floatval( $crawled_stats['avg_word_count'] ?? 0 ) ),
+				'avg_heading_count'  => round( floatval( $crawled_stats['avg_heading_count'] ?? 0 ), 1 ),
+				'avg_image_count'    => round( floatval( $crawled_stats['avg_image_count'] ?? 0 ), 1 ),
+				'avg_freshness_days' => round( floatval( $crawled_stats['avg_freshness_days'] ?? 0 ) ),
+				'schema_percentage'  => $crawled_schema_rate,
+				'total_count'        => $crawled_count,
+			),
+			'citation_rate'  => $citation_rate,
+			'schema_multiplier' => $schema_multiplier,
+		);
+	}
+
+	/**
+	 * Get optimal content length based on citation data.
+	 *
+	 * Analyzes word count ranges to find the ideal length for citations.
+	 *
+	 * @since 2.7.0
+	 * @return array Optimal content length range.
+	 */
+	public function get_optimal_content_length() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		// Group citations by word count ranges.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$results = $wpdb->get_results(
+			"SELECT
+				CASE
+					WHEN content_word_count < 300 THEN '0-299'
+					WHEN content_word_count < 600 THEN '300-599'
+					WHEN content_word_count < 900 THEN '600-899'
+					WHEN content_word_count < 1200 THEN '900-1199'
+					WHEN content_word_count < 1500 THEN '1200-1499'
+					WHEN content_word_count < 2000 THEN '1500-1999'
+					ELSE '2000+'
+				END as word_range,
+				COUNT(*) as citation_count
+			FROM {$table_name}
+			WHERE traffic_type = 'citation_click' AND content_word_count IS NOT NULL
+			GROUP BY word_range
+			ORDER BY citation_count DESC",
+			ARRAY_A
+		);
+
+		// Find range with most citations.
+		$optimal_range = ! empty( $results ) ? $results[0] : array(
+			'word_range'     => 'N/A',
+			'citation_count' => 0,
+		);
+
+		return array(
+			'optimal_range' => $optimal_range['word_range'],
+			'citation_count' => absint( $optimal_range['citation_count'] ),
+			'all_ranges' => $results,
+		);
 	}
 
 	/**

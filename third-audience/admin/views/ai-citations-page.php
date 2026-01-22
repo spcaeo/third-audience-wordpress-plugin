@@ -70,6 +70,20 @@ $queries_captured = $wpdb->get_var(
 	"SELECT COUNT(*) FROM {$table_name} WHERE {$where_sql} AND search_query IS NOT NULL"
 );
 
+// Overall Citation Rate (v2.7.0) - Citations vs Crawls.
+// Build WHERE clause without traffic_type filter for counting crawls.
+$crawl_where_clauses = array();
+foreach ( $where_clauses as $clause ) {
+	if ( strpos( $clause, 'traffic_type' ) === false ) {
+		$crawl_where_clauses[] = $clause;
+	}
+}
+$crawl_where_sql = empty( $crawl_where_clauses ) ? '1=1' : implode( ' AND ', $crawl_where_clauses );
+$total_crawls = $wpdb->get_var(
+	"SELECT COUNT(*) FROM {$table_name} WHERE {$crawl_where_sql} AND traffic_type = 'bot_crawl'"
+);
+$overall_citation_rate = $total_crawls > 0 ? round( ( $total_citations / $total_crawls ) * 100, 1 ) : 0;
+
 // Get all available platforms for filter dropdown.
 $available_platforms = $wpdb->get_col(
 	"SELECT DISTINCT ai_platform FROM {$table_name} WHERE traffic_type = 'citation_click' AND ai_platform IS NOT NULL ORDER BY ai_platform"
@@ -175,6 +189,52 @@ $top_cited_pages = $wpdb->get_results(
 					?>%
 				</div>
 				<div class="ta-hero-meta">Queries / Citations</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Overall Citation Rate Summary (v2.7.0) -->
+	<div class="ta-card" style="margin-top: 20px; background: linear-gradient(135deg, #ffffff 0%, #f9f9fb 100%); border-left: 4px solid #007aff;">
+		<div class="ta-card-body" style="padding: 24px;">
+			<div style="display: flex; align-items: center; gap: 20px;">
+				<div style="flex-shrink: 0;">
+					<div style="width: 80px; height: 80px; background: rgba(0, 122, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+						<span class="dashicons dashicons-chart-area" style="font-size: 36px; width: 36px; height: 36px; color: #007aff;"></span>
+					</div>
+				</div>
+				<div style="flex: 1;">
+					<h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">
+						<?php esc_html_e( 'Overall Citation Rate', 'third-audience' ); ?>
+					</h3>
+					<div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
+						<span style="font-size: 42px; font-weight: 700; color: <?php echo $overall_citation_rate >= 50 ? '#34c759' : ( $overall_citation_rate >= 20 ? '#ff9500' : '#ff3b30' ); ?>;">
+							<?php echo esc_html( $overall_citation_rate ); ?>%
+						</span>
+						<span style="font-size: 13px; color: #646970;">
+							<?php
+							printf(
+								/* translators: 1: citations count, 2: crawls count */
+								esc_html__( '%1$s citations from %2$s crawls', 'third-audience' ),
+								'<strong>' . number_format( $total_citations ) . '</strong>',
+								'<strong>' . number_format( $total_crawls ) . '</strong>'
+							);
+							?>
+						</span>
+					</div>
+					<p style="margin: 0; font-size: 13px; color: #646970; line-height: 1.5;">
+						<?php
+						if ( $overall_citation_rate >= 50 ) {
+							esc_html_e( 'Excellent! Your content has strong citation performance. Over half of AI bot crawls result in citations.', 'third-audience' );
+						} elseif ( $overall_citation_rate >= 20 ) {
+							esc_html_e( 'Good citation rate. Consider optimizing content quality and structured data to improve visibility in AI responses.', 'third-audience' );
+						} elseif ( $overall_citation_rate > 0 ) {
+							esc_html_e( 'Low citation rate. Your content is being crawled but not cited. Focus on improving content depth, authority, and relevance.', 'third-audience' );
+						} else {
+							esc_html_e( 'No citations yet. When users click links from AI platforms (ChatGPT, Perplexity, etc.), citations will be tracked here.', 'third-audience' );
+						}
+						?>
+					</p>
+				</div>
 			</div>
 		</div>
 	</div>
