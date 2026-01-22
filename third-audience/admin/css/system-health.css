@@ -710,3 +710,22 @@
 .ta-stat-label { font-size: 11px !important; }
 .ta-form-table th, .ta-form-table td { padding: 6px 8px !important; }
 .button { padding: 4px 10px !important; height: 30px !important; font-size: 12px !important; }
+
+/* Card Grid Layout - Utilize horizontal space */
+.ta-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.ta-cards-container .ta-card {
+    margin-bottom: 0 !important;
+}
+
+/* Responsive: single column on mobile */
+@media (max-width: 1024px) {
+    .ta-cards-container {
+        grid-template-columns: 1fr;
+    }
+}
