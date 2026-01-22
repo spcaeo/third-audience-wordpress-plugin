@@ -123,6 +123,13 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_recalculate_ai_score', array( $this, 'ajax_recalculate_ai_score' ) );
 		add_action( 'wp_ajax_ta_test_ga4_connection', array( $this, 'ajax_test_ga4_connection' ) );
 
+		// Competitor Benchmarking AJAX handlers.
+		add_action( 'wp_ajax_ta_add_competitor', array( $this, 'ajax_add_competitor' ) );
+		add_action( 'wp_ajax_ta_delete_competitor', array( $this, 'ajax_delete_competitor' ) );
+		add_action( 'wp_ajax_ta_generate_prompts', array( $this, 'ajax_generate_prompts' ) );
+		add_action( 'wp_ajax_ta_record_test', array( $this, 'ajax_record_test' ) );
+		add_action( 'wp_ajax_ta_delete_test', array( $this, 'ajax_delete_test' ) );
+
 		// Metadata settings hooks - clear pre-generated markdown when settings change.
 		add_action( 'update_option_ta_enable_enhanced_metadata', array( $this, 'on_metadata_settings_change' ), 10, 2 );
 		add_action( 'update_option_ta_metadata_word_count', array( $this, 'on_metadata_settings_change' ), 10, 2 );
@@ -151,6 +158,7 @@ class TA_Admin {
 			'bot-analytics_page_third-audience-cache-browser',
 			'bot-analytics_page_third-audience-system-health',
 			'bot-analytics_page_third-audience-about',
+			'bot-analytics_page_third-audience-competitor-benchmarking',
 		);
 
 		if ( in_array( $hook, $ta_pages, true ) ) {
@@ -306,6 +314,42 @@ class TA_Admin {
 				array(),
 				TA_VERSION
 			);
+		}
+
+		// Competitor Benchmarking page.
+		if ( 'bot-analytics_page_third-audience-competitor-benchmarking' === $hook ) {
+			wp_enqueue_style(
+				'ta-competitor-benchmarking',
+				TA_PLUGIN_URL . 'admin/css/competitor-benchmarking.css',
+				array( 'ta-apple-theme' ),
+				TA_VERSION
+			);
+
+			wp_enqueue_script(
+				'ta-competitor-benchmarking',
+				TA_PLUGIN_URL . 'admin/js/competitor-benchmarking.js',
+				array( 'jquery' ),
+				TA_VERSION,
+				true
+			);
+
+			wp_localize_script( 'ta-competitor-benchmarking', 'taCompetitorBenchmarking', array(
+				'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+				'nonce'      => $this->security->create_nonce( 'competitor_benchmarking' ),
+				'resultsUrl' => admin_url( 'admin.php?page=third-audience-competitor-benchmarking&tab=results' ),
+				'i18n'       => array(
+					'saving'                   => __( 'Saving...', 'third-audience' ),
+					'generating'               => __( 'Generating...', 'third-audience' ),
+					'error'                    => __( 'An error occurred. Please try again.', 'third-audience' ),
+					'selectCompetitor'         => __( 'Please select a competitor first.', 'third-audience' ),
+					'confirmDeleteCompetitor'  => __( 'Delete competitor "%s"? All associated test results will remain.', 'third-audience' ),
+					'confirmDeleteResult'      => __( 'Delete this test result?', 'third-audience' ),
+					'usePrompt'                => __( 'Use in Test', 'third-audience' ),
+					'copied'                   => __( 'Copied!', 'third-audience' ),
+					'copyFailed'               => __( 'Failed to copy. Please copy manually.', 'third-audience' ),
+					'fillFields'               => __( 'Fill in the fields above to generate a custom prompt...', 'third-audience' ),
+				),
+			) );
 		}
 
 		// AI Score meta box (post editor).
@@ -649,6 +693,16 @@ class TA_Admin {
 			array( $this, 'render_about_page' )
 		);
 
+		// Competitor Benchmarking submenu.
+		add_submenu_page(
+			'third-audience-bot-analytics',
+			__( 'Competitor Benchmarking', 'third-audience' ),
+			__( 'Competitor Benchmarking', 'third-audience' ),
+			'manage_options',
+			'third-audience-competitor-benchmarking',
+			array( $this, 'render_competitor_benchmarking_page' )
+		);
+
 		// Citation Alerts submenu (hidden from menu, accessible via direct link).
 		add_submenu_page(
 			null, // Hidden from menu.
@@ -926,6 +980,43 @@ class TA_Admin {
 		$this->security->verify_admin_capability();
 
 		include TA_PLUGIN_DIR . 'admin/views/about-page.php';
+	}
+
+	/**
+	 * Render Competitor Benchmarking page.
+	 *
+	 * @since 3.1.0
+	 * @return void
+	 */
+	public function render_competitor_benchmarking_page() {
+		$this->security->verify_admin_capability();
+
+		// Handle export action.
+		if ( isset( $_GET['action'] ) && 'export' === $_GET['action'] ) {
+			check_admin_referer( 'ta_export_benchmarks' );
+
+			$benchmarking = TA_Competitor_Benchmarking::get_instance();
+
+			// Get filters.
+			$filters = array();
+			if ( ! empty( $_GET['competitor_url'] ) ) {
+				$filters['competitor_url'] = sanitize_text_field( wp_unslash( $_GET['competitor_url'] ) );
+			}
+			if ( ! empty( $_GET['ai_platform'] ) ) {
+				$filters['ai_platform'] = sanitize_text_field( wp_unslash( $_GET['ai_platform'] ) );
+			}
+			if ( ! empty( $_GET['date_from'] ) ) {
+				$filters['date_from'] = sanitize_text_field( wp_unslash( $_GET['date_from'] ) );
+			}
+			if ( ! empty( $_GET['date_to'] ) ) {
+				$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
+			}
+
+			$benchmarking->export_to_csv( $filters );
+			exit;
+		}
+
+		include TA_PLUGIN_DIR . 'admin/views/competitor-benchmarking-page.php';
 	}
 
 	/**
@@ -2118,5 +2209,178 @@ class TA_Admin {
 		wp_send_json_success( array(
 			'message' => $result['message'],
 		) );
+	}
+
+	/**
+	 * AJAX handler: Add competitor.
+	 *
+	 * @since 3.1.0
+	 * @return void
+	 */
+	public function ajax_add_competitor() {
+		$this->security->verify_ajax_request( 'competitor_benchmarking' );
+
+		$url  = isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '';
+		$name = isset( $_POST['competitor_name'] ) ? sanitize_text_field( wp_unslash( $_POST['competitor_name'] ) ) : '';
+
+		if ( empty( $url ) || empty( $name ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'Competitor URL and name are required.', 'third-audience' ),
+			) );
+		}
+
+		$benchmarking = TA_Competitor_Benchmarking::get_instance();
+		$result       = $benchmarking->add_competitor( $url, $name );
+
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array(
+				'message' => $result->get_error_message(),
+			) );
+		}
+
+		wp_send_json_success( array(
+			'message' => __( 'Competitor added successfully.', 'third-audience' ),
+		) );
+	}
+
+	/**
+	 * AJAX handler: Delete competitor.
+	 *
+	 * @since 3.1.0
+	 * @return void
+	 */
+	public function ajax_delete_competitor() {
+		$this->security->verify_ajax_request( 'competitor_benchmarking' );
+
+		$url = isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '';
+
+		if ( empty( $url ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'Invalid competitor URL.', 'third-audience' ),
+			) );
+		}
+
+		$benchmarking = TA_Competitor_Benchmarking::get_instance();
+		$result       = $benchmarking->delete_competitor( $url );
+
+		if ( $result ) {
+			wp_send_json_success( array(
+				'message' => __( 'Competitor deleted successfully.', 'third-audience' ),
+			) );
+		} else {
+			wp_send_json_error( array(
+				'message' => __( 'Failed to delete competitor.', 'third-audience' ),
+			) );
+		}
+	}
+
+	/**
+	 * AJAX handler: Generate prompts for competitor.
+	 *
+	 * @since 3.1.0
+	 * @return void
+	 */
+	public function ajax_generate_prompts() {
+		$this->security->verify_ajax_request( 'competitor_benchmarking' );
+
+		$url  = isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '';
+		$name = isset( $_POST['competitor_name'] ) ? sanitize_text_field( wp_unslash( $_POST['competitor_name'] ) ) : '';
+
+		if ( empty( $url ) || empty( $name ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'Competitor URL and name are required.', 'third-audience' ),
+			) );
+		}
+
+		$benchmarking = TA_Competitor_Benchmarking::get_instance();
+		$prompts      = $benchmarking->generate_prompts( $url, $name );
+
+		wp_send_json_success( array(
+			'prompts' => $prompts,
+			'message' => __( 'Prompts generated successfully.', 'third-audience' ),
+		) );
+	}
+
+	/**
+	 * AJAX handler: Record test result.
+	 *
+	 * @since 3.1.0
+	 * @return void
+	 */
+	public function ajax_record_test() {
+		// Verify nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'ta_record_test' ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'Security verification failed.', 'third-audience' ),
+			) );
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'Permission denied.', 'third-audience' ),
+			) );
+		}
+
+		$data = array(
+			'competitor_url'  => isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '',
+			'competitor_name' => isset( $_POST['competitor_name'] ) ? sanitize_text_field( wp_unslash( $_POST['competitor_name'] ) ) : '',
+			'test_prompt'     => isset( $_POST['test_prompt'] ) ? sanitize_textarea_field( wp_unslash( $_POST['test_prompt'] ) ) : '',
+			'ai_platform'     => isset( $_POST['ai_platform'] ) ? sanitize_text_field( wp_unslash( $_POST['ai_platform'] ) ) : '',
+			'cited_rank'      => isset( $_POST['cited_rank'] ) && $_POST['cited_rank'] !== '' ? absint( $_POST['cited_rank'] ) : null,
+			'test_date'       => isset( $_POST['test_date'] ) ? sanitize_text_field( wp_unslash( $_POST['test_date'] ) ) : current_time( 'mysql' ),
+			'test_notes'      => isset( $_POST['test_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['test_notes'] ) ) : '',
+		);
+
+		// Validate required fields.
+		if ( empty( $data['competitor_url'] ) || empty( $data['competitor_name'] ) || empty( $data['test_prompt'] ) || empty( $data['ai_platform'] ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'All required fields must be filled.', 'third-audience' ),
+			) );
+		}
+
+		$benchmarking = TA_Competitor_Benchmarking::get_instance();
+		$result       = $benchmarking->record_test( $data );
+
+		if ( $result ) {
+			wp_send_json_success( array(
+				'message' => __( 'Test result recorded successfully.', 'third-audience' ),
+				'test_id' => $result,
+			) );
+		} else {
+			wp_send_json_error( array(
+				'message' => __( 'Failed to record test result.', 'third-audience' ),
+			) );
+		}
+	}
+
+	/**
+	 * AJAX handler: Delete test result.
+	 *
+	 * @since 3.1.0
+	 * @return void
+	 */
+	public function ajax_delete_test() {
+		$this->security->verify_ajax_request( 'competitor_benchmarking' );
+
+		$test_id = isset( $_POST['test_id'] ) ? absint( $_POST['test_id'] ) : 0;
+
+		if ( empty( $test_id ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'Invalid test ID.', 'third-audience' ),
+			) );
+		}
+
+		$benchmarking = TA_Competitor_Benchmarking::get_instance();
+		$result       = $benchmarking->delete_test( $test_id );
+
+		if ( $result ) {
+			wp_send_json_success( array(
+				'message' => __( 'Test result deleted successfully.', 'third-audience' ),
+			) );
+		} else {
+			wp_send_json_error( array(
+				'message' => __( 'Failed to delete test result.', 'third-audience' ),
+			) );
+		}
 	}
 }

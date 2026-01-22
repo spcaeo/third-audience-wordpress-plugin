@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
- * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Google Analytics 4 integration for tracking bot traffic!
- * Version: 3.0.0
+ * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Google Analytics 4 integration and Competitor Benchmarking!
+ * Version: 3.1.0
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,14 +27,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.0.0' );
+define( 'TA_VERSION', '3.1.0' );
 
 /**
  * Database version for migrations.
  *
  * @since 1.1.0
  */
-define( 'TA_DB_VERSION', '2.0.0' );
+define( 'TA_DB_VERSION', '3.1.0' );
 
 /**
  * Minimum PHP version required.
@@ -389,6 +389,15 @@ function ta_upgrade( $installed_version ) {
 			'cache_cleared'     => $cache_cleared,
 			'removed_settings'  => array( 'ta_worker_url', 'ta_router_url', 'ta_api_key' ),
 		) );
+	}
+
+	// Upgrade from 2.x to 3.1.0 - Add Competitor Benchmarking feature.
+	if ( version_compare( $installed_version, '3.1.0', '<' ) ) {
+		// Initialize Competitor Benchmarking class to create database table.
+		if ( class_exists( 'TA_Competitor_Benchmarking' ) ) {
+			TA_Competitor_Benchmarking::get_instance();
+			$logger->info( 'Upgraded to v3.1.0 - Competitor Benchmarking feature added.' );
+		}
 	}
 
 	// Log upgrade completion.
