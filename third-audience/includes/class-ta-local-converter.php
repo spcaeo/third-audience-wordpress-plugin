@@ -66,21 +66,39 @@ class TA_Local_Converter {
 	 */
 	private function init_converter() {
 		try {
+			// Enhanced options for production-grade markdown
 			$options = array(
-				'header_style'    => 'atx',              // Use # for headers
-				'bold_style'      => '**',               // Use ** for bold
-				'italic_style'    => '_',                // Use _ for italic
-				'strip_tags'      => true,               // Strip all HTML tags for pure markdown
-				'remove_nodes'    => 'script style nav header footer aside form',  // Remove UI chrome
-				'hard_break'      => false,              // Use double space for line breaks
-				'list_item_style' => '-',                // Use - for unordered lists
-				'table_pipe_escape' => '\\',             // Escape pipes in tables
-				'use_autolinks'   => true,               // Convert URLs to autolinks
+				'header_style'              => 'atx',     // Use # for headers
+				'bold_style'                => '**',      // Use ** for bold
+				'italic_style'              => '_',       // Use _ for italic
+				'strip_tags'                => false,     // Selective stripping with remove_nodes
+				'strip_placeholder_links'   => true,      // Remove # placeholder links
+				'remove_nodes'              => 'script style nav header footer aside form iframe', // Remove UI chrome
+				'hard_break'                => true,      // Preserve line breaks
+				'list_item_style'           => '-',       // Use - for unordered lists
+				'table_pipe_escape'         => '\\|',     // Proper table escaping
+				'table_caption_side'        => 'top',     // Table captions above
+				'use_autolinks'             => true,      // Convert URLs to autolinks
+				'suppress_errors'           => true,      // Graceful error handling
+				'preserve_comments'         => false,     // Remove HTML comments
 			);
 
 			$this->converter = new HtmlConverter( $options );
 
-			$this->logger->debug( 'Local HTML converter initialized successfully.' );
+			// Add custom converters for enhanced formatting
+			$environment = $this->converter->getEnvironment();
+
+			// Add table converter for GitHub Flavored Markdown tables
+			$environment->addConverter( new \League\HTMLToMarkdown\Converter\TableConverter() );
+
+			// Add code block converters with language hints
+			$environment->addConverter( new \League\HTMLToMarkdown\Converter\CodeConverter() );
+			$environment->addConverter( new \League\HTMLToMarkdown\Converter\PreformattedConverter() );
+
+			// Add blockquote converter for better quote formatting
+			$environment->addConverter( new \League\HTMLToMarkdown\Converter\BlockquoteConverter() );
+
+			$this->logger->debug( 'Enhanced HTML converter initialized successfully with custom converters.' );
 
 		} catch ( Exception $e ) {
 			$this->logger->error( 'Failed to initialize HTML converter.', array(
@@ -265,16 +283,26 @@ class TA_Local_Converter {
 				}
 			}
 
+			// SEO Description (full, not truncated like summary)
+			if ( get_option( 'ta_metadata_description', true ) ) {
+				$description = $this->get_seo_description( $post );
+				if ( ! empty( $description ) ) {
+					$frontmatter .= 'description: "' . addslashes( $description ) . "\"\n";
+				}
+			}
+
+			// SEO Keywords
+			if ( get_option( 'ta_metadata_keywords', true ) ) {
+				$keywords = $this->get_seo_keywords( $post );
+				if ( ! empty( $keywords ) ) {
+					$frontmatter .= 'keywords: "' . addslashes( $keywords ) . "\"\n";
+				}
+			}
+
 			// Language
 			if ( get_option( 'ta_metadata_language', true ) ) {
 				$language = $this->get_language();
 				$frontmatter .= 'language: "' . $language . "\"\n";
-			}
-
-			// Last modified
-			if ( get_option( 'ta_metadata_last_modified', true ) ) {
-				$last_modified = get_the_modified_date( 'c', $post->ID );
-				$frontmatter .= 'last_modified: "' . $last_modified . "\"\n";
 			}
 
 			// Schema type
@@ -371,6 +399,91 @@ class TA_Local_Converter {
 		// Extract language code (e.g., 'en' from 'en_US')
 		$language = substr( $locale, 0, 2 );
 		return $language;
+	}
+
+	/**
+	 * Get SEO description from various sources.
+	 *
+	 * @since 2.4.0
+	 * @param WP_Post $post The post object.
+	 * @return string SEO description.
+	 */
+	private function get_seo_description( $post ) {
+		// Try Yoast SEO meta description
+		$description = get_post_meta( $post->ID, '_yoast_wpseo_metadesc', true );
+
+		// Try RankMath meta description
+		if ( empty( $description ) ) {
+			$description = get_post_meta( $post->ID, 'rank_math_description', true );
+		}
+
+		// Fallback to excerpt
+		if ( empty( $description ) ) {
+			$description = get_the_excerpt( $post );
+		}
+
+		// Fallback to first paragraph of content
+		if ( empty( $description ) && ! empty( $post->post_content ) ) {
+			$content = wp_strip_all_tags( $post->post_content );
+			$paragraphs = explode( "\n\n", $content );
+			$description = ! empty( $paragraphs[0] ) ? $paragraphs[0] : '';
+		}
+
+		// Trim to reasonable length (160 characters for SEO)
+		if ( strlen( $description ) > 160 ) {
+			$description = substr( $description, 0, 157 ) . '...';
+		}
+
+		return trim( $description );
+	}
+
+	/**
+	 * Get SEO keywords from various sources.
+	 *
+	 * @since 2.4.0
+	 * @param WP_Post $post The post object.
+	 * @return string Comma-separated keywords.
+	 */
+	private function get_seo_keywords( $post ) {
+		$keywords = array();
+
+		// Try Yoast SEO focus keyword
+		$focus_keyword = get_post_meta( $post->ID, '_yoast_wpseo_focuskw', true );
+		if ( ! empty( $focus_keyword ) ) {
+			$keywords[] = $focus_keyword;
+		}
+
+		// Try RankMath focus keyword
+		if ( empty( $keywords ) ) {
+			$rank_math_keyword = get_post_meta( $post->ID, 'rank_math_focus_keyword', true );
+			if ( ! empty( $rank_math_keyword ) ) {
+				$keywords[] = $rank_math_keyword;
+			}
+		}
+
+		// Add tags as keywords
+		$tags = get_the_tags( $post->ID );
+		if ( ! empty( $tags ) ) {
+			foreach ( $tags as $tag ) {
+				$keywords[] = $tag->name;
+			}
+		}
+
+		// Add categories as keywords if we still don't have enough
+		if ( count( $keywords ) < 3 ) {
+			$categories = get_the_category( $post->ID );
+			if ( ! empty( $categories ) ) {
+				foreach ( $categories as $category ) {
+					$keywords[] = $category->name;
+				}
+			}
+		}
+
+		// Remove duplicates and limit to 10 keywords
+		$keywords = array_unique( $keywords );
+		$keywords = array_slice( $keywords, 0, 10 );
+
+		return implode( ', ', $keywords );
 	}
 
 	/**
@@ -613,11 +726,16 @@ class TA_Local_Converter {
 	 * @param WP_Post $post The post object.
 	 * @return string Footer markdown.
 	 */
-	private function generate_footer( $post ) {
+	private function generate_footer( $post, $cache_status = null ) {
 		$footer = "\n\n---\n\n";
 		$footer .= '_View the original post at: [' . get_permalink( $post->ID ) . '](' . get_permalink( $post->ID ) . ')_  ' . "\n";
 		$footer .= '_Served as markdown by [Third Audience](https://github.com/third-audience) v' . TA_VERSION . '_  ' . "\n";
 		$footer .= '_Generated: ' . gmdate( 'Y-m-d H:i:s' ) . ' UTC_  ' . "\n";
+
+		// Add cache status if provided
+		if ( ! empty( $cache_status ) ) {
+			$footer .= '_Cache Status: ' . strtoupper( $cache_status ) . '_  ' . "\n";
+		}
 
 		return $footer;
 	}
