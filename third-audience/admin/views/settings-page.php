@@ -385,8 +385,10 @@ $security = TA_Security::get_instance();
 								'post_status' => 'publish',
 							) );
 							if ( $sample_post ) :
-								$md_url = untrailingslashit( get_permalink( $sample_post[0] ) ) . '.md';
-								?>
+								$permalink = get_permalink( $sample_post[0] );
+								if ( $permalink && is_string( $permalink ) ) :
+									$md_url = untrailingslashit( $permalink ) . '.md';
+									?>
 								<p>
 									<a href="<?php echo esc_url( $md_url ); ?>" target="_blank" class="button button-secondary">
 										<?php esc_html_e( 'View Sample .md', 'third-audience' ); ?>
@@ -395,7 +397,14 @@ $security = TA_Security::get_instance();
 								<p class="description">
 									<code class="ta-url-display"><?php echo esc_html( $md_url ); ?></code>
 								</p>
-							<?php else : ?>
+							<?php
+								else :
+									?>
+									<p class="description"><?php esc_html_e( 'Could not generate sample URL.', 'third-audience' ); ?></p>
+									<?php
+								endif;
+							else :
+								?>
 								<p class="description"><?php esc_html_e( 'No published posts found.', 'third-audience' ); ?></p>
 							<?php endif; ?>
 						</div>

@@ -47,8 +47,19 @@ class TA_Discovery {
             // Get current URL and generate markdown URL
             $current_url = get_permalink();
 
+            // Bail early if permalink is invalid
+            if (empty($current_url) || !is_string($current_url)) {
+                return;
+            }
+
             // Parse URL to handle edge cases
             $parsed = wp_parse_url($current_url);
+
+            // Bail if URL parsing failed
+            if (false === $parsed || !isset($parsed['scheme']) || !isset($parsed['host'])) {
+                return;
+            }
+
             $path = isset($parsed['path']) ? $parsed['path'] : '/';
 
             // Remove trailing slash and add .md

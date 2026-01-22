@@ -139,6 +139,14 @@ class TA_Logger {
 
 		// Set up log file path.
 		$upload_dir = wp_upload_dir();
+
+		// Bail if upload dir has an error or basedir is not set.
+		if ( empty( $upload_dir['basedir'] ) || ! empty( $upload_dir['error'] ) ) {
+			// Fallback to a safe default if upload dir fails.
+			$this->log_file_path = WP_CONTENT_DIR . '/third-audience-debug.log';
+			return;
+		}
+
 		$log_dir    = $upload_dir['basedir'] . '/third-audience-logs';
 
 		// Create log directory if it doesn't exist.
@@ -645,6 +653,12 @@ class TA_Logger {
 
 		// Delete log files.
 		$upload_dir = wp_upload_dir();
+
+		// Bail if upload dir has an error or basedir is not set.
+		if ( empty( $upload_dir['basedir'] ) || ! empty( $upload_dir['error'] ) ) {
+			return;
+		}
+
 		$log_dir    = $upload_dir['basedir'] . '/third-audience-logs';
 
 		if ( is_dir( $log_dir ) ) {

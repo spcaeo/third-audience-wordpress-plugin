@@ -71,6 +71,12 @@ class TA_Content_Negotiation {
 
         // Redirect to .md URL
         $current_url = get_permalink();
+
+        // Bail if permalink is invalid
+        if (empty($current_url) || !is_string($current_url)) {
+            return;
+        }
+
         $markdown_url = untrailingslashit($current_url) . '.md';
 
         // Use 303 See Other for content negotiation redirect
