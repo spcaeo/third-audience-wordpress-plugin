@@ -366,7 +366,6 @@ $bot_stats = $wpdb->get_results(
 
 			<div style="margin-top: 20px;">
 				<button type="button" id="add-custom-bot" class="button button-secondary ta-btn">
-					<span class="dashicons dashicons-plus-alt" style="margin-top: 3px;"></span>
 					<?php esc_html_e( 'Add Custom Bot Pattern', 'third-audience' ); ?>
 				</button>
 			</div>

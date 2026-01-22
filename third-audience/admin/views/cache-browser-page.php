@@ -90,7 +90,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="ta-warmup-body">
 			<div class="ta-warmup-controls">
 				<button id="ta-warmup-all-btn" class="button button-primary">
-					<span class="dashicons dashicons-update"></span>
 					<?php esc_html_e( 'Warm All Cache', 'third-audience' ); ?>
 				</button>
 				<button id="ta-warmup-cancel-btn" class="button" style="display:none;">
@@ -166,38 +165,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 	<div class="ta-cache-actions">
 		<div class="ta-actions-left">
 			<button id="ta-bulk-delete-btn" class="button">
-				<span class="dashicons dashicons-trash"></span>
 				<?php esc_html_e( 'Delete Selected', 'third-audience' ); ?>
 			</button>
 			<button id="ta-clear-expired-btn" class="button">
-				<span class="dashicons dashicons-dismiss"></span>
 				<?php esc_html_e( 'Clear Expired', 'third-audience' ); ?>
 			</button>
 		</div>
 		<div class="ta-actions-right">
 			<div class="ta-export-dropdown">
 				<button type="button" class="button ta-export-dropdown-toggle">
-					<span class="dashicons dashicons-download"></span>
 					<?php esc_html_e( 'Export', 'third-audience' ); ?>
-					<span class="dashicons dashicons-arrow-down-alt2"></span>
 				</button>
 				<div class="ta-export-dropdown-menu">
 					<button id="ta-export-selected-btn" class="ta-export-option" title="<?php esc_attr_e( 'Export only selected cache entries', 'third-audience' ); ?>">
-						<span class="dashicons dashicons-yes-alt"></span>
 						<div>
 							<strong><?php esc_html_e( 'Export Selected', 'third-audience' ); ?></strong>
 							<span><?php esc_html_e( 'Only checked items', 'third-audience' ); ?></span>
 						</div>
 					</button>
 					<button id="ta-export-filtered-btn" class="ta-export-option" title="<?php esc_attr_e( 'Export current filtered and sorted view', 'third-audience' ); ?>">
-						<span class="dashicons dashicons-filter"></span>
 						<div>
 							<strong><?php esc_html_e( 'Export View', 'third-audience' ); ?></strong>
 							<span><?php esc_html_e( 'Current filtered view', 'third-audience' ); ?></span>
 						</div>
 					</button>
 					<button id="ta-export-all-btn" class="ta-export-option" title="<?php esc_attr_e( 'Export all cache entries', 'third-audience' ); ?>">
-						<span class="dashicons dashicons-database"></span>
 						<div>
 							<strong><?php esc_html_e( 'Export All', 'third-audience' ); ?></strong>
 							<span><?php esc_html_e( 'All cache entries', 'third-audience' ); ?></span>
@@ -275,7 +267,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<div class="ta-modal-header">
 				<h2><?php esc_html_e( 'Cache Content', 'third-audience' ); ?></h2>
 				<button class="ta-modal-close" id="ta-modal-close" aria-label="<?php esc_attr_e( 'Close', 'third-audience' ); ?>">
-					<span class="dashicons dashicons-no-alt"></span>
+					×
 				</button>
 			</div>
 			<div class="ta-modal-body">

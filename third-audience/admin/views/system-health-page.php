@@ -105,12 +105,10 @@ $library_version = TA_Local_Converter::get_library_version();
 				</div>
 				<div class="ta-card-actions">
 					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ta_check_updates' ), 'ta_check_updates' ) ); ?>" class="button button-secondary">
-						<span class="dashicons dashicons-update"></span>
 						<?php esc_html_e( 'Check Updates', 'third-audience' ); ?>
 					</a>
 					<?php if ( $version_info['update_available'] && ! empty( $version_info['release_url'] ) ) : ?>
 						<a href="<?php echo esc_url( $version_info['release_url'] ); ?>" class="button button-primary" target="_blank" rel="noopener">
-							<span class="dashicons dashicons-download"></span>
 							<?php esc_html_e( 'Download', 'third-audience' ); ?>
 						</a>
 					<?php endif; ?>
