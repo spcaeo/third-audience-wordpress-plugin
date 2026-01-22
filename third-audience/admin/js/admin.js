@@ -47,6 +47,9 @@
 
 			// Citation alert dismissal
 			$(document).on('click', '.ta-citation-alert .notice-dismiss', this.dismissCitationAlert.bind(this));
+
+			// GA4 test connection
+			$('#ta-test-ga4-btn').on('click', this.testGA4Connection.bind(this));
 		},
 
 		/**
@@ -428,6 +431,56 @@
 				error: function() {
 					// Alert will still be dismissed visually by WordPress default behavior
 					console.log('Error dismissing alert, but notice removed visually');
+				}
+			});
+		},
+
+		/**
+		 * Test GA4 connection via AJAX.
+		 *
+		 * @param {Event} e Click event.
+		 */
+		testGA4Connection: function(e) {
+			e.preventDefault();
+
+			var $btn = $(e.target);
+			var $result = $('#ta-ga4-test-result');
+			var originalText = $btn.text();
+			var measurementId = $('#ta_ga4_measurement_id').val();
+			var apiSecret = $('#ta_ga4_api_secret').val();
+
+			if (!measurementId || !apiSecret) {
+				$result.html('<span class="error"> Please enter both Measurement ID and API Secret</span>');
+				return;
+			}
+
+			$btn.addClass('ta-btn-loading').prop('disabled', true).text('Testing...');
+			$result.html('<span class="testing"> Testing connection...</span>');
+
+			$.ajax({
+				url: taAdmin.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'ta_test_ga4_connection',
+					nonce: taAdmin.nonce,
+					measurement_id: measurementId,
+					api_secret: apiSecret
+				},
+				success: function(response) {
+					if (response.success) {
+						$result.html('<span class="success"> ' + response.data.message + '</span>');
+						TAAdmin.showToast(response.data.message, 'success');
+					} else {
+						$result.html('<span class="error"> ' + (response.data.message || 'Connection test failed') + '</span>');
+						TAAdmin.showToast(response.data.message || 'Connection test failed', 'error');
+					}
+				},
+				error: function() {
+					$result.html('<span class="error"> Connection test failed</span>');
+					TAAdmin.showToast('Connection test failed', 'error');
+				},
+				complete: function() {
+					$btn.removeClass('ta-btn-loading').prop('disabled', false).text(originalText);
 				}
 			});
 		}

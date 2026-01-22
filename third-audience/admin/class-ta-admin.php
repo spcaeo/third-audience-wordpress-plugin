@@ -102,6 +102,7 @@ class TA_Admin {
 		add_action( 'admin_post_ta_save_notification_settings', array( $this, 'handle_save_notification_settings' ) );
 		add_action( 'admin_post_ta_save_bot_config', array( $this, 'handle_save_bot_config' ) );
 		add_action( 'admin_post_ta_save_headless_settings', array( $this, 'handle_save_headless_settings' ) );
+		add_action( 'admin_post_ta_save_ga4_settings', array( $this, 'handle_save_ga4_settings' ) );
 
 		// AJAX handlers.
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
@@ -120,6 +121,7 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_dismiss_alert', array( $this, 'ajax_dismiss_alert' ) );
 		add_action( 'wp_ajax_ta_update_robots_txt', array( $this, 'ajax_update_robots_txt' ) );
 		add_action( 'wp_ajax_ta_recalculate_ai_score', array( $this, 'ajax_recalculate_ai_score' ) );
+		add_action( 'wp_ajax_ta_test_ga4_connection', array( $this, 'ajax_test_ga4_connection' ) );
 
 		// Metadata settings hooks - clear pre-generated markdown when settings change.
 		add_action( 'update_option_ta_enable_enhanced_metadata', array( $this, 'on_metadata_settings_change' ), 10, 2 );
@@ -757,6 +759,25 @@ class TA_Admin {
 			'type'              => 'boolean',
 			'sanitize_callback' => 'rest_sanitize_boolean',
 			'default'           => true,
+		) );
+
+		// GA4 Integration settings.
+		register_setting( 'ta_settings', 'ta_ga4_enabled', array(
+			'type'              => 'boolean',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+			'default'           => false,
+		) );
+
+		register_setting( 'ta_settings', 'ta_ga4_measurement_id', array(
+			'type'              => 'string',
+			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
+			'default'           => '',
+		) );
+
+		register_setting( 'ta_settings', 'ta_ga4_api_secret', array(
+			'type'              => 'string',
+			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
+			'default'           => '',
 		) );
 	}
 
@@ -2008,6 +2029,94 @@ class TA_Admin {
 		wp_send_json_success( array(
 			'message' => __( 'Score recalculated successfully.', 'third-audience' ),
 			'score'   => $score_data['score'],
+		) );
+	}
+
+	/**
+	 * Handle save GA4 settings action.
+	 *
+	 * @since 3.0.0
+	 * @return void
+	 */
+	public function handle_save_ga4_settings() {
+		$this->security->verify_admin_capability();
+		$this->security->verify_nonce_or_die( 'save_ga4_settings' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$settings = isset( $_POST['ta_ga4'] ) && is_array( $_POST['ta_ga4'] ) ? $_POST['ta_ga4'] : array();
+
+		// Sanitize settings.
+		$sanitized = array(
+			'enabled'        => isset( $settings['enabled'] ),
+			'measurement_id' => $this->security->sanitize_text( $settings['measurement_id'] ?? '' ),
+			'api_secret'     => $this->security->sanitize_text( $settings['api_secret'] ?? '' ),
+		);
+
+		// Validate Measurement ID format (should be G-XXXXXXXXXX).
+		if ( ! empty( $sanitized['measurement_id'] ) && ! preg_match( '/^G-[A-Z0-9]+$/', $sanitized['measurement_id'] ) ) {
+			add_settings_error(
+				'ta_messages',
+				'ta_ga4_invalid_id',
+				__( 'Invalid GA4 Measurement ID format. Should be G-XXXXXXXXXX.', 'third-audience' ),
+				'error'
+			);
+			$this->redirect_to_settings( 'ga4' );
+			return;
+		}
+
+		if ( class_exists( 'TA_GA4_Integration' ) ) {
+			$ga4 = TA_GA4_Integration::get_instance();
+			$ga4->save_settings( $sanitized );
+		}
+
+		add_settings_error(
+			'ta_messages',
+			'ta_ga4_saved',
+			__( 'GA4 settings saved successfully.', 'third-audience' ),
+			'success'
+		);
+
+		$this->redirect_to_settings( 'ga4' );
+	}
+
+	/**
+	 * AJAX handler: Test GA4 connection.
+	 *
+	 * @since 3.0.0
+	 * @return void
+	 */
+	public function ajax_test_ga4_connection() {
+		$this->security->verify_ajax_request( 'admin_ajax' );
+
+		$measurement_id = isset( $_POST['measurement_id'] ) ? $this->security->sanitize_text( $_POST['measurement_id'] ) : '';
+		$api_secret     = isset( $_POST['api_secret'] ) ? $this->security->sanitize_text( $_POST['api_secret'] ) : '';
+
+		if ( empty( $measurement_id ) || empty( $api_secret ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'Measurement ID and API Secret are required.', 'third-audience' ),
+			) );
+		}
+
+		if ( ! class_exists( 'TA_GA4_Integration' ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'GA4 Integration class not found.', 'third-audience' ),
+			) );
+		}
+
+		$ga4    = TA_GA4_Integration::get_instance();
+		$result = $ga4->test_connection( $measurement_id, $api_secret );
+
+		if ( is_wp_error( $result ) ) {
+			$this->logger->error( 'GA4 connection test failed (AJAX).', array(
+				'error' => $result->get_error_message(),
+			) );
+			wp_send_json_error( array(
+				'message' => $result->get_error_message(),
+			) );
+		}
+
+		wp_send_json_success( array(
+			'message' => $result['message'],
 		) );
 	}
 }

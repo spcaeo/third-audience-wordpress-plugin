@@ -1061,6 +1061,29 @@ class TA_Bot_Analytics {
 			}
 		}
 
+		// Send event to GA4 (async, non-blocking).
+		if ( class_exists( 'TA_GA4_Integration' ) ) {
+			$ga4 = TA_GA4_Integration::get_instance();
+			if ( $ga4->is_enabled() ) {
+				// Send appropriate event based on traffic type.
+				if ( 'citation_click' === $insert_data['traffic_type'] ) {
+					$result = $ga4->send_citation_click_event( $insert_data );
+				} else {
+					$result = $ga4->send_bot_crawl_event( $insert_data );
+				}
+
+				// Update sync stats.
+				if ( ! is_wp_error( $result ) ) {
+					$ga4->update_sync_stats( true );
+				} else {
+					$ga4->update_sync_stats( false );
+					$this->logger->debug( 'GA4 event send failed.', array(
+						'error' => $result->get_error_message(),
+					) );
+				}
+			}
+		}
+
 		return $wpdb->insert_id;
 	}
 

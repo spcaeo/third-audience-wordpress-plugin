@@ -25,6 +25,7 @@ $tabs = array(
 	'general'       => __( 'General', 'third-audience' ),
 	'headless'      => __( 'Headless Setup', 'third-audience' ),
 	'webhooks'      => __( 'Webhooks', 'third-audience' ),
+	'ga4'           => __( 'GA4 Integration', 'third-audience' ),
 	'notifications' => __( 'Notifications', 'third-audience' ),
 	'logs'          => __( 'Logs', 'third-audience' ),
 );
@@ -555,6 +556,219 @@ $security = TA_Security::get_instance();
 									</td>
 								</tr>
 							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+
+		<?php elseif ( 'ga4' === $current_tab ) : ?>
+			<!-- GA4 Integration Tab -->
+			<div class="ta-tab-content ta-tab-ga4">
+				<div class="ta-settings-layout">
+					<div class="ta-settings-main">
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<?php $security->nonce_field( 'save_ga4_settings' ); ?>
+							<input type="hidden" name="action" value="ta_save_ga4_settings" />
+
+							<div class="ta-card">
+								<h2><?php esc_html_e( 'Google Analytics 4 Integration', 'third-audience' ); ?></h2>
+								<p class="description">
+									<?php esc_html_e( 'Send AI bot traffic data to Google Analytics 4 using the Measurement Protocol. Track bot crawls, AI citations, and session metrics in your GA4 dashboard.', 'third-audience' ); ?>
+								</p>
+
+								<?php
+								$ga4_settings = array();
+								if ( class_exists( 'TA_GA4_Integration' ) ) {
+									$ga4 = TA_GA4_Integration::get_instance();
+									$ga4_settings = $ga4->get_settings();
+								}
+								?>
+
+								<table class="form-table" role="presentation">
+									<tr>
+										<th scope="row"><?php esc_html_e( 'Enable GA4 Integration', 'third-audience' ); ?></th>
+										<td>
+											<label class="ta-checkbox-label">
+												<input type="checkbox" name="ta_ga4[enabled]" value="1"
+													   <?php checked( ! empty( $ga4_settings['enabled'] ) ); ?> />
+												<?php esc_html_e( 'Send bot traffic data to Google Analytics 4', 'third-audience' ); ?>
+											</label>
+											<p class="description">
+												<?php esc_html_e( 'Events are sent asynchronously in the background without affecting page load performance.', 'third-audience' ); ?>
+											</p>
+										</td>
+									</tr>
+
+									<tr>
+										<th scope="row">
+											<label for="ta_ga4_measurement_id"><?php esc_html_e( 'Measurement ID', 'third-audience' ); ?></label>
+										</th>
+										<td>
+											<input type="text" name="ta_ga4[measurement_id]" id="ta_ga4_measurement_id" class="regular-text"
+												   value="<?php echo esc_attr( $ga4_settings['measurement_id'] ?? '' ); ?>"
+												   placeholder="G-XXXXXXXXXX" />
+											<p class="description">
+												<?php
+												printf(
+													/* translators: %s: Link to GA4 admin */
+													esc_html__( 'Find this in your GA4 property settings under Admin > Data Streams. Format: G-XXXXXXXXXX', 'third-audience' )
+												);
+												?>
+											</p>
+										</td>
+									</tr>
+
+									<tr>
+										<th scope="row">
+											<label for="ta_ga4_api_secret"><?php esc_html_e( 'API Secret', 'third-audience' ); ?></label>
+										</th>
+										<td>
+											<input type="text" name="ta_ga4[api_secret]" id="ta_ga4_api_secret" class="regular-text"
+												   value="<?php echo esc_attr( $ga4_settings['api_secret'] ?? '' ); ?>"
+												   placeholder="<?php esc_attr_e( 'Your API Secret', 'third-audience' ); ?>" />
+											<p class="description">
+												<?php esc_html_e( 'Create this in GA4: Admin > Data Streams > Select Stream > Measurement Protocol API secrets > Create', 'third-audience' ); ?>
+											</p>
+										</td>
+									</tr>
+
+									<tr>
+										<th scope="row"><?php esc_html_e( 'Test Connection', 'third-audience' ); ?></th>
+										<td>
+											<button type="button" id="ta-test-ga4-btn" class="button button-secondary">
+												<?php esc_html_e( 'Test Connection', 'third-audience' ); ?>
+											</button>
+											<span id="ta-ga4-test-result"></span>
+											<p class="description">
+												<?php esc_html_e( 'Verify your Measurement ID and API Secret are correct before saving.', 'third-audience' ); ?>
+											</p>
+										</td>
+									</tr>
+								</table>
+
+								<p class="submit">
+									<input type="submit" name="submit" id="submit" class="button button-primary"
+										   value="<?php esc_attr_e( 'Save GA4 Settings', 'third-audience' ); ?>" />
+								</p>
+							</div>
+						</form>
+
+						<!-- Events Tracked -->
+						<div class="ta-card">
+							<h2><?php esc_html_e( 'Events Tracked', 'third-audience' ); ?></h2>
+							<p class="description">
+								<?php esc_html_e( 'The following events are automatically sent to GA4 when enabled:', 'third-audience' ); ?>
+							</p>
+
+							<table class="widefat">
+								<thead>
+									<tr>
+										<th><?php esc_html_e( 'Event Name', 'third-audience' ); ?></th>
+										<th><?php esc_html_e( 'Description', 'third-audience' ); ?></th>
+										<th><?php esc_html_e( 'Parameters', 'third-audience' ); ?></th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td><code>bot_crawl</code></td>
+										<td><?php esc_html_e( 'Triggered when an AI bot accesses markdown content', 'third-audience' ); ?></td>
+										<td>
+											<code>bot_name</code>, <code>bot_type</code>, <code>url</code>, <code>cache_status</code>,
+											<code>response_time</code>, <code>ai_score</code>, <code>content_type</code>
+										</td>
+									</tr>
+									<tr>
+										<td><code>ai_citation_click</code></td>
+										<td><?php esc_html_e( 'Triggered when a user clicks through from an AI platform', 'third-audience' ); ?></td>
+										<td>
+											<code>platform</code>, <code>search_query</code>, <code>url</code>, <code>citation_rate</code>
+										</td>
+									</tr>
+									<tr>
+										<td><code>bot_session</code></td>
+										<td><?php esc_html_e( 'Session summary for bot visits', 'third-audience' ); ?></td>
+										<td>
+											<code>bot_name</code>, <code>pages_per_session</code>, <code>session_duration</code>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+
+						<?php if ( class_exists( 'TA_GA4_Integration' ) && ! empty( $ga4_settings['enabled'] ) ) : ?>
+							<!-- Sync Statistics -->
+							<?php
+							$ga4 = TA_GA4_Integration::get_instance();
+							$sync_stats = $ga4->get_sync_stats();
+							?>
+							<div class="ta-card">
+								<h2><?php esc_html_e( 'Sync Statistics', 'third-audience' ); ?></h2>
+								<table class="widefat">
+									<tbody>
+										<tr>
+											<th><?php esc_html_e( 'Total Events Sent', 'third-audience' ); ?></th>
+											<td><?php echo esc_html( number_format_i18n( $sync_stats['total_events_sent'] ) ); ?></td>
+										</tr>
+										<tr>
+											<th><?php esc_html_e( 'Successful Syncs', 'third-audience' ); ?></th>
+											<td><?php echo esc_html( number_format_i18n( $sync_stats['success_count'] ) ); ?></td>
+										</tr>
+										<tr>
+											<th><?php esc_html_e( 'Failed Syncs', 'third-audience' ); ?></th>
+											<td><?php echo esc_html( number_format_i18n( $sync_stats['error_count'] ) ); ?></td>
+										</tr>
+										<tr>
+											<th><?php esc_html_e( 'Last Sync', 'third-audience' ); ?></th>
+											<td>
+												<?php
+												if ( ! empty( $sync_stats['last_sync_time'] ) ) {
+													echo esc_html( $sync_stats['last_sync_time'] );
+												} else {
+													esc_html_e( 'No syncs yet', 'third-audience' );
+												}
+												?>
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						<?php endif; ?>
+					</div>
+
+					<div class="ta-settings-sidebar">
+						<div class="ta-card">
+							<h3><?php esc_html_e( 'GA4 Integration Guide', 'third-audience' ); ?></h3>
+							<ol>
+								<li><?php esc_html_e( 'Log in to your Google Analytics 4 account', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Go to Admin > Data Streams', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Select your web data stream', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Copy the Measurement ID (G-XXXXXXXXXX)', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Go to Measurement Protocol API secrets', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Create a new API secret and copy it', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Paste both values above and test the connection', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'Save your settings to start sending events', 'third-audience' ); ?></li>
+							</ol>
+						</div>
+
+						<div class="ta-card">
+							<h3><?php esc_html_e( 'Viewing Your Data', 'third-audience' ); ?></h3>
+							<p>
+								<?php esc_html_e( 'Once configured, bot traffic data will appear in GA4 under:', 'third-audience' ); ?>
+							</p>
+							<ul>
+								<li><strong><?php esc_html_e( 'Reports > Engagement > Events', 'third-audience' ); ?></strong></li>
+								<li><strong><?php esc_html_e( 'Explore > Free Form', 'third-audience' ); ?></strong></li>
+							</ul>
+							<p>
+								<?php esc_html_e( 'Look for events: bot_crawl, ai_citation_click, and bot_session.', 'third-audience' ); ?>
+							</p>
+						</div>
+
+						<div class="ta-card">
+							<h3><?php esc_html_e( 'Privacy Note', 'third-audience' ); ?></h3>
+							<p>
+								<?php esc_html_e( 'Bot traffic data is anonymized using hashed client IDs. No personally identifiable information is sent to Google Analytics.', 'third-audience' ); ?>
+							</p>
 						</div>
 					</div>
 				</div>

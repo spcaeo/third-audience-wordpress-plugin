@@ -130,6 +130,7 @@ class TA_Autoloader {
 			'TA_Bot_Analytics'              => 'includes/class-ta-bot-analytics.php',
 			'TA_Crawl_Budget_Analyzer'      => 'includes/class-ta-crawl-budget-analyzer.php',
 			'TA_Webhooks'                   => 'includes/class-ta-webhooks.php',
+			'TA_GA4_Integration'            => 'includes/class-ta-ga4-integration.php',
 
 			// Rate limiting and queue
 			'TA_Rate_Limiter'        => 'includes/class-ta-rate-limiter.php',
