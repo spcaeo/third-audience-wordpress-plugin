@@ -55,7 +55,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 
 	<!-- Real-time Metrics Hero -->
 	<div class="ta-hero-metrics">
-		<div class="ta-hero-card ta-hero-primary">
+		<div class="ta-hero-card">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-chart-line"></span>
 			</div>
@@ -63,9 +63,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-label"><?php esc_html_e( 'Total Bot Visits', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo number_format( $summary['total_visits'] ); ?></div>
 				<div class="ta-hero-meta">
-					<span class="ta-badge ta-badge-success">
-						<?php echo number_format( $summary['visits_today'] ); ?> today
-					</span>
+					<?php echo number_format( $summary['visits_today'] ); ?> today
 				</div>
 			</div>
 		</div>
@@ -88,17 +86,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Cache Hit Rate', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo $summary['cache_hit_rate']; ?>%</div>
-				<div class="ta-hero-meta">
-					<?php
-					if ( $summary['cache_hit_rate'] >= 80 ) {
-						echo '<span class="ta-badge ta-badge-success">Excellent</span>';
-					} elseif ( $summary['cache_hit_rate'] >= 50 ) {
-						echo '<span class="ta-badge ta-badge-warning">Good</span>';
-					} else {
-						echo '<span class="ta-badge ta-badge-error">Needs improvement</span>';
-					}
-					?>
-				</div>
+				<div class="ta-hero-meta">Performance metric</div>
 			</div>
 		</div>
 
@@ -109,17 +97,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Avg Response', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo $summary['avg_response_time']; ?><span style="font-size: 14px;">ms</span></div>
-				<div class="ta-hero-meta">
-					<?php
-					if ( $summary['avg_response_time'] < 10 ) {
-						echo '<span class="ta-badge ta-badge-success">Fast</span>';
-					} elseif ( $summary['avg_response_time'] < 50 ) {
-						echo '<span class="ta-badge ta-badge-warning">Normal</span>';
-					} else {
-						echo '<span class="ta-badge ta-badge-error">Slow</span>';
-					}
-					?>
-				</div>
+				<div class="ta-hero-meta">Average response time</div>
 			</div>
 		</div>
 	</div>
@@ -163,14 +141,8 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 						<div>
 							<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply', 'third-audience' ); ?></button>
 							<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-bot-analytics' ) ); ?>" class="button"><?php esc_html_e( 'Reset', 'third-audience' ); ?></a>
-							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export', 'export_format' => 'csv', 'export_type' => 'detailed' ) ) ), 'ta_export_analytics' ) ); ?>" class="button">
-								<span class="dashicons dashicons-download"></span>
-								<?php esc_html_e( 'Export', 'third-audience' ); ?>
-							</a>
-							<button type="button" class="button ta-clear-all-visits" style="color: #d63638;">
-								<span class="dashicons dashicons-trash"></span>
-								<?php esc_html_e( 'Clear All', 'third-audience' ); ?>
-							</button>
+							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export', 'export_format' => 'csv', 'export_type' => 'detailed' ) ) ), 'ta_export_analytics' ) ); ?>" class="button"><?php esc_html_e( 'Export', 'third-audience' ); ?></a>
+							<button type="button" class="button ta-clear-all-visits" style="color: #d63638;"><?php esc_html_e( 'Clear All', 'third-audience' ); ?></button>
 						</div>
 					</div>
 				</div>
@@ -291,14 +263,8 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<?php esc_html_e( 'Live Activity Feed', 'third-audience' ); ?>
 			</h2>
 			<div class="ta-card-actions">
-				<button type="button" class="button button-secondary ta-cache-help-toggle">
-					<span class="dashicons dashicons-info-outline"></span>
-					<?php esc_html_e( 'Cache Guide', 'third-audience' ); ?>
-				</button>
-				<button type="button" class="button ta-feed-toggle-btn" data-paused="false">
-					<span class="dashicons dashicons-controls-pause"></span>
-					<span><?php esc_html_e( 'Pause', 'third-audience' ); ?></span>
-				</button>
+				<button type="button" class="button button-secondary ta-cache-help-toggle"><?php esc_html_e( 'Cache Guide', 'third-audience' ); ?></button>
+				<button type="button" class="button ta-feed-toggle-btn" data-paused="false"><?php esc_html_e( 'Pause', 'third-audience' ); ?></button>
 			</div>
 		</div>
 		<div class="ta-card-body">

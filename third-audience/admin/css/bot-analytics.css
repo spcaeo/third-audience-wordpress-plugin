@@ -14,35 +14,24 @@
 }
 
 .ta-hero-card {
-	background: linear-gradient(135deg, #f5f5f7 0%, #ffffff 100%);
+	background: white;
 	border: 1px solid rgba(0, 0, 0, 0.08);
 	border-radius: 8px;
 	padding: 20px;
 	display: flex;
 	align-items: center;
 	gap: 16px;
-	transition: all 0.3s ease;
+	transition: all 0.2s ease;
 }
 
 .ta-hero-card:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-.ta-hero-primary {
-	background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
-	color: white;
-}
-
-.ta-hero-primary .ta-hero-label,
-.ta-hero-primary .ta-hero-meta {
-	color: rgba(255, 255, 255, 0.9);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .ta-hero-icon {
 	width: 48px;
 	height: 48px;
-	background: rgba(255, 255, 255, 0.15);
+	background: #f5f5f7;
 	border-radius: 8px;
 	display: flex;
 	align-items: center;
@@ -50,19 +39,11 @@
 	flex-shrink: 0;
 }
 
-.ta-hero-primary .ta-hero-icon {
-	background: rgba(255, 255, 255, 0.2);
-}
-
 .ta-hero-icon .dashicons {
 	font-size: 24px;
 	width: 24px;
 	height: 24px;
 	color: #007aff;
-}
-
-.ta-hero-primary .ta-hero-icon .dashicons {
-	color: white;
 }
 
 .ta-hero-content {
@@ -84,10 +65,6 @@
 	color: #1d1d1f;
 	line-height: 1;
 	margin-bottom: 6px;
-}
-
-.ta-hero-primary .ta-hero-value {
-	color: white;
 }
 
 .ta-hero-meta {
@@ -128,23 +105,22 @@
 
 .ta-filters-toggle {
 	width: 100%;
-	background: #f5f5f7;
+	background: white;
 	border: 1px solid #d1d1d6;
-	border-radius: 8px;
-	padding: 12px 16px;
+	border-radius: 4px;
+	padding: 10px 16px;
 	display: flex;
 	align-items: center;
 	gap: 10px;
 	font-size: 13px;
-	font-weight: 600;
+	font-weight: 500;
 	color: #1d1d1f;
 	cursor: pointer;
-	transition: all 0.2s ease;
+	transition: background 0.2s ease;
 }
 
 .ta-filters-toggle:hover {
-	background: #e5e5ea;
-	border-color: #007aff;
+	background: #f5f5f7;
 }
 
 .ta-filters-toggle .dashicons {
@@ -173,9 +149,15 @@
 
 .ta-filter-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	grid-template-columns: 2fr 2fr 3fr 4fr;
 	gap: 16px;
 	align-items: end;
+}
+
+@media (max-width: 1200px) {
+	.ta-filter-grid {
+		grid-template-columns: 1fr 1fr;
+	}
 }
 
 .ta-filter-item label {
@@ -233,15 +215,9 @@
 /* === Cards === */
 .ta-card {
 	background: white;
-	border: 1px solid rgba(0, 0, 0, 0.08);
-	border-radius: 8px;
+	border: 1px solid #d1d1d6;
+	border-radius: 4px;
 	margin-bottom: 20px;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-	transition: all 0.3s ease;
-}
-
-.ta-card:hover {
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .ta-card-header {
