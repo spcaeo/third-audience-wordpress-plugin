@@ -32,12 +32,16 @@
 			$('#ta-warmup-cancel-btn').on('click', this.handleCancelWarmup.bind(this));
 
 			// Export events.
+			$('.ta-export-toggle').on('click', this.toggleExportMenu.bind(this));
 			$('#ta-export-selected-btn').on('click', this.handleExportSelected.bind(this));
 			$('#ta-export-filtered-btn').on('click', this.handleExportFiltered.bind(this));
 			$('#ta-export-all-btn').on('click', this.handleExportAll.bind(this));
 
+			// Close export menu when clicking outside.
+			$(document).on('click', this.closeExportMenu.bind(this));
+
 			// Filter events.
-			$('.ta-toggle-filters').on('click', this.toggleFilters.bind(this));
+			$('.ta-filters-toggle').on('click', this.toggleFilters.bind(this));
 			$('.ta-size-preset').on('click', this.handleSizePreset.bind(this));
 			$('.ta-date-preset').on('click', this.handleDatePreset.bind(this));
 			$('#ta-clear-filters').on('click', this.clearFilters.bind(this));
@@ -55,7 +59,7 @@
 
 			if (hasFilters) {
 				$('.ta-filters-content').show();
-				$('.ta-toggle-filters .dashicons').removeClass('dashicons-arrow-down-alt2')
+				$('.ta-filters-toggle .dashicons').removeClass('dashicons-arrow-down-alt2')
 					.addClass('dashicons-arrow-up-alt2');
 			}
 		},
@@ -63,8 +67,33 @@
 		toggleFilters: function(e) {
 			e.preventDefault();
 			$('.ta-filters-content').slideToggle(300);
-			$('.ta-toggle-filters .dashicons').toggleClass('dashicons-arrow-down-alt2 dashicons-arrow-up-alt2');
+			$('.ta-filters-toggle .dashicons').toggleClass('dashicons-arrow-down-alt2 dashicons-arrow-up-alt2');
 		},
+
+	toggleExportMenu: function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		var $menu = $('.ta-export-dropdown-menu');
+		var $btn = $('.ta-export-toggle');
+
+		if ($menu.is(':visible')) {
+			$menu.hide();
+		} else {
+			var btnOffset = $btn.offset();
+			var btnHeight = $btn.outerHeight();
+			$menu.css({
+				position: 'absolute',
+				top: btnOffset.top + btnHeight,
+				right: $(window).width() - (btnOffset.left + $btn.outerWidth())
+			}).show();
+		}
+	},
+
+	closeExportMenu: function(e) {
+		if (!$(e.target).closest('.ta-export-toggle, .ta-export-dropdown-menu').length) {
+			$('.ta-export-dropdown-menu').hide();
+		}
+	},
 
 		handleSizePreset: function(e) {
 			e.preventDefault();
