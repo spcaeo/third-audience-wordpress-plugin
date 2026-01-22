@@ -34,7 +34,7 @@ class TA_Bot_Analytics {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '1.0.0';
+	const DB_VERSION = '1.1.0';
 
 	/**
 	 * Option name for database version.
@@ -154,6 +154,32 @@ class TA_Bot_Analytics {
 		$this->logger = TA_Logger::get_instance();
 		$this->webhooks = TA_Webhooks::get_instance();
 		$this->maybe_create_table();
+
+		// Hook into template_redirect to track AI citation clicks.
+		add_action( 'template_redirect', array( $this, 'maybe_track_citation_click' ), 5 );
+	}
+
+	/**
+	 * Maybe track AI citation click on page load.
+	 *
+	 * Runs on every page load to check if the visitor came from an AI platform.
+	 *
+	 * @since 2.2.0
+	 * @return void
+	 */
+	public function maybe_track_citation_click() {
+		// Only track on front-end (not admin).
+		if ( is_admin() ) {
+			return;
+		}
+
+		// Only track GET requests (not POST/form submissions).
+		if ( 'GET' !== $_SERVER['REQUEST_METHOD'] ) {
+			return;
+		}
+
+		// Track citation click if detected.
+		$this->track_citation_click();
 	}
 
 	/**
@@ -189,19 +215,96 @@ class TA_Bot_Analytics {
 			ip_address varchar(45) DEFAULT NULL,
 			referer text DEFAULT NULL,
 			country_code varchar(2) DEFAULT NULL,
+			traffic_type varchar(20) DEFAULT 'bot_crawl',
+			ai_platform varchar(50) DEFAULT NULL,
+			search_query text DEFAULT NULL,
+			referer_source varchar(100) DEFAULT NULL,
+			referer_medium varchar(50) DEFAULT NULL,
 			visit_timestamp datetime NOT NULL,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			KEY bot_type (bot_type),
 			KEY post_id (post_id),
 			KEY visit_timestamp (visit_timestamp),
-			KEY bot_type_timestamp (bot_type, visit_timestamp)
+			KEY bot_type_timestamp (bot_type, visit_timestamp),
+			KEY traffic_type (traffic_type),
+			KEY ai_platform (ai_platform)
 		) {$charset_collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
 
-		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+		// Migration for v1.1.0: Add AI citation tracking columns if upgrading from v1.0.0
+		if ( version_compare( $installed_version, '1.1.0', '<' ) ) {
+			$migration_success = true;
+
+			// Check if columns exist before adding (prevents errors on fresh installs)
+			$columns_to_add = array(
+				'traffic_type'    => "ALTER TABLE {$table_name} ADD COLUMN traffic_type varchar(20) DEFAULT 'bot_crawl' AFTER country_code",
+				'ai_platform'     => "ALTER TABLE {$table_name} ADD COLUMN ai_platform varchar(50) DEFAULT NULL AFTER traffic_type",
+				'search_query'    => "ALTER TABLE {$table_name} ADD COLUMN search_query text DEFAULT NULL AFTER ai_platform",
+				'referer_source'  => "ALTER TABLE {$table_name} ADD COLUMN referer_source varchar(100) DEFAULT NULL AFTER search_query",
+				'referer_medium'  => "ALTER TABLE {$table_name} ADD COLUMN referer_medium varchar(50) DEFAULT NULL AFTER referer_source",
+			);
+
+			foreach ( $columns_to_add as $column_name => $alter_sql ) {
+				// Check if column exists using compatible syntax
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$column_exists = $wpdb->get_results(
+					"SHOW COLUMNS FROM {$table_name} LIKE '{$column_name}'"
+				);
+
+				if ( empty( $column_exists ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+					$result = $wpdb->query( $alter_sql );
+
+					if ( false === $result ) {
+						$migration_success = false;
+						$this->logger->error( "Failed to add column {$column_name}", array(
+							'error' => $wpdb->last_error,
+						) );
+					}
+				}
+			}
+
+			// Add indexes for new columns (compatible with MySQL 5.6+)
+			$indexes_to_add = array(
+				'traffic_type' => 'traffic_type',
+				'ai_platform'  => 'ai_platform',
+			);
+
+			foreach ( $indexes_to_add as $index_name => $column_name ) {
+				// Check if index exists (compatible with all MySQL versions)
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$index_exists = $wpdb->get_results(
+					"SHOW INDEX FROM {$table_name} WHERE Key_name = '{$index_name}'"
+				);
+
+				if ( empty( $index_exists ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+					$result = $wpdb->query( "ALTER TABLE {$table_name} ADD INDEX {$index_name} ({$column_name})" );
+
+					if ( false === $result ) {
+						$migration_success = false;
+						$this->logger->error( "Failed to add index {$index_name}", array(
+							'error' => $wpdb->last_error,
+						) );
+					}
+				}
+			}
+
+			// Only update version if migration succeeded
+			if ( $migration_success ) {
+				update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+				$this->logger->info( 'Migration to v1.1.0 completed successfully.' );
+			} else {
+				$this->logger->error( 'Migration to v1.1.0 failed. Will retry on next page load.' );
+				return; // Don't update version, migration will retry
+			}
+		} else {
+			// No migration needed, just update version
+			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+		}
 
 		$this->logger->info( 'Bot analytics table created/updated.', array(
 			'version' => self::DB_VERSION,
@@ -358,6 +461,11 @@ class TA_Bot_Analytics {
 			'ip_address'      => $ip_address,
 			'referer'         => isset( $data['referer'] ) ? esc_url_raw( $data['referer'] ) : null,
 			'country_code'    => $country_code,
+			'traffic_type'    => sanitize_text_field( $data['traffic_type'] ?? 'bot_crawl' ),
+			'ai_platform'     => isset( $data['ai_platform'] ) ? sanitize_text_field( $data['ai_platform'] ) : null,
+			'search_query'    => isset( $data['search_query'] ) ? sanitize_text_field( $data['search_query'] ) : null,
+			'referer_source'  => isset( $data['referer_source'] ) ? sanitize_text_field( $data['referer_source'] ) : null,
+			'referer_medium'  => isset( $data['referer_medium'] ) ? sanitize_text_field( $data['referer_medium'] ) : null,
 			'visit_timestamp' => current_time( 'mysql' ),
 		);
 
@@ -376,6 +484,11 @@ class TA_Bot_Analytics {
 			'%s', // ip_address
 			'%s', // referer
 			'%s', // country_code
+			'%s', // traffic_type
+			'%s', // ai_platform
+			'%s', // search_query
+			'%s', // referer_source
+			'%s', // referer_medium
 			'%s', // visit_timestamp
 		);
 
@@ -411,6 +524,62 @@ class TA_Bot_Analytics {
 		}
 
 		return $wpdb->insert_id;
+	}
+
+	/**
+	 * Track AI citation click from referrer.
+	 *
+	 * Detects when a user clicks a citation from an AI platform (ChatGPT,
+	 * Perplexity, Claude, etc.) and logs it as citation traffic.
+	 *
+	 * @since 2.2.0
+	 * @return int|false Insert ID or false if not citation traffic.
+	 */
+	public function track_citation_click() {
+		// Detect AI citation traffic from referrer.
+		$citation_data = TA_AI_Citation_Tracker::detect_citation_traffic();
+
+		if ( false === $citation_data ) {
+			return false; // Not citation traffic.
+		}
+
+		// Get current page info.
+		$post_id    = get_queried_object_id();
+		$post       = $post_id ? get_post( $post_id ) : null;
+		$post_type  = $post ? $post->post_type : null;
+		$post_title = $post ? $post->post_title : null;
+
+		// Prepare tracking data.
+		$tracking_data = array(
+			'bot_type'        => 'AI_Citation', // Special bot type for citations.
+			'bot_name'        => $citation_data['platform'],
+			'user_agent'      => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
+			'url'             => esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' ),
+			'post_id'         => $post_id,
+			'post_type'       => $post_type,
+			'post_title'      => $post_title,
+			'request_method'  => 'citation_click',
+			'cache_status'    => 'N/A',
+			'referer'         => $citation_data['referer'],
+			'traffic_type'    => 'citation_click',
+			'ai_platform'     => $citation_data['platform'],
+			'search_query'    => $citation_data['search_query'],
+			'referer_source'  => $citation_data['source'],
+			'referer_medium'  => $citation_data['medium'],
+		);
+
+		// Track the visit.
+		$result = $this->track_visit( $tracking_data );
+
+		if ( false !== $result ) {
+			$this->logger->info( 'AI citation click tracked.', array(
+				'platform'     => $citation_data['platform'],
+				'search_query' => $citation_data['search_query'],
+				'url'          => $tracking_data['url'],
+			) );
+		}
+
+		return $result;
 	}
 
 	/**

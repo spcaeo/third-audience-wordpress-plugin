@@ -126,6 +126,7 @@ class TA_Admin {
 			'settings_page_third-audience',
 			'toplevel_page_third-audience-bot-analytics',
 			'bot-analytics_page_third-audience-bot-management',
+			'bot-analytics_page_third-audience-ai-citations',
 			'bot-analytics_page_third-audience-cache-browser',
 			'bot-analytics_page_third-audience-system-health',
 			'bot-analytics_page_third-audience-about',
@@ -196,6 +197,26 @@ class TA_Admin {
 				'ta-bot-analytics',
 				TA_PLUGIN_URL . 'admin/js/bot-analytics.js',
 				array( 'jquery', 'chartjs' ),
+				TA_VERSION,
+				true
+			);
+		}
+
+		// AI Citations page.
+		if ( 'bot-analytics_page_third-audience-ai-citations' === $hook ) {
+			// Enqueue bot analytics styles (reuse existing styles).
+			wp_enqueue_style(
+				'ta-bot-analytics',
+				TA_PLUGIN_URL . 'admin/css/bot-analytics.css',
+				array(),
+				TA_VERSION
+			);
+
+			// Enqueue bot analytics JavaScript for filter toggle.
+			wp_enqueue_script(
+				'ta-bot-analytics',
+				TA_PLUGIN_URL . 'admin/js/bot-analytics.js',
+				array( 'jquery' ),
 				TA_VERSION,
 				true
 			);
@@ -356,6 +377,16 @@ class TA_Admin {
 			'manage_options',
 			'third-audience-bot-management',
 			array( $this, 'render_bot_management_page' )
+		);
+
+		// AI Citations submenu.
+		add_submenu_page(
+			'third-audience-bot-analytics',
+			__( 'AI Citations', 'third-audience' ),
+			__( 'AI Citations', 'third-audience' ),
+			'manage_options',
+			'third-audience-ai-citations',
+			array( $this, 'render_ai_citations_page' )
 		);
 
 		// Cache Browser submenu.
@@ -597,6 +628,21 @@ class TA_Admin {
 		$this->security->verify_admin_capability();
 
 		include TA_PLUGIN_DIR . 'admin/views/bot-management-page.php';
+	}
+
+	/**
+	 * Render AI Citations page.
+	 *
+	 * @since 2.2.0
+	 * @return void
+	 */
+	public function render_ai_citations_page() {
+		$this->security->verify_admin_capability();
+
+		// Get citation analytics data.
+		$analytics = TA_Bot_Analytics::get_instance();
+
+		include TA_PLUGIN_DIR . 'admin/views/ai-citations-page.php';
 	}
 
 	/**
