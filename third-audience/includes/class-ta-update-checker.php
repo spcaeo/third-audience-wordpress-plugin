@@ -297,12 +297,13 @@ class TA_Update_Checker {
 	public function get_version_info() {
 		$latest = $this->check_for_updates();
 
+		// If we can't fetch from GitHub, show current version as latest
 		return array(
 			'current_version'  => TA_VERSION,
-			'latest_version'   => $latest['version'] ?? 'Unknown',
+			'latest_version'   => $latest['version'] ?? TA_VERSION,
 			'update_available' => $latest ? version_compare( TA_VERSION, $latest['version'], '<' ) : false,
 			'release_url'      => $latest['release_url'] ?? '',
-			'last_checked'     => $latest['checked_at'] ?? 'Never',
+			'last_checked'     => $latest['checked_at'] ?? 'Not checked yet',
 		);
 	}
 }
