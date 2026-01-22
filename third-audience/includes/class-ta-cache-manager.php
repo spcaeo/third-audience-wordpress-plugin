@@ -1113,13 +1113,26 @@ class TA_Cache_Manager implements TA_Cacheable {
 			);
 
 			foreach ( $posts as $post_id ) {
-				$url     = get_permalink( $post_id );
-				$key     = $this->get_cache_key( $url );
-				$url_map[ $key ] = array(
+				$url = get_permalink( $post_id );
+
+				// Generate keys for all URL variations to match cache invalidation logic.
+				$urls = array(
+					$url,
+					trailingslashit( $url ),
+					untrailingslashit( $url ),
+				);
+
+				$url_info = array(
 					'url'     => $url,
 					'title'   => get_the_title( $post_id ),
 					'post_id' => $post_id,
 				);
+
+				// Map all variations to the same post info.
+				foreach ( $urls as $u ) {
+					$key = $this->get_cache_key( $u );
+					$url_map[ $key ] = $url_info;
+				}
 			}
 		}
 

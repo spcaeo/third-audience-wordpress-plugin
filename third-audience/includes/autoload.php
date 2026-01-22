@@ -124,6 +124,7 @@ class TA_Autoloader {
 			'TA_Content_Negotiation' => 'includes/class-ta-content-negotiation.php',
 			'TA_Discovery'           => 'includes/class-ta-discovery.php',
 			'TA_Cache_Manager'       => 'includes/class-ta-cache-manager.php',
+			'TA_Headless_Wizard'     => 'includes/class-ta-headless-wizard.php',
 
 			// Bot Analytics and Webhooks
 			'TA_Bot_Analytics'       => 'includes/class-ta-bot-analytics.php',
