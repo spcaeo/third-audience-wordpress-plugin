@@ -17,7 +17,7 @@
 }
 
 .ta-bot-management .wp-heading-inline {
-	font-size: 28px;
+	font-size: 24px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.5px;
@@ -27,7 +27,7 @@
 .ta-bot-management .description {
 	font-size: 14px;
 	color: #86868b;
-	margin-bottom: 24px;
+	margin-bottom: 16px;
 	line-height: 1.5;
 }
 
@@ -38,7 +38,7 @@
 .ta-card {
 	background: #ffffff;
 	border: none;
-	border-radius: 16px;
+	border-radius: 12px;
 	padding: 32px;
 	margin: 24px 0;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -53,13 +53,13 @@
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
-	margin-bottom: 24px;
+	margin-bottom: 16px;
 	padding-bottom: 20px;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .ta-card-title {
-	font-size: 22px;
+	font-size: 14px;
 	font-weight: 600;
 	color: #1d1d1f;
 	margin: 0;
@@ -79,7 +79,7 @@
    ======================================== */
 
 .ta-form-group {
-	margin-bottom: 20px;
+	margin-bottom: 14px;
 }
 
 .ta-checkbox-label {
@@ -112,7 +112,7 @@
 }
 
 .ta-checkbox-text strong {
-	font-size: 15px;
+	font-size: 14px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.2px;
@@ -434,7 +434,7 @@
 }
 
 .button-secondary.ta-btn .dashicons {
-	font-size: 16px;
+	font-size: 14px;
 	width: 16px;
 	height: 16px;
 }
@@ -515,13 +515,13 @@
 	}
 
 	.ta-card {
-		padding: 20px;
+		padding: 14px;
 		border-radius: 12px;
 	}
 
 	.ta-card-header {
 		flex-direction: column;
-		margin-bottom: 20px;
+		margin-bottom: 14px;
 		padding-bottom: 16px;
 	}
 

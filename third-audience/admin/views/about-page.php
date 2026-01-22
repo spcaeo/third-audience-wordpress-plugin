@@ -55,16 +55,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			<h3><?php esc_html_e( '1. Auto-Discovery (Recommended by Crawlers)', 'third-audience' ); ?></h3>
 			<p><?php esc_html_e( 'Every HTML page includes a discovery tag that tells AI crawlers where to find the Markdown version:', 'third-audience' ); ?></p>
-			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #667eea; overflow-x: auto;"><code>&lt;link rel="alternate" type="text/markdown" href="https://yoursite.com/post-name.md" /&gt;</code></pre>
+			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #007aff; overflow-x: auto;"><code>&lt;link rel="alternate" type="text/markdown" href="https://yoursite.com/post-name.md" /&gt;</code></pre>
 
 			<h3><?php esc_html_e( '2. Direct .md URL Access', 'third-audience' ); ?></h3>
 			<p><?php esc_html_e( 'AI agents can append .md to any post URL:', 'third-audience' ); ?></p>
-			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #667eea; overflow-x: auto;"><code>https://yoursite.com/my-post       → HTML version (for humans)
+			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #007aff; overflow-x: auto;"><code>https://yoursite.com/my-post       → HTML version (for humans)
 https://yoursite.com/my-post.md    → Markdown version (for AI)</code></pre>
 
 			<h3><?php esc_html_e( '3. Content Negotiation (HTTP Headers)', 'third-audience' ); ?></h3>
 			<p><?php esc_html_e( 'Advanced AI crawlers can request Markdown using HTTP headers:', 'third-audience' ); ?></p>
-			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #667eea; overflow-x: auto;"><code>GET /my-post HTTP/1.1
+			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #007aff; overflow-x: auto;"><code>GET /my-post HTTP/1.1
 Accept: text/markdown
 
 → Returns Markdown instead of HTML</code></pre>
@@ -75,9 +75,9 @@ Accept: text/markdown
 			<h2><?php esc_html_e( 'Technical Flow', 'third-audience' ); ?></h2>
 			<p><?php esc_html_e( 'Here\'s what happens when an AI bot visits your site:', 'third-audience' ); ?></p>
 
-			<div style="background: #f9f9f9; padding: 20px; margin: 20px 0; font-family: monospace; font-size: 14px; line-height: 1.8; border: 1px solid #ddd;">
+			<div style="background: #f9f9f9; padding: 14px; margin: 14px 0; font-family: monospace; font-size: 14px; line-height: 1.8; border: 1px solid #ddd;">
 				<div style="margin-bottom: 15px;">
-					<strong style="color: #667eea;">┌─ AI Bot Visit ────────────────────────────────────┐</strong>
+					<strong style="color: #007aff;">┌─ AI Bot Visit ────────────────────────────────────┐</strong>
 				</div>
 				<div style="margin-left: 10px;">
 					<div>│ 1. Request: GET /blog-post.md</div>
@@ -109,7 +109,7 @@ Accept: text/markdown
 					<div style="color: #00a32a;">│    HTTP 200 OK</div>
 				</div>
 				<div style="margin-top: 15px;">
-					<strong style="color: #667eea;">└───────────────────────────────────────────────────┘</strong>
+					<strong style="color: #007aff;">└───────────────────────────────────────────────────┘</strong>
 				</div>
 			</div>
 
@@ -260,8 +260,8 @@ Accept: text/markdown
 			</p>
 
 			<!-- Version 1.1.1 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #667eea; padding-left: 20px; margin: 20px 0;">
-				<h3 style="margin: 0 0 10px 0; color: #667eea;">
+			<div class="ta-version-entry" style="border-left: 4px solid #007aff; padding-left: 20px; margin: 14px 0;">
+				<h3 style="margin: 0 0 10px 0; color: #007aff;">
 					<?php esc_html_e( 'Version 1.1.1', 'third-audience' ); ?>
 					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 21, 2026</span>
 				</h3>
@@ -283,7 +283,7 @@ Accept: text/markdown
 			</div>
 
 			<!-- Version 1.1.0 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #2271b1; padding-left: 20px; margin: 20px 0;">
+			<div class="ta-version-entry" style="border-left: 4px solid #2271b1; padding-left: 20px; margin: 14px 0;">
 				<h3 style="margin: 0 0 10px 0; color: #2271b1;">
 					<?php esc_html_e( 'Version 1.1.0', 'third-audience' ); ?>
 					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 21, 2026</span>
@@ -304,7 +304,7 @@ Accept: text/markdown
 			</div>
 
 			<!-- Version 1.0.0 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #00a32a; padding-left: 20px; margin: 20px 0;">
+			<div class="ta-version-entry" style="border-left: 4px solid #00a32a; padding-left: 20px; margin: 14px 0;">
 				<h3 style="margin: 0 0 10px 0; color: #00a32a;">
 					<?php esc_html_e( 'Version 1.0.0', 'third-audience' ); ?>
 					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 16, 2026</span>
@@ -372,7 +372,7 @@ Accept: text/markdown
 
 /* Container */
 .ta-about-page {
-	margin: 20px 20px 20px 0;
+	margin: 16px 16px 16px 0;
 }
 
 .ta-about-page .wp-heading-inline {
@@ -380,38 +380,38 @@ Accept: text/markdown
 }
 
 .ta-about-page .description {
-	margin-top: 8px;
-	font-size: 14px;
+	margin-top: 6px;
+	font-size: 13px;
 	color: #86868b;
 	line-height: 1.5;
 }
 
 .ta-about-container {
 	max-width: 1200px;
-	margin: 24px 0;
+	margin: 16px 0;
 }
 
 /* Card Base - Apple Style */
 .ta-card {
 	background: #ffffff;
 	border: none;
-	border-radius: 16px;
-	padding: 32px 36px;
-	margin-bottom: 20px;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+	border-radius: 12px;
+	padding: 14px 24px;
+	margin-bottom: 14px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ta-card:hover {
-	box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
-	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+	transform: translateY(-1px);
 }
 
 /* Hero Section - Apple Style */
 .ta-hero {
 	background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
 	border: none;
-	padding: 48px 40px;
+	padding: 32px 28px;
 	position: relative;
 	overflow: hidden;
 	text-align: center;
@@ -419,25 +419,25 @@ Accept: text/markdown
 
 .ta-hero-icon {
 	display: inline-flex;
-	width: 64px;
-	height: 64px;
+	width: 52px;
+	height: 52px;
 	background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
-	border-radius: 16px;
+	border-radius: 12px;
 	align-items: center;
 	justify-content: center;
-	margin-bottom: 20px;
+	margin-bottom: 14px;
 }
 
 .ta-hero-icon .dashicons {
 	color: #fff;
-	font-size: 36px;
-	width: 36px;
-	height: 36px;
+	font-size: 22px;
+	width: 28px;
+	height: 28px;
 }
 
 .ta-hero h2 {
-	margin: 0 0 16px 0;
-	font-size: 32px;
+	margin: 0 0 12px 0;
+	font-size: 26px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.5px;
@@ -445,9 +445,9 @@ Accept: text/markdown
 }
 
 .ta-lead {
-	font-size: 18px;
+	font-size: 14px;
 	line-height: 1.6;
-	margin-bottom: 16px;
+	margin-bottom: 12px;
 	font-weight: 500;
 	color: #1d1d1f;
 }
@@ -455,15 +455,15 @@ Accept: text/markdown
 .ta-hero p {
 	color: #86868b;
 	line-height: 1.6;
-	font-size: 15px;
-	margin: 12px auto;
+	font-size: 14px;
+	margin: 10px auto;
 	max-width: 900px;
 }
 
 /* Typography - Apple SF Pro Style */
 .ta-card h2 {
-	margin: 0 0 24px 0;
-	font-size: 22px;
+	margin: 0 0 16px 0;
+	font-size: 18px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.4px;
@@ -473,8 +473,8 @@ Accept: text/markdown
 }
 
 .ta-card h3 {
-	margin: 20px 0 12px 0;
-	font-size: 17px;
+	margin: 14px 0 12px 0;
+	font-size: 15px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.3px;
@@ -503,7 +503,7 @@ Accept: text/markdown
 .ta-card pre {
 	background: #f5f5f7 !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
-	padding: 20px !important;
+	padding: 14px !important;
 	border-radius: 12px !important;
 	font-size: 13px;
 	line-height: 1.6;
@@ -525,14 +525,14 @@ Accept: text/markdown
 .ta-features-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: 20px;
+	gap: 14px;
 	margin-top: 24px;
 }
 
 .ta-feature-item {
 	background: #f5f5f7;
 	border-radius: 12px;
-	padding: 24px;
+	padding: 16px;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -554,7 +554,7 @@ Accept: text/markdown
 
 .ta-feature-icon .dashicons {
 	color: #fff;
-	font-size: 28px;
+	font-size: 22px;
 	width: 28px;
 	height: 28px;
 }
@@ -577,7 +577,7 @@ Accept: text/markdown
 
 .ta-feature-item h3 {
 	margin: 0 0 12px 0;
-	font-size: 16px;
+	font-size: 14px;
 }
 
 .ta-feature-item ul {
@@ -612,8 +612,8 @@ Accept: text/markdown
 .ta-credits-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-	gap: 24px;
-	margin: 24px 0;
+	gap: 16px;
+	margin: 16px 0;
 }
 
 .ta-credit-item h3 {
@@ -628,7 +628,7 @@ Accept: text/markdown
 .ta-credit-item a {
 	color: #007aff;
 	text-decoration: none;
-	font-size: 17px;
+	font-size: 15px;
 	font-weight: 600;
 	transition: opacity 0.2s;
 }
@@ -660,7 +660,7 @@ Accept: text/markdown
 	display: flex;
 	align-items: center;
 	gap: 16px;
-	padding: 20px;
+	padding: 14px;
 	background: #f5f5f7;
 	border-radius: 12px;
 	text-decoration: none;
@@ -685,7 +685,7 @@ Accept: text/markdown
 
 .ta-link-icon .dashicons {
 	color: #fff;
-	font-size: 28px;
+	font-size: 22px;
 	width: 28px;
 	height: 28px;
 }
@@ -698,7 +698,7 @@ Accept: text/markdown
 }
 
 .ta-link-content strong {
-	font-size: 16px;
+	font-size: 14px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.2px;
@@ -712,7 +712,7 @@ Accept: text/markdown
 
 .ta-link-card .dashicons-arrow-right-alt2 {
 	color: #86868b;
-	font-size: 20px;
+	font-size: 15px;
 	width: 20px;
 	height: 20px;
 	flex-shrink: 0;
@@ -727,7 +727,7 @@ Accept: text/markdown
 .ta-version-entry {
 	border-left: 4px solid #007aff;
 	padding-left: 20px;
-	margin: 20px 0;
+	margin: 14px 0;
 	transition: all 0.2s;
 }
 
@@ -804,7 +804,7 @@ Accept: text/markdown
 /* Responsive Design */
 @media (max-width: 782px) {
 	.ta-card {
-		padding: 24px 20px;
+		padding: 16px 20px;
 		border-radius: 12px;
 	}
 
@@ -817,7 +817,7 @@ Accept: text/markdown
 	}
 
 	.ta-lead {
-		font-size: 16px;
+		font-size: 14px;
 	}
 
 	.ta-features-grid {
