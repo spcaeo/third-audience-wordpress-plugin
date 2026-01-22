@@ -582,6 +582,201 @@
 	}
 }
 
+/* === Session Analytics (v2.6.0) === */
+.ta-section-header {
+	margin-top: 30px;
+	margin-bottom: 16px;
+	padding-bottom: 12px;
+	border-bottom: 2px solid #f0f0f1;
+}
+
+.ta-section-header h2 {
+	font-size: 18px;
+	font-weight: 600;
+	color: #1d1d1f;
+	margin: 0 0 4px 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.ta-section-header h2 .dashicons {
+	color: #646970;
+}
+
+.ta-section-header .description {
+	margin: 0;
+	font-size: 13px;
+}
+
+/* Secondary hero metrics (session metrics) */
+.ta-hero-metrics-secondary .ta-hero-card {
+	background: linear-gradient(135deg, #ffffff 0%, #f9f9fb 100%);
+}
+
+/* Icon color variants */
+.ta-hero-icon-purple {
+	background: rgba(175, 82, 222, 0.1);
+}
+
+.ta-hero-icon-purple .dashicons {
+	color: #af52de;
+}
+
+.ta-hero-icon-blue {
+	background: rgba(0, 122, 255, 0.1);
+}
+
+.ta-hero-icon-blue .dashicons {
+	color: #007aff;
+}
+
+.ta-hero-icon-green {
+	background: rgba(52, 199, 89, 0.1);
+}
+
+.ta-hero-icon-green .dashicons {
+	color: #34c759;
+}
+
+.ta-hero-icon-orange {
+	background: rgba(255, 149, 0, 0.1);
+}
+
+.ta-hero-icon-orange .dashicons {
+	color: #ff9500;
+}
+
+/* Crawl Budget Grid */
+.ta-crawl-budget-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	gap: 20px;
+	margin-bottom: 20px;
+}
+
+.ta-crawl-budget-section {
+	padding: 16px;
+	background: #f9f9fb;
+	border-radius: 8px;
+	border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.ta-crawl-budget-section h4 {
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d1d1f;
+	margin: 0 0 12px 0;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.ta-crawl-budget-section h4 .dashicons {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+	color: #007aff;
+}
+
+.ta-table-borderless {
+	width: 100%;
+	border: none;
+}
+
+.ta-table-borderless tbody tr {
+	border: none;
+	background: transparent;
+}
+
+.ta-table-borderless tbody tr:hover {
+	background: rgba(0, 0, 0, 0.02);
+}
+
+.ta-table-borderless td {
+	padding: 8px 0;
+	border: none;
+	font-size: 13px;
+}
+
+.ta-table-borderless td:first-child {
+	color: #646970;
+	padding-right: 12px;
+}
+
+.ta-table-borderless td:last-child {
+	text-align: right;
+}
+
+.ta-cache-hit-rate {
+	font-weight: 600;
+}
+
+/* Crawl Insights */
+.ta-crawl-insights {
+	padding: 16px;
+	background: #f9f9fb;
+	border-radius: 8px;
+	margin-top: 20px;
+}
+
+.ta-crawl-insights h4 {
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d1d1f;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.ta-crawl-insights h4 .dashicons {
+	color: #ff9500;
+}
+
+.ta-insights-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.ta-insights-list li {
+	padding: 8px 0;
+	font-size: 13px;
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	line-height: 1.5;
+}
+
+.ta-insights-list li .dashicons {
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+.ta-insight-good {
+	color: #34c759;
+}
+
+.ta-insight-good .dashicons {
+	color: #34c759;
+}
+
+.ta-insight-ok {
+	color: #646970;
+}
+
+.ta-insight-ok .dashicons {
+	color: #007aff;
+}
+
+.ta-insight-warning {
+	color: #ff9500;
+}
+
+.ta-insight-warning .dashicons {
+	color: #ff9500;
+}
+
 @media (max-width: 600px) {
 	.ta-hero-metrics {
 		grid-template-columns: 1fr;
@@ -603,5 +798,9 @@
 
 	.ta-progress-bar {
 		width: 60px;
+	}
+
+	.ta-crawl-budget-grid {
+		grid-template-columns: 1fr;
 	}
 }

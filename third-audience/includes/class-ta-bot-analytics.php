@@ -941,7 +941,234 @@ class TA_Bot_Analytics {
 			}
 		}
 
+		// Update session tracking after recording visit.
+		$this->update_session_tracking( $insert_data );
+
 		return $wpdb->insert_id;
+	}
+
+	/**
+	 * Update session tracking for bot fingerprinting.
+	 *
+	 * Groups visits into sessions and calculates session metrics:
+	 * - Pages per session
+	 * - Session duration
+	 * - Request intervals
+	 * - Crawl budget utilization
+	 *
+	 * Session Definition: Visits from same bot+IP within 30-minute window.
+	 *
+	 * @since 2.6.0
+	 * @param array $visit_data Current visit data.
+	 * @return void
+	 */
+	private function update_session_tracking( $visit_data ) {
+		global $wpdb;
+
+		// Skip if no IP or user agent.
+		if ( empty( $visit_data['ip_address'] ) || empty( $visit_data['user_agent'] ) ) {
+			return;
+		}
+
+		// Generate fingerprint hash (bot identifier).
+		$fingerprint = md5( $visit_data['user_agent'] . '|' . $visit_data['ip_address'] );
+
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+		$analytics_table    = $wpdb->prefix . self::TABLE_NAME;
+
+		// Get or create fingerprint record.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$fingerprint_record = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$fingerprints_table} WHERE fingerprint_hash = %s",
+				$fingerprint
+			)
+		);
+
+		$now = current_time( 'mysql' );
+
+		if ( ! $fingerprint_record ) {
+			// First visit from this bot+IP - create fingerprint record.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->insert(
+				$fingerprints_table,
+				array(
+					'fingerprint_hash' => $fingerprint,
+					'user_agent'       => $visit_data['user_agent'],
+					'ip_address'       => $visit_data['ip_address'],
+					'first_seen'       => $now,
+					'last_seen'        => $now,
+					'visit_count'      => 1,
+					'classification'   => $visit_data['bot_type'],
+				),
+				array( '%s', '%s', '%s', '%s', '%s', '%d', '%s' )
+			);
+
+			return; // First visit, no session metrics to calculate yet.
+		}
+
+		// Calculate time since last visit (in seconds).
+		$last_seen_timestamp = strtotime( $fingerprint_record->last_seen );
+		$current_timestamp   = strtotime( $now );
+		$time_since_last     = $current_timestamp - $last_seen_timestamp;
+
+		// Session window: 30 minutes (1800 seconds).
+		$session_window = 1800;
+
+		// Determine if this is same session or new session.
+		$is_same_session = $time_since_last <= $session_window;
+
+		// Get recent visits from this bot+IP for session calculation.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$recent_visits = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT visit_timestamp FROM {$analytics_table}
+				WHERE user_agent = %s AND ip_address = %s
+				ORDER BY visit_timestamp DESC LIMIT 100",
+				$visit_data['user_agent'],
+				$visit_data['ip_address']
+			)
+		);
+
+		// Calculate session metrics.
+		$total_visits = count( $recent_visits );
+		$visit_count  = absint( $fingerprint_record->visit_count ) + 1;
+
+		// Calculate request intervals (time between consecutive requests).
+		$intervals = array();
+		for ( $i = 0; $i < count( $recent_visits ) - 1; $i++ ) {
+			$time1       = strtotime( $recent_visits[ $i ]->visit_timestamp );
+			$time2       = strtotime( $recent_visits[ $i + 1 ]->visit_timestamp );
+			$intervals[] = abs( $time1 - $time2 );
+		}
+
+		$request_interval_avg    = ! empty( $intervals ) ? array_sum( $intervals ) / count( $intervals ) : null;
+		$request_interval_stddev = ! empty( $intervals ) ? $this->calculate_stddev( $intervals ) : null;
+
+		// Calculate session metrics by grouping visits into sessions.
+		$sessions           = $this->group_visits_into_sessions( $recent_visits, $session_window );
+		$pages_per_session  = ! empty( $sessions ) ? array_sum( array_column( $sessions, 'page_count' ) ) / count( $sessions ) : null;
+		$session_durations  = array_column( $sessions, 'duration' );
+		$session_duration   = ! empty( $session_durations ) ? array_sum( $session_durations ) / count( $session_durations ) : null;
+
+		// Calculate unique paths ratio.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$unique_urls = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(DISTINCT url) FROM {$analytics_table}
+				WHERE user_agent = %s AND ip_address = %s",
+				$visit_data['user_agent'],
+				$visit_data['ip_address']
+			)
+		);
+		$unique_paths_ratio = $visit_count > 0 ? round( absint( $unique_urls ) / $visit_count, 2 ) : null;
+
+		// Update fingerprint record with session metrics.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$wpdb->update(
+			$fingerprints_table,
+			array(
+				'last_seen'              => $now,
+				'visit_count'            => $visit_count,
+				'request_interval_avg'   => $request_interval_avg,
+				'request_interval_stddev' => $request_interval_stddev,
+				'pages_per_session_avg'  => $pages_per_session,
+				'session_duration_avg'   => $session_duration,
+				'unique_paths_ratio'     => $unique_paths_ratio,
+				'classification'         => $visit_data['bot_type'],
+			),
+			array( 'fingerprint_hash' => $fingerprint ),
+			array( '%s', '%d', '%d', '%d', '%f', '%d', '%f', '%s' ),
+			array( '%s' )
+		);
+
+		$this->logger->debug( 'Session tracking updated.', array(
+			'fingerprint'       => $fingerprint,
+			'visit_count'       => $visit_count,
+			'is_same_session'   => $is_same_session,
+			'pages_per_session' => $pages_per_session,
+		) );
+	}
+
+	/**
+	 * Group visits into sessions based on time windows.
+	 *
+	 * @since 2.6.0
+	 * @param array $visits Array of visit records with timestamps.
+	 * @param int   $session_window Session timeout in seconds (default: 1800 = 30 min).
+	 * @return array Array of sessions with page_count and duration.
+	 */
+	private function group_visits_into_sessions( $visits, $session_window = 1800 ) {
+		if ( empty( $visits ) ) {
+			return array();
+		}
+
+		$sessions        = array();
+		$current_session = array(
+			'start'      => null,
+			'end'        => null,
+			'page_count' => 0,
+			'duration'   => 0,
+		);
+
+		foreach ( $visits as $index => $visit ) {
+			$timestamp = strtotime( $visit->visit_timestamp );
+
+			if ( null === $current_session['start'] ) {
+				// First visit in session.
+				$current_session['start']      = $timestamp;
+				$current_session['end']        = $timestamp;
+				$current_session['page_count'] = 1;
+			} else {
+				$time_since_last = abs( $current_session['end'] - $timestamp );
+
+				if ( $time_since_last <= $session_window ) {
+					// Same session - update end time and increment page count.
+					$current_session['end']        = $timestamp;
+					$current_session['page_count']++;
+				} else {
+					// New session - save current and start new.
+					$current_session['duration'] = abs( $current_session['end'] - $current_session['start'] );
+					$sessions[]                  = $current_session;
+
+					// Start new session.
+					$current_session = array(
+						'start'      => $timestamp,
+						'end'        => $timestamp,
+						'page_count' => 1,
+						'duration'   => 0,
+					);
+				}
+			}
+		}
+
+		// Add final session.
+		if ( null !== $current_session['start'] ) {
+			$current_session['duration'] = abs( $current_session['end'] - $current_session['start'] );
+			$sessions[]                  = $current_session;
+		}
+
+		return $sessions;
+	}
+
+	/**
+	 * Calculate standard deviation of an array of numbers.
+	 *
+	 * @since 2.6.0
+	 * @param array $values Array of numeric values.
+	 * @return float Standard deviation.
+	 */
+	private function calculate_stddev( $values ) {
+		if ( empty( $values ) ) {
+			return 0.0;
+		}
+
+		$mean     = array_sum( $values ) / count( $values );
+		$variance = array_sum( array_map( function( $x ) use ( $mean ) {
+			return pow( $x - $mean, 2 );
+		}, $values ) ) / count( $values );
+
+		return sqrt( $variance );
 	}
 
 	/**
@@ -1371,6 +1598,142 @@ class TA_Bot_Analytics {
 				$offset
 			),
 			ARRAY_A
+		);
+	}
+
+	/**
+	 * Get session analytics summary.
+	 *
+	 * Returns aggregated session metrics from bot fingerprints table.
+	 *
+	 * @since 2.6.0
+	 * @return array Session analytics summary.
+	 */
+	public function get_session_analytics() {
+		global $wpdb;
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$stats = $wpdb->get_row(
+			"SELECT
+				COUNT(*) as total_bots,
+				AVG(visit_count) as avg_visits_per_bot,
+				AVG(pages_per_session_avg) as avg_pages_per_session,
+				AVG(session_duration_avg) as avg_session_duration,
+				AVG(request_interval_avg) as avg_request_interval,
+				AVG(unique_paths_ratio) as avg_unique_paths_ratio
+			FROM {$fingerprints_table}",
+			ARRAY_A
+		);
+
+		return array(
+			'total_bot_fingerprints'  => absint( $stats['total_bots'] ?? 0 ),
+			'avg_visits_per_bot'      => round( floatval( $stats['avg_visits_per_bot'] ?? 0 ), 1 ),
+			'avg_pages_per_session'   => round( floatval( $stats['avg_pages_per_session'] ?? 0 ), 1 ),
+			'avg_session_duration'    => absint( $stats['avg_session_duration'] ?? 0 ), // seconds
+			'avg_request_interval'    => absint( $stats['avg_request_interval'] ?? 0 ), // seconds
+			'avg_unique_paths_ratio'  => round( floatval( $stats['avg_unique_paths_ratio'] ?? 0 ), 2 ),
+		);
+	}
+
+	/**
+	 * Get top bots by session metrics.
+	 *
+	 * Returns bots sorted by pages per session, session duration, etc.
+	 *
+	 * @since 2.6.0
+	 * @param string $metric Metric to sort by: 'pages_per_session', 'session_duration', 'visit_count'.
+	 * @param int    $limit  Number of results to return.
+	 * @return array Top bots with session metrics.
+	 */
+	public function get_top_bots_by_metric( $metric = 'pages_per_session', $limit = 10 ) {
+		global $wpdb;
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+
+		$allowed_metrics = array(
+			'pages_per_session' => 'pages_per_session_avg',
+			'session_duration'  => 'session_duration_avg',
+			'visit_count'       => 'visit_count',
+			'request_interval'  => 'request_interval_avg',
+		);
+
+		$order_by = $allowed_metrics[ $metric ] ?? 'pages_per_session_avg';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					classification as bot_type,
+					user_agent,
+					visit_count,
+					pages_per_session_avg,
+					session_duration_avg,
+					request_interval_avg,
+					unique_paths_ratio,
+					first_seen,
+					last_seen
+				FROM {$fingerprints_table}
+				WHERE {$order_by} IS NOT NULL
+				ORDER BY {$order_by} DESC
+				LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Get crawl budget metrics.
+	 *
+	 * Analyzes requests per hour/day and bandwidth consumption.
+	 *
+	 * @since 2.6.0
+	 * @param string $bot_type Optional bot type filter.
+	 * @param string $period   Time period: 'hour', 'day', 'week'.
+	 * @return array Crawl budget metrics.
+	 */
+	public function get_crawl_budget_metrics( $bot_type = null, $period = 'day' ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		// Determine time window.
+		$time_windows = array(
+			'hour' => '1 HOUR',
+			'day'  => '1 DAY',
+			'week' => '7 DAY',
+		);
+		$time_window = $time_windows[ $period ] ?? '1 DAY';
+
+		$where = 'WHERE visit_timestamp >= DATE_SUB(NOW(), INTERVAL ' . $time_window . ')';
+		if ( $bot_type ) {
+			$where .= $wpdb->prepare( ' AND bot_type = %s', $bot_type );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$stats = $wpdb->get_row(
+			"SELECT
+				COUNT(*) as total_requests,
+				COUNT(DISTINCT post_id) as unique_pages,
+				SUM(response_size) as total_bandwidth,
+				AVG(response_time) as avg_response_time,
+				COUNT(CASE WHEN cache_status = 'HIT' THEN 1 END) as cache_hits,
+				COUNT(CASE WHEN cache_status = 'MISS' THEN 1 END) as cache_misses
+			FROM {$table_name}
+			{$where}",
+			ARRAY_A
+		);
+
+		$total_requests = absint( $stats['total_requests'] ?? 0 );
+		$cache_hits     = absint( $stats['cache_hits'] ?? 0 );
+
+		return array(
+			'period'              => $period,
+			'total_requests'      => $total_requests,
+			'unique_pages'        => absint( $stats['unique_pages'] ?? 0 ),
+			'total_bandwidth_mb'  => round( absint( $stats['total_bandwidth'] ?? 0 ) / 1024 / 1024, 2 ),
+			'avg_response_time'   => absint( $stats['avg_response_time'] ?? 0 ),
+			'cache_hit_rate'      => $total_requests > 0 ? round( ( $cache_hits / $total_requests ) * 100, 1 ) : 0,
+			'requests_per_hour'   => $period === 'hour' ? $total_requests : round( $total_requests / ( $period === 'day' ? 24 : 168 ), 1 ),
 		);
 	}
 
