@@ -203,10 +203,18 @@ class TA_Admin {
 
 		// Cache Browser page.
 		if ( 'bot-analytics_page_third-audience-cache-browser' === $hook ) {
+			// Enqueue shared bot analytics styles first.
+			wp_enqueue_style(
+				'ta-bot-analytics',
+				TA_PLUGIN_URL . 'admin/css/bot-analytics.css',
+				array(),
+				TA_VERSION
+			);
+
 			wp_enqueue_style(
 				'ta-cache-browser',
 				TA_PLUGIN_URL . 'admin/css/cache-browser.css',
-				array(),
+				array( 'ta-bot-analytics' ),
 				TA_VERSION
 			);
 
