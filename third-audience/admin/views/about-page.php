@@ -75,7 +75,7 @@ Accept: text/markdown
 			<h2><?php esc_html_e( 'Technical Flow', 'third-audience' ); ?></h2>
 			<p><?php esc_html_e( 'Here\'s what happens when an AI bot visits your site:', 'third-audience' ); ?></p>
 
-			<div style="background: #f9f9f9; padding: 14px; margin: 14px 0; font-family: monospace; font-size: 14px; line-height: 1.8; border: 1px solid #ddd;">
+			<div style="background: #f9f9f9; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 13px; line-height: 1.8; border: 1px solid #ddd;">
 				<div style="margin-bottom: 15px;">
 					<strong style="color: #007aff;">┌─ AI Bot Visit ────────────────────────────────────┐</strong>
 				</div>
@@ -260,10 +260,10 @@ Accept: text/markdown
 			</p>
 
 			<!-- Version 1.1.1 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #007aff; padding-left: 20px; margin: 14px 0;">
+			<div class="ta-version-entry" style="border-left: 4px solid #007aff; padding-left: 20px; margin: 10px 0;">
 				<h3 style="margin: 0 0 10px 0; color: #007aff;">
 					<?php esc_html_e( 'Version 1.1.1', 'third-audience' ); ?>
-					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 21, 2026</span>
+					<span style="font-size: 13px; color: #646970; font-weight: normal;">— January 21, 2026</span>
 				</h3>
 				<p><strong><?php esc_html_e( 'Bug Fix:', 'third-audience' ); ?></strong></p>
 				<ul>
@@ -283,10 +283,10 @@ Accept: text/markdown
 			</div>
 
 			<!-- Version 1.1.0 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #2271b1; padding-left: 20px; margin: 14px 0;">
+			<div class="ta-version-entry" style="border-left: 4px solid #2271b1; padding-left: 20px; margin: 10px 0;">
 				<h3 style="margin: 0 0 10px 0; color: #2271b1;">
 					<?php esc_html_e( 'Version 1.1.0', 'third-audience' ); ?>
-					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 21, 2026</span>
+					<span style="font-size: 13px; color: #646970; font-weight: normal;">— January 21, 2026</span>
 				</h3>
 				<p><strong><?php esc_html_e( 'Major Features:', 'third-audience' ); ?></strong></p>
 				<ul>
@@ -304,10 +304,10 @@ Accept: text/markdown
 			</div>
 
 			<!-- Version 1.0.0 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #00a32a; padding-left: 20px; margin: 14px 0;">
+			<div class="ta-version-entry" style="border-left: 4px solid #00a32a; padding-left: 20px; margin: 10px 0;">
 				<h3 style="margin: 0 0 10px 0; color: #00a32a;">
 					<?php esc_html_e( 'Version 1.0.0', 'third-audience' ); ?>
-					<span style="font-size: 14px; color: #646970; font-weight: normal;">— January 16, 2026</span>
+					<span style="font-size: 13px; color: #646970; font-weight: normal;">— January 16, 2026</span>
 				</h3>
 				<p><strong><?php esc_html_e( 'Initial Release:', 'third-audience' ); ?></strong></p>
 				<ul>
@@ -372,7 +372,7 @@ Accept: text/markdown
 
 /* Container */
 .ta-about-page {
-	margin: 16px 16px 16px 0;
+	margin: 10px 10px 10px 0;
 }
 
 .ta-about-page .wp-heading-inline {
@@ -388,16 +388,16 @@ Accept: text/markdown
 
 .ta-about-container {
 	max-width: 1200px;
-	margin: 16px 0;
+	margin: 10px 0;
 }
 
 /* Card Base - Apple Style */
 .ta-card {
 	background: #ffffff;
 	border: none;
-	border-radius: 12px;
-	padding: 14px 24px;
-	margin-bottom: 14px;
+	border-radius: 8px;
+	padding: 10px 16px;
+	margin-bottom: 10px;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -411,7 +411,7 @@ Accept: text/markdown
 .ta-hero {
 	background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
 	border: none;
-	padding: 32px 28px;
+	padding: 20px 18px;
 	position: relative;
 	overflow: hidden;
 	text-align: center;
@@ -419,25 +419,25 @@ Accept: text/markdown
 
 .ta-hero-icon {
 	display: inline-flex;
-	width: 52px;
-	height: 52px;
+	width: 38px;
+	height: 38px;
 	background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
-	border-radius: 12px;
+	border-radius: 8px;
 	align-items: center;
 	justify-content: center;
-	margin-bottom: 14px;
+	margin-bottom: 10px;
 }
 
 .ta-hero-icon .dashicons {
 	color: #fff;
-	font-size: 22px;
+	font-size: 13px;
 	width: 28px;
 	height: 28px;
 }
 
 .ta-hero h2 {
 	margin: 0 0 12px 0;
-	font-size: 26px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.5px;
@@ -445,9 +445,9 @@ Accept: text/markdown
 }
 
 .ta-lead {
-	font-size: 14px;
+	font-size: 13px;
 	line-height: 1.6;
-	margin-bottom: 12px;
+	margin-bottom: 8px;
 	font-weight: 500;
 	color: #1d1d1f;
 }
@@ -455,7 +455,7 @@ Accept: text/markdown
 .ta-hero p {
 	color: #86868b;
 	line-height: 1.6;
-	font-size: 14px;
+	font-size: 13px;
 	margin: 10px auto;
 	max-width: 900px;
 }
@@ -463,7 +463,7 @@ Accept: text/markdown
 /* Typography - Apple SF Pro Style */
 .ta-card h2 {
 	margin: 0 0 16px 0;
-	font-size: 18px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.4px;
@@ -473,8 +473,8 @@ Accept: text/markdown
 }
 
 .ta-card h3 {
-	margin: 14px 0 12px 0;
-	font-size: 15px;
+	margin: 10px 0 12px 0;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.3px;
@@ -484,27 +484,27 @@ Accept: text/markdown
 .ta-card p {
 	color: #86868b;
 	line-height: 1.6;
-	font-size: 15px;
-	margin: 12px 0;
+	font-size: 13px;
+	margin: 8px 0;
 }
 
 .ta-card ul,
 .ta-card ol {
-	margin: 12px 0 12px 24px;
+	margin: 8px 0 12px 24px;
 	line-height: 1.7;
 }
 
 .ta-card li {
 	margin-bottom: 8px;
 	color: #86868b;
-	font-size: 14px;
+	font-size: 13px;
 }
 
 .ta-card pre {
 	background: #f5f5f7 !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
-	padding: 14px !important;
-	border-radius: 12px !important;
+	padding: 10px !important;
+	border-radius: 8px !important;
 	font-size: 13px;
 	line-height: 1.6;
 	color: #1d1d1f !important;
@@ -525,14 +525,14 @@ Accept: text/markdown
 .ta-features-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: 14px;
+	gap: 10px;
 	margin-top: 24px;
 }
 
 .ta-feature-item {
 	background: #f5f5f7;
-	border-radius: 12px;
-	padding: 16px;
+	border-radius: 8px;
+	padding: 10px;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -545,16 +545,16 @@ Accept: text/markdown
 .ta-feature-icon {
 	width: 48px;
 	height: 48px;
-	border-radius: 12px;
+	border-radius: 8px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	margin-bottom: 16px;
+	margin-bottom: 10px;
 }
 
 .ta-feature-icon .dashicons {
 	color: #fff;
-	font-size: 22px;
+	font-size: 13px;
 	width: 28px;
 	height: 28px;
 }
@@ -577,7 +577,7 @@ Accept: text/markdown
 
 .ta-feature-item h3 {
 	margin: 0 0 12px 0;
-	font-size: 14px;
+	font-size: 13px;
 }
 
 .ta-feature-item ul {
@@ -612,12 +612,12 @@ Accept: text/markdown
 .ta-credits-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-	gap: 16px;
-	margin: 16px 0;
+	gap: 10px;
+	margin: 10px 0;
 }
 
 .ta-credit-item h3 {
-	font-size: 14px;
+	font-size: 13px;
 	color: #86868b;
 	margin: 0 0 8px 0;
 	text-transform: uppercase;
@@ -628,7 +628,7 @@ Accept: text/markdown
 .ta-credit-item a {
 	color: #007aff;
 	text-decoration: none;
-	font-size: 15px;
+	font-size: 13px;
 	font-weight: 600;
 	transition: opacity 0.2s;
 }
@@ -639,7 +639,7 @@ Accept: text/markdown
 
 .ta-credits-message {
 	color: #86868b !important;
-	font-size: 14px !important;
+	font-size: 13px !important;
 	line-height: 1.6 !important;
 	margin-top: 20px !important;
 }
@@ -652,17 +652,17 @@ Accept: text/markdown
 .ta-links-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: 16px;
+	gap: 10px;
 	margin-top: 20px;
 }
 
 .ta-link-card {
 	display: flex;
 	align-items: center;
-	gap: 16px;
-	padding: 14px;
+	gap: 10px;
+	padding: 10px;
 	background: #f5f5f7;
-	border-radius: 12px;
+	border-radius: 8px;
 	text-decoration: none;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -676,7 +676,7 @@ Accept: text/markdown
 .ta-link-icon {
 	width: 48px;
 	height: 48px;
-	border-radius: 12px;
+	border-radius: 8px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -685,7 +685,7 @@ Accept: text/markdown
 
 .ta-link-icon .dashicons {
 	color: #fff;
-	font-size: 22px;
+	font-size: 13px;
 	width: 28px;
 	height: 28px;
 }
@@ -698,7 +698,7 @@ Accept: text/markdown
 }
 
 .ta-link-content strong {
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.2px;
@@ -712,7 +712,7 @@ Accept: text/markdown
 
 .ta-link-card .dashicons-arrow-right-alt2 {
 	color: #86868b;
-	font-size: 15px;
+	font-size: 13px;
 	width: 20px;
 	height: 20px;
 	flex-shrink: 0;
@@ -727,7 +727,7 @@ Accept: text/markdown
 .ta-version-entry {
 	border-left: 4px solid #007aff;
 	padding-left: 20px;
-	margin: 14px 0;
+	margin: 10px 0;
 	transition: all 0.2s;
 }
 
@@ -738,12 +738,12 @@ Accept: text/markdown
 .ta-version-entry h3 {
 	margin: 0 0 12px 0;
 	color: #1d1d1f;
-	font-size: 18px;
+	font-size: 13px;
 	font-weight: 600;
 }
 
 .ta-version-entry h3 span {
-	font-size: 14px;
+	font-size: 13px;
 	color: #86868b;
 	font-weight: 400;
 }
@@ -797,15 +797,15 @@ Accept: text/markdown
 .ta-card div[style*="font-family: monospace"] {
 	background: #f5f5f7 !important;
 	border: 1px solid rgba(0, 0, 0, 0.08) !important;
-	border-radius: 12px !important;
+	border-radius: 8px !important;
 	font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace !important;
 }
 
 /* Responsive Design */
 @media (max-width: 782px) {
 	.ta-card {
-		padding: 16px 20px;
-		border-radius: 12px;
+		padding: 10px 14px;
+		border-radius: 8px;
 	}
 
 	.ta-hero {
@@ -813,11 +813,11 @@ Accept: text/markdown
 	}
 
 	.ta-hero h2 {
-		font-size: 26px;
+		font-size: 13px;
 	}
 
 	.ta-lead {
-		font-size: 14px;
+		font-size: 13px;
 	}
 
 	.ta-features-grid {
