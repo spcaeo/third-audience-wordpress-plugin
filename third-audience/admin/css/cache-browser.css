@@ -14,7 +14,7 @@
 .ta-summary-cards {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 16px;
+	gap: 12px;
 	margin: 24px 0;
 }
 
@@ -22,10 +22,10 @@
 	background: #f5f5f7;
 	border: none;
 	border-radius: 12px;
-	padding: 24px;
+	padding: 16px;
 	display: flex;
 	align-items: center;
-	gap: 16px;
+	gap: 12px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -49,7 +49,7 @@
 
 .ta-summary-icon .dashicons {
 	color: #fff;
-	font-size: 32px;
+	font-size: 26px;
 	width: 32px;
 	height: 32px;
 }
@@ -60,7 +60,7 @@
 
 .ta-summary-content h3 {
 	margin: 0;
-	font-size: 28px;
+	font-size: 24px;
 	font-weight: 600;
 	color: #1d1d1f;
 	line-height: 1;
@@ -83,7 +83,7 @@
 .ta-warmup-card {
 	background: #ffffff;
 	border: none;
-	border-radius: 16px;
+	border-radius: 12px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 	margin: 24px 0;
@@ -96,17 +96,17 @@
 }
 
 .ta-warmup-header {
-	padding: 24px 28px 20px;
+	padding: 16px 20px 20px;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	gap: 20px;
+	gap: 14px;
 }
 
 .ta-warmup-title h2 {
 	margin: 0 0 6px;
-	font-size: 18px;
+	font-size: 14px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.3px;
@@ -149,13 +149,13 @@
 }
 
 .ta-warmup-body {
-	padding: 20px 28px 24px;
+	padding: 14px 28px 24px;
 }
 
 .ta-warmup-controls {
 	display: flex;
 	gap: 10px;
-	margin-bottom: 20px;
+	margin-bottom: 14px;
 }
 
 .ta-warmup-controls .button-primary {
@@ -179,7 +179,7 @@
 }
 
 .ta-warmup-controls .button-primary .dashicons {
-	font-size: 18px;
+	font-size: 14px;
 	width: 18px;
 	height: 18px;
 }
@@ -241,8 +241,8 @@
 .ta-cache-filters {
 	background: #ffffff;
 	border: none;
-	border-radius: 16px;
-	padding: 24px 28px;
+	border-radius: 12px;
+	padding: 16px 20px;
 	margin: 24px 0;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -255,7 +255,7 @@
 .ta-filter-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16px;
+	gap: 12px;
 	align-items: flex-end;
 }
 
@@ -401,7 +401,7 @@
 }
 
 .ta-cache-actions .button .dashicons {
-	font-size: 18px;
+	font-size: 14px;
 	width: 18px;
 	height: 18px;
 }
@@ -434,13 +434,13 @@
 }
 
 .ta-export-dropdown-toggle .dashicons {
-	font-size: 18px;
+	font-size: 14px;
 	width: 18px;
 	height: 18px;
 }
 
 .ta-export-dropdown-toggle .dashicons-arrow-down-alt2 {
-	font-size: 16px;
+	font-size: 14px;
 	width: 16px;
 	height: 16px;
 	transition: transform 0.2s;
@@ -541,7 +541,7 @@
 .ta-cache-table-card {
 	background: #ffffff;
 	border: none;
-	border-radius: 16px;
+	border-radius: 12px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 	margin: 24px 0;
@@ -780,7 +780,7 @@
 
 .ta-cache-content-modal .ta-modal-body pre {
 	background: #f5f5f7;
-	padding: 20px;
+	padding: 14px;
 	border-radius: 12px;
 	overflow-x: auto;
 	white-space: pre-wrap;
@@ -898,15 +898,15 @@ body.ta-modal-open {
 	}
 
 	.ta-cache-content-modal .ta-modal-header {
-		padding: 24px 24px 20px;
+		padding: 16px 24px 20px;
 	}
 
 	.ta-cache-content-modal .ta-modal-header h2 {
-		font-size: 22px;
+		font-size: 14px;
 	}
 
 	.ta-cache-content-modal .ta-modal-body {
-		padding: 24px;
+		padding: 16px;
 	}
 
 	.ta-cache-table th.ta-sortable {
