@@ -76,6 +76,8 @@ $library_version = TA_Local_Converter::get_library_version();
 		</div>
 	</div>
 
+	<!-- Card Grid: Version & System Info -->
+	<div class="ta-cards-container">
 	<!-- Version Information -->
 	<div class="ta-card">
 		<div class="ta-card-header">
@@ -229,7 +231,10 @@ $library_version = TA_Local_Converter::get_library_version();
 			</div>
 		</div>
 	</div>
+	</div><!-- /ta-cards-container -->
 
+	<!-- Card Grid: Diagnostics & Troubleshooting -->
+	<div class="ta-cards-container">
 	<!-- System Diagnostics -->
 	<div class="ta-card">
 		<div class="ta-card-header">
@@ -358,6 +363,7 @@ composer install --no-dev --optimize-autoloader</pre>
 			</div>
 		</div>
 	<?php endif; ?>
+	</div><!-- /ta-cards-container -->
 
 	<!-- Plugin Information -->
 	<div class="ta-card">
