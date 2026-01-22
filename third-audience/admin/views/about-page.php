@@ -250,6 +250,25 @@ Accept: text/markdown
 			<p class="ta-credits-message">
 				<?php esc_html_e( 'This plugin was created to make the "third audience" concept accessible to all WordPress users. Special thanks to Dries for introducing this important shift in how we think about web content optimization.', 'third-audience' ); ?>
 			</p>
+
+			<h3 style="margin: 30px 0 16px 0; color: #1d1d1f; font-size: 18px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 16px;">
+				<?php esc_html_e( 'Built with Open Source', 'third-audience' ); ?>
+			</h3>
+			<p style="color: #86868b; margin-bottom: 20px;">
+				<?php esc_html_e( 'Third Audience is powered by this amazing open source library:', 'third-audience' ); ?>
+			</p>
+			<div class="ta-credits-grid">
+				<div class="ta-credit-item">
+					<h3><?php esc_html_e( 'HTML to Markdown', 'third-audience' ); ?></h3>
+					<a href="https://github.com/thephpleague/html-to-markdown" target="_blank" rel="noopener"><?php esc_html_e( 'league/html-to-markdown', 'third-audience' ); ?></a>
+					<p style="font-size: 13px; color: #86868b; margin-top: 8px;">
+						<?php esc_html_e( 'Fast, clean HTML to Markdown conversion for serving AI-optimized content.', 'third-audience' ); ?>
+					</p>
+				</div>
+			</div>
+			<p style="color: #86868b; margin-top: 20px; font-size: 13px;">
+				<?php esc_html_e( 'AI citation tracking and referrer parsing is handled by our custom lightweight implementation - zero external dependencies!', 'third-audience' ); ?>
+			</p>
 		</div>
 
 		<!-- Version History -->
