@@ -34,7 +34,7 @@ class TA_Bot_Analytics {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '1.1.0';
+	const DB_VERSION = '1.2.0';
 
 	/**
 	 * Option name for database version.
@@ -126,6 +126,13 @@ class TA_Bot_Analytics {
 	private $webhooks;
 
 	/**
+	 * Detection pipeline instance.
+	 *
+	 * @var TA_Bot_Detection_Pipeline|null
+	 */
+	private $pipeline = null;
+
+	/**
 	 * Singleton instance.
 	 *
 	 * @var TA_Bot_Analytics|null
@@ -151,9 +158,22 @@ class TA_Bot_Analytics {
 	 * @since 1.4.0
 	 */
 	private function __construct() {
+		global $wpdb;
+
 		$this->logger = TA_Logger::get_instance();
 		$this->webhooks = TA_Webhooks::get_instance();
+
+		// Initialize detection pipeline if classes exist.
+		if ( class_exists( 'TA_Bot_Detection_Pipeline' ) &&
+		     class_exists( 'TA_Known_Pattern_Detector' ) &&
+		     class_exists( 'TA_Heuristic_Detector' ) ) {
+			$known_detector     = new TA_Known_Pattern_Detector( $wpdb );
+			$heuristic_detector = new TA_Heuristic_Detector();
+			$this->pipeline     = new TA_Bot_Detection_Pipeline( $known_detector, $heuristic_detector );
+		}
+
 		$this->maybe_create_table();
+		$this->maybe_migrate_patterns();
 
 		// Hook into template_redirect to track AI citation clicks.
 		add_action( 'template_redirect', array( $this, 'maybe_track_citation_click' ), 5 );
@@ -234,6 +254,60 @@ class TA_Bot_Analytics {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
 
+		// Migration for v1.2.0: Create dynamic bot detection tables and add detection columns.
+		if ( version_compare( $installed_version, '1.2.0', '<' ) ) {
+			$this->create_bot_detection_tables( $charset_collate );
+
+			// Add detection_method and confidence_score columns to analytics table.
+			$migration_success_v12 = true;
+
+			$columns_to_add_v12 = array(
+				'detection_method' => "ALTER TABLE {$table_name} ADD COLUMN detection_method varchar(50) DEFAULT 'legacy' AFTER referer_medium",
+				'confidence_score' => "ALTER TABLE {$table_name} ADD COLUMN confidence_score decimal(3,2) DEFAULT NULL AFTER detection_method",
+			);
+
+			foreach ( $columns_to_add_v12 as $column_name => $alter_sql ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$column_exists = $wpdb->get_results(
+					"SHOW COLUMNS FROM {$table_name} LIKE '{$column_name}'"
+				);
+
+				if ( empty( $column_exists ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+					$result = $wpdb->query( $alter_sql );
+
+					if ( false === $result ) {
+						$migration_success_v12 = false;
+						$this->logger->error( "Failed to add column {$column_name}", array(
+							'error' => $wpdb->last_error,
+						) );
+					}
+				}
+			}
+
+			// Add index for detection_method.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$index_exists = $wpdb->get_results(
+				"SHOW INDEX FROM {$table_name} WHERE Key_name = 'detection_method'"
+			);
+
+			if ( empty( $index_exists ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$result = $wpdb->query( "ALTER TABLE {$table_name} ADD INDEX detection_method (detection_method)" );
+
+				if ( false === $result ) {
+					$migration_success_v12 = false;
+					$this->logger->error( 'Failed to add index detection_method', array(
+						'error' => $wpdb->last_error,
+					) );
+				}
+			}
+
+			if ( ! $migration_success_v12 ) {
+				$this->logger->error( 'Migration to v1.2.0 failed for detection columns.' );
+			}
+		}
+
 		// Migration for v1.1.0: Add AI citation tracking columns if upgrading from v1.0.0
 		if ( version_compare( $installed_version, '1.1.0', '<' ) ) {
 			$migration_success = true;
@@ -312,7 +386,152 @@ class TA_Bot_Analytics {
 	}
 
 	/**
+	 * Create bot detection tables for dynamic pattern management.
+	 *
+	 * Creates 4 new tables for the dynamic bot detection system:
+	 * - wp_ta_bot_patterns: Bot detection patterns (replaces hardcoded patterns)
+	 * - wp_ta_unknown_bots: Unknown user agents awaiting classification
+	 * - wp_ta_bot_db_sync: External bot database sync status
+	 * - wp_ta_bot_fingerprints: Behavioral analysis data
+	 *
+	 * @since 1.2.0
+	 * @param string $charset_collate Database charset collation.
+	 * @return void
+	 */
+	private function create_bot_detection_tables( $charset_collate ) {
+		global $wpdb;
+
+		// Table 1: Bot Patterns - Dynamic bot detection patterns.
+		$patterns_table = $wpdb->prefix . 'ta_bot_patterns';
+		$sql_patterns = "CREATE TABLE IF NOT EXISTS {$patterns_table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			pattern varchar(255) NOT NULL,
+			pattern_type enum('exact','regex','contains','ml') NOT NULL DEFAULT 'regex',
+			bot_name varchar(100) NOT NULL,
+			bot_vendor varchar(100) DEFAULT NULL,
+			bot_category enum('ai','search','social','seo','monitoring','other') DEFAULT NULL,
+			priority varchar(20) NOT NULL DEFAULT 'medium',
+			color varchar(7) DEFAULT '#999999',
+			confidence_score decimal(3,2) DEFAULT 1.00,
+			source enum('manual','heuristic','external_db','ml','community') NOT NULL DEFAULT 'manual',
+			source_version varchar(50) DEFAULT NULL,
+			is_active tinyint(1) NOT NULL DEFAULT 1,
+			first_seen datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			last_seen datetime DEFAULT NULL,
+			visit_count int(11) DEFAULT 0,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY pattern (pattern(100)),
+			KEY is_active (is_active),
+			KEY bot_category (bot_category),
+			KEY confidence_score (confidence_score)
+		) {$charset_collate};";
+
+		// Table 2: Unknown Bots - User agents awaiting classification.
+		$unknown_bots_table = $wpdb->prefix . 'ta_unknown_bots';
+		$sql_unknown = "CREATE TABLE IF NOT EXISTS {$unknown_bots_table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			user_agent text NOT NULL,
+			user_agent_hash varchar(64) NOT NULL,
+			first_seen datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			last_seen datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			visit_count int(11) NOT NULL DEFAULT 1,
+			classification_status varchar(20) NOT NULL DEFAULT 'pending',
+			suggested_bot_name varchar(100) DEFAULT NULL,
+			confidence_score decimal(3,2) DEFAULT NULL,
+			ip_addresses text DEFAULT NULL,
+			referers text DEFAULT NULL,
+			visited_urls text DEFAULT NULL,
+			notes text DEFAULT NULL,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			UNIQUE KEY user_agent_hash (user_agent_hash),
+			KEY classification_status (classification_status),
+			KEY last_seen (last_seen),
+			KEY visit_count (visit_count)
+		) {$charset_collate};";
+
+		// Table 3: Bot DB Sync - External database sync status.
+		$sync_table = $wpdb->prefix . 'ta_bot_db_sync';
+		$sql_sync = "CREATE TABLE IF NOT EXISTS {$sync_table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			source_name varchar(100) NOT NULL,
+			source_url varchar(500) NOT NULL,
+			last_sync_at datetime DEFAULT NULL,
+			next_sync_at datetime DEFAULT NULL,
+			sync_frequency varchar(20) NOT NULL DEFAULT 'daily',
+			sync_status varchar(20) NOT NULL DEFAULT 'pending',
+			patterns_added int(11) DEFAULT 0,
+			patterns_updated int(11) DEFAULT 0,
+			error_message text DEFAULT NULL,
+			is_active tinyint(1) NOT NULL DEFAULT 1,
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			UNIQUE KEY source_name (source_name),
+			KEY sync_status (sync_status),
+			KEY is_active (is_active),
+			KEY next_sync_at (next_sync_at)
+		) {$charset_collate};";
+
+		// Table 4: Bot Fingerprints - Behavioral analysis data.
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+		$sql_fingerprints = "CREATE TABLE IF NOT EXISTS {$fingerprints_table} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			fingerprint_hash varchar(64) NOT NULL,
+			user_agent text NOT NULL,
+			ip_address varchar(45) NOT NULL,
+			request_interval_avg int(11) DEFAULT NULL,
+			request_interval_stddev int(11) DEFAULT NULL,
+			pages_per_session_avg decimal(5,2) DEFAULT NULL,
+			session_duration_avg int(11) DEFAULT NULL,
+			unique_paths_ratio decimal(3,2) DEFAULT NULL,
+			robots_txt_checked tinyint(1) DEFAULT 0,
+			respects_robots_txt tinyint(1) DEFAULT NULL,
+			http_accept_header text DEFAULT NULL,
+			http_accept_language text DEFAULT NULL,
+			javascript_enabled tinyint(1) DEFAULT 0,
+			cookies_enabled tinyint(1) DEFAULT 0,
+			first_seen datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			last_seen datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			visit_count int(11) NOT NULL DEFAULT 1,
+			bot_score decimal(3,2) DEFAULT NULL,
+			classification varchar(50) DEFAULT 'unknown',
+			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			UNIQUE KEY fingerprint_hash (fingerprint_hash),
+			KEY ip_address (ip_address),
+			KEY classification (classification),
+			KEY last_seen (last_seen),
+			KEY bot_score (bot_score)
+		) {$charset_collate};";
+
+		// Execute table creation.
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( $sql_patterns );
+		dbDelta( $sql_unknown );
+		dbDelta( $sql_sync );
+		dbDelta( $sql_fingerprints );
+
+		// Log migration completion.
+		$this->logger->info( 'Bot detection tables created.', array(
+			'tables' => array(
+				$patterns_table,
+				$unknown_bots_table,
+				$sync_table,
+				$fingerprints_table,
+			),
+		) );
+	}
+
+	/**
 	 * Detect bot from user agent.
+	 *
+	 * Uses the detection pipeline if available, otherwise falls back to legacy detection.
+	 * Returns array format for backward compatibility.
 	 *
 	 * @since 1.4.0
 	 * @param string $user_agent The user agent string.
@@ -323,6 +542,31 @@ class TA_Bot_Analytics {
 			return false;
 		}
 
+		// Use pipeline if available (new system).
+		if ( null !== $this->pipeline ) {
+			$detection_result = $this->pipeline->detect( $user_agent );
+
+			if ( ! $detection_result->is_bot() ) {
+				return false;
+			}
+
+			// Convert pipeline result to legacy array format for backward compatibility.
+			$bot_name = $detection_result->get_bot_name();
+
+			// Map bot name to known bot type for color.
+			$bot_type = $this->get_bot_type_from_name( $bot_name );
+			$color    = $this->get_bot_color( $bot_type );
+			$priority = $this->get_bot_priority( $bot_type, 'medium' );
+
+			return array(
+				'type'     => $bot_type,
+				'name'     => $bot_name,
+				'color'    => $color,
+				'priority' => $priority,
+			);
+		}
+
+		// Legacy detection (fallback if pipeline not available).
 		// Check known bots first.
 		foreach ( self::$known_bots as $bot_type => $bot_info ) {
 			if ( preg_match( $bot_info['pattern'], $user_agent ) ) {
@@ -366,6 +610,66 @@ class TA_Bot_Analytics {
 	}
 
 	/**
+	 * Get bot detection result object (new pipeline method).
+	 *
+	 * Returns detailed detection information including confidence score.
+	 *
+	 * @since 2.3.0
+	 * @param string $user_agent The user agent string.
+	 * @return TA_Bot_Detection_Result|null Detection result or null if pipeline unavailable.
+	 */
+	public function get_bot_detection_result( $user_agent ) {
+		if ( null === $this->pipeline ) {
+			return null;
+		}
+
+		return $this->pipeline->detect( $user_agent );
+	}
+
+	/**
+	 * Get bot type from bot name.
+	 *
+	 * Maps bot names back to their types for backward compatibility.
+	 *
+	 * @since 2.3.0
+	 * @param string $bot_name Bot name.
+	 * @return string Bot type.
+	 */
+	private function get_bot_type_from_name( $bot_name ) {
+		// Map known bot names to types.
+		$name_to_type_map = array(
+			'Claude (Anthropic)' => 'ClaudeBot',
+			'GPT (OpenAI)'       => 'GPTBot',
+			'ChatGPT User'       => 'ChatGPT-User',
+			'Perplexity'         => 'PerplexityBot',
+			'ByteDance AI'       => 'Bytespider',
+			'Anthropic AI'       => 'anthropic-ai',
+			'Cohere'             => 'cohere-ai',
+			'Google Gemini'      => 'Google-Extended',
+			'Meta AI'            => 'FacebookBot',
+			'Apple Intelligence' => 'Applebot-Extended',
+		);
+
+		return $name_to_type_map[ $bot_name ] ?? 'Custom_' . sanitize_title( $bot_name );
+	}
+
+	/**
+	 * Get bot color by type.
+	 *
+	 * @since 2.3.0
+	 * @param string $bot_type Bot type.
+	 * @return string Hex color code.
+	 */
+	private function get_bot_color( $bot_type ) {
+		if ( isset( self::$known_bots[ $bot_type ]['color'] ) ) {
+			return self::$known_bots[ $bot_type ]['color'];
+		}
+
+		// Default color for unknown/custom bots.
+		return '#8B5CF6';
+	}
+
+	/**
 	 * Check if a bot type is blocked.
 	 *
 	 * @since 1.5.0
@@ -384,6 +688,116 @@ class TA_Bot_Analytics {
 		// Check if bot priority is set to 'blocked'.
 		$priority = $this->get_bot_priority( $bot_type );
 		return 'blocked' === $priority;
+	}
+
+	/**
+	 * Migrate hardcoded bot patterns to database.
+	 *
+	 * Runs once to migrate the $known_bots array to wp_ta_bot_patterns table.
+	 *
+	 * @since 2.3.0
+	 * @return void
+	 */
+	public function maybe_migrate_patterns() {
+		// Check if migration already done.
+		if ( get_option( 'ta_bot_patterns_migrated', false ) ) {
+			return;
+		}
+
+		global $wpdb;
+		$patterns_table = $wpdb->prefix . 'ta_bot_patterns';
+
+		// Check if table exists.
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '{$patterns_table}'" );
+		if ( ! $table_exists ) {
+			return;
+		}
+
+		// Migrate each known bot pattern.
+		$migrated_count = 0;
+		foreach ( self::$known_bots as $bot_type => $bot_info ) {
+			// Use pattern as-is (already a regex).
+			$pattern = $bot_info['pattern'];
+
+			// Extract vendor from bot name.
+			$bot_vendor = $this->get_vendor_from_name( $bot_info['name'] );
+
+			// Determine category based on bot type.
+			$category_map = array(
+				'ClaudeBot'         => 'ai',
+				'GPTBot'            => 'ai',
+				'ChatGPT-User'      => 'ai',
+				'PerplexityBot'     => 'ai',
+				'Bytespider'        => 'ai',
+				'anthropic-ai'      => 'ai',
+				'cohere-ai'         => 'ai',
+				'Google-Extended'   => 'ai',
+				'FacebookBot'       => 'social',
+				'Applebot-Extended' => 'ai',
+			);
+			$bot_category = $category_map[ $bot_type ] ?? 'other';
+
+			// Map to new structure.
+			$insert_data = array(
+				'pattern'       => $pattern,
+				'pattern_type'  => 'regex',
+				'bot_name'      => $bot_info['name'],
+				'bot_vendor'    => $bot_vendor,
+				'bot_category'  => $bot_category,
+				'priority'      => $bot_info['priority'],
+				'color'         => $bot_info['color'],
+				'source'        => 'manual',
+				'is_active'     => 1,
+				'first_seen'    => current_time( 'mysql' ),
+			);
+
+			// Add pattern.
+			$result = $wpdb->insert( $patterns_table, $insert_data );
+			if ( $result ) {
+				$migrated_count++;
+			}
+		}
+
+		// Mark migration as complete.
+		update_option( 'ta_bot_patterns_migrated', true );
+
+		$this->logger->info( 'Bot patterns migrated to database.', array(
+			'count' => $migrated_count,
+		) );
+	}
+
+	/**
+	 * Extract vendor name from bot name.
+	 *
+	 * @since 2.3.0
+	 * @param string $bot_name Bot name.
+	 * @return string Vendor name.
+	 */
+	private function get_vendor_from_name( $bot_name ) {
+		// Extract vendor from name (text in parentheses).
+		if ( preg_match( '/\(([^)]+)\)/', $bot_name, $matches ) ) {
+			return $matches[1];
+		}
+
+		// Default vendors.
+		$vendor_map = array(
+			'Claude'    => 'Anthropic',
+			'GPT'       => 'OpenAI',
+			'ChatGPT'   => 'OpenAI',
+			'Perplexity' => 'Perplexity',
+			'ByteDance' => 'ByteDance',
+			'Google'    => 'Google',
+			'Meta'      => 'Meta',
+			'Apple'     => 'Apple',
+		);
+
+		foreach ( $vendor_map as $key => $vendor ) {
+			if ( stripos( $bot_name, $key ) !== false ) {
+				return $vendor;
+			}
+		}
+
+		return 'Unknown';
 	}
 
 	/**
@@ -447,26 +861,28 @@ class TA_Bot_Analytics {
 		$country_code = $ip_address ? $this->get_geolocation( $ip_address ) : null;
 
 		$insert_data = array(
-			'bot_type'        => sanitize_text_field( $data['bot_type'] ),
-			'bot_name'        => sanitize_text_field( $data['bot_name'] ?? '' ),
-			'user_agent'      => sanitize_text_field( $data['user_agent'] ?? '' ),
-			'url'             => esc_url_raw( $data['url'] ),
-			'post_id'         => isset( $data['post_id'] ) ? absint( $data['post_id'] ) : null,
-			'post_type'       => isset( $data['post_type'] ) ? sanitize_text_field( $data['post_type'] ) : null,
-			'post_title'      => isset( $data['post_title'] ) ? sanitize_text_field( $data['post_title'] ) : null,
-			'request_method'  => sanitize_text_field( $data['request_method'] ?? 'md_url' ),
-			'cache_status'    => sanitize_text_field( $data['cache_status'] ?? 'MISS' ),
-			'response_time'   => isset( $data['response_time'] ) ? absint( $data['response_time'] ) : null,
-			'response_size'   => isset( $data['response_size'] ) ? absint( $data['response_size'] ) : null,
-			'ip_address'      => $ip_address,
-			'referer'         => isset( $data['referer'] ) ? esc_url_raw( $data['referer'] ) : null,
-			'country_code'    => $country_code,
-			'traffic_type'    => sanitize_text_field( $data['traffic_type'] ?? 'bot_crawl' ),
-			'ai_platform'     => isset( $data['ai_platform'] ) ? sanitize_text_field( $data['ai_platform'] ) : null,
-			'search_query'    => isset( $data['search_query'] ) ? sanitize_text_field( $data['search_query'] ) : null,
-			'referer_source'  => isset( $data['referer_source'] ) ? sanitize_text_field( $data['referer_source'] ) : null,
-			'referer_medium'  => isset( $data['referer_medium'] ) ? sanitize_text_field( $data['referer_medium'] ) : null,
-			'visit_timestamp' => current_time( 'mysql' ),
+			'bot_type'         => sanitize_text_field( $data['bot_type'] ),
+			'bot_name'         => sanitize_text_field( $data['bot_name'] ?? '' ),
+			'user_agent'       => sanitize_text_field( $data['user_agent'] ?? '' ),
+			'url'              => esc_url_raw( $data['url'] ),
+			'post_id'          => isset( $data['post_id'] ) ? absint( $data['post_id'] ) : null,
+			'post_type'        => isset( $data['post_type'] ) ? sanitize_text_field( $data['post_type'] ) : null,
+			'post_title'       => isset( $data['post_title'] ) ? sanitize_text_field( $data['post_title'] ) : null,
+			'request_method'   => sanitize_text_field( $data['request_method'] ?? 'md_url' ),
+			'cache_status'     => sanitize_text_field( $data['cache_status'] ?? 'MISS' ),
+			'response_time'    => isset( $data['response_time'] ) ? absint( $data['response_time'] ) : null,
+			'response_size'    => isset( $data['response_size'] ) ? absint( $data['response_size'] ) : null,
+			'ip_address'       => $ip_address,
+			'referer'          => isset( $data['referer'] ) ? esc_url_raw( $data['referer'] ) : null,
+			'country_code'     => $country_code,
+			'traffic_type'     => sanitize_text_field( $data['traffic_type'] ?? 'bot_crawl' ),
+			'ai_platform'      => isset( $data['ai_platform'] ) ? sanitize_text_field( $data['ai_platform'] ) : null,
+			'search_query'     => isset( $data['search_query'] ) ? sanitize_text_field( $data['search_query'] ) : null,
+			'referer_source'   => isset( $data['referer_source'] ) ? sanitize_text_field( $data['referer_source'] ) : null,
+			'referer_medium'   => isset( $data['referer_medium'] ) ? sanitize_text_field( $data['referer_medium'] ) : null,
+			'detection_method' => isset( $data['detection_method'] ) ? sanitize_text_field( $data['detection_method'] ) : 'legacy',
+			'confidence_score' => isset( $data['confidence_score'] ) ? floatval( $data['confidence_score'] ) : null,
+			'visit_timestamp'  => current_time( 'mysql' ),
 		);
 
 		$format = array(
@@ -489,6 +905,8 @@ class TA_Bot_Analytics {
 			'%s', // search_query
 			'%s', // referer_source
 			'%s', // referer_medium
+			'%s', // detection_method
+			'%f', // confidence_score
 			'%s', // visit_timestamp
 		);
 
@@ -1371,8 +1789,17 @@ class TA_Bot_Analytics {
 	 */
 	public static function uninstall() {
 		global $wpdb;
+
+		// Drop main analytics table.
 		$table_name = $wpdb->prefix . self::TABLE_NAME;
 		$wpdb->query( "DROP TABLE IF EXISTS {$table_name}" );
+
+		// Drop bot detection tables (added in v1.2.0).
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}ta_bot_patterns" );
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}ta_unknown_bots" );
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}ta_bot_db_sync" );
+		$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}ta_bot_fingerprints" );
+
 		delete_option( self::DB_VERSION_OPTION );
 	}
 }

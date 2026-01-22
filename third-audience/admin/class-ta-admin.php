@@ -290,8 +290,13 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function handle_export_request() {
-		// Only handle on bot analytics page with export action.
-		if ( ! isset( $_GET['page'] ) || 'third-audience-bot-analytics' !== $_GET['page'] ) {
+		// Only handle on bot analytics or AI citations page with export action.
+		if ( ! isset( $_GET['page'] ) ) {
+			return;
+		}
+
+		$page = $_GET['page'];
+		if ( ! in_array( $page, array( 'third-audience-bot-analytics', 'third-audience-ai-citations' ), true ) ) {
 			return;
 		}
 
@@ -299,8 +304,11 @@ class TA_Admin {
 			return;
 		}
 
+		// Determine which nonce to check based on page.
+		$nonce_action = ( 'third-audience-ai-citations' === $page ) ? 'ta_export_citations' : 'ta_export_analytics';
+
 		// Verify nonce and capability.
-		if ( ! check_admin_referer( 'ta_export_analytics' ) ) {
+		if ( ! check_admin_referer( $nonce_action ) ) {
 			wp_die( esc_html__( 'Invalid security token.', 'third-audience' ) );
 		}
 
@@ -324,6 +332,27 @@ class TA_Admin {
 		$analytics = TA_Bot_Analytics::get_instance();
 		$filters   = array();
 
+		// AI Citations page filters.
+		if ( 'third-audience-ai-citations' === $page ) {
+			if ( ! empty( $_GET['platform'] ) ) {
+				$filters['platform'] = sanitize_text_field( wp_unslash( $_GET['platform'] ) );
+			}
+			if ( ! empty( $_GET['date_from'] ) ) {
+				$filters['date_from'] = sanitize_text_field( wp_unslash( $_GET['date_from'] ) );
+			}
+			if ( ! empty( $_GET['date_to'] ) ) {
+				$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
+			}
+			if ( ! empty( $_GET['search'] ) ) {
+				$filters['search'] = sanitize_text_field( wp_unslash( $_GET['search'] ) );
+			}
+
+			// Export citations data.
+			$this->export_citations_to_csv( $filters );
+			exit;
+		}
+
+		// Bot Analytics page filters.
 		if ( ! empty( $_GET['bot_type'] ) ) {
 			$filters['bot_type'] = sanitize_text_field( wp_unslash( $_GET['bot_type'] ) );
 		}
@@ -340,6 +369,157 @@ class TA_Admin {
 		} else {
 			$analytics->export_to_csv( $filters, $export_type );
 		}
+	}
+
+	/**
+	 * Export AI Citations data to CSV.
+	 *
+	 * @since 2.3.0
+	 * @param array $filters Filter criteria.
+	 * @return void
+	 */
+	private function export_citations_to_csv( $filters = array() ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+		// Build WHERE clause.
+		$where_clauses = array( "traffic_type = 'citation_click'" );
+
+		if ( ! empty( $filters['platform'] ) ) {
+			$where_clauses[] = $wpdb->prepare( 'ai_platform = %s', $filters['platform'] );
+		}
+		if ( ! empty( $filters['date_from'] ) ) {
+			$where_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) >= %s', $filters['date_from'] );
+		}
+		if ( ! empty( $filters['date_to'] ) ) {
+			$where_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) <= %s', $filters['date_to'] );
+		}
+		if ( ! empty( $filters['search'] ) ) {
+			$search_term     = '%' . $wpdb->esc_like( $filters['search'] ) . '%';
+			$where_clauses[] = $wpdb->prepare( '(url LIKE %s OR post_title LIKE %s OR search_query LIKE %s)', $search_term, $search_term, $search_term );
+		}
+
+		$where_sql = implode( ' AND ', $where_clauses );
+
+		// Query ALL fields for comprehensive export.
+		$results = $wpdb->get_results(
+			"SELECT
+				id,
+				bot_type,
+				bot_name,
+				user_agent,
+				url,
+				post_id,
+				post_type,
+				post_title,
+				request_method,
+				cache_status,
+				response_time,
+				response_size,
+				ip_address,
+				referer,
+				country_code,
+				traffic_type,
+				ai_platform,
+				search_query,
+				referer_source,
+				referer_medium,
+				detection_method,
+				confidence_score,
+				visit_timestamp,
+				created_at
+			FROM {$table_name}
+			WHERE {$where_sql}
+			ORDER BY visit_timestamp DESC",
+			ARRAY_A
+		);
+
+		// Generate filename.
+		$filename = 'ai-citations-' . gmdate( 'Y-m-d-H-i-s' ) . '.csv';
+
+		// Set headers for download.
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+
+		// Open output stream.
+		$output = fopen( 'php://output', 'w' );
+
+		// Add BOM for UTF-8.
+		fprintf( $output, chr( 0xEF ) . chr( 0xBB ) . chr( 0xBF ) );
+
+		// Add header metadata.
+		fputcsv( $output, array( 'Third Audience AI Citations Export' ) );
+		fputcsv( $output, array( 'Generated', gmdate( 'Y-m-d H:i:s' ) . ' UTC' ) );
+		fputcsv( $output, array( 'Total Records', count( $results ) ) );
+		fputcsv( $output, array() );
+
+		// CSV headers - ALL fields.
+		fputcsv(
+			$output,
+			array(
+				'ID',
+				'Bot Type',
+				'Bot Name',
+				'User Agent',
+				'URL',
+				'Post ID',
+				'Post Type',
+				'Post Title',
+				'Request Method',
+				'Cache Status',
+				'Response Time (ms)',
+				'Response Size',
+				'IP Address',
+				'Referer',
+				'Country Code',
+				'Traffic Type',
+				'AI Platform',
+				'Search Query',
+				'Referer Source',
+				'Referer Medium',
+				'Detection Method',
+				'Confidence Score',
+				'Visit Time (UTC)',
+				'Created At (UTC)',
+			)
+		);
+
+		// Export data rows.
+		foreach ( $results as $row ) {
+			fputcsv(
+				$output,
+				array(
+					$row['id'],
+					$row['bot_type'],
+					$row['bot_name'],
+					$row['user_agent'],
+					$row['url'],
+					$row['post_id'],
+					$row['post_type'],
+					$row['post_title'],
+					$row['request_method'],
+					$row['cache_status'],
+					$row['response_time'],
+					$row['response_size'],
+					$row['ip_address'],
+					$row['referer'],
+					$row['country_code'],
+					$row['traffic_type'],
+					$row['ai_platform'],
+					$row['search_query'],
+					$row['referer_source'],
+					$row['referer_medium'],
+					$row['detection_method'],
+					$row['confidence_score'],
+					$row['visit_timestamp'],
+					$row['created_at'],
+				)
+			);
+		}
+
+		fclose( $output );
 	}
 
 	/**

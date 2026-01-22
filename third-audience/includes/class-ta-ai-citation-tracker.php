@@ -93,48 +93,101 @@ class TA_AI_Citation_Tracker {
 	);
 
 	/**
-	 * Detect AI citation traffic from referrer header.
+	 * Detect AI citation traffic from UTM parameters or referrer header.
+	 *
+	 * Modern AI platforms (ChatGPT, Gemini, Perplexity) strip referrer headers
+	 * for privacy. ChatGPT uses utm_source parameter instead.
 	 *
 	 * @since 2.2.0
 	 * @return array|false Citation data or false if not AI platform traffic.
 	 */
 	public static function detect_citation_traffic() {
-		// Get referrer from HTTP headers.
-		$referer = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : null;
+		$platform_config = null;
+		$search_query    = null;
+		$detection_method = null;
 
-		if ( empty( $referer ) ) {
-			return false;
+		// METHOD 1: Check UTM parameters (ChatGPT's method since June 2025).
+		$utm_source = isset( $_GET['utm_source'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_source'] ) ) : null;
+		$utm_medium = isset( $_GET['utm_medium'] ) ? sanitize_text_field( wp_unslash( $_GET['utm_medium'] ) ) : null;
+
+		if ( $utm_source ) {
+			// ChatGPT uses utm_source=chatgpt.com.
+			if ( strpos( $utm_source, 'chatgpt' ) !== false ) {
+				$platform_config = array(
+					'name'  => 'ChatGPT',
+					'color' => '#10A37F',
+				);
+				$detection_method = 'utm_parameter';
+			}
+			// Perplexity might use utm_source=perplexity.ai.
+			elseif ( strpos( $utm_source, 'perplexity' ) !== false ) {
+				$platform_config = array(
+					'name'  => 'Perplexity',
+					'color' => '#1FB6D0',
+				);
+				$detection_method = 'utm_parameter';
+			}
+			// Gemini might use utm_source=gemini.
+			elseif ( strpos( $utm_source, 'gemini' ) !== false ) {
+				$platform_config = array(
+					'name'  => 'Google Gemini',
+					'color' => '#4285F4',
+				);
+				$detection_method = 'utm_parameter';
+			}
+			// Claude might use utm_source=claude.
+			elseif ( strpos( $utm_source, 'claude' ) !== false ) {
+				$platform_config = array(
+					'name'  => 'Claude',
+					'color' => '#D97757',
+				);
+				$detection_method = 'utm_parameter';
+			}
 		}
 
-		// Parse referrer URL.
-		$parsed_url = wp_parse_url( $referer );
-		if ( ! isset( $parsed_url['host'] ) ) {
-			return false;
-		}
-
-		$host = strtolower( $parsed_url['host'] );
-
-		// Check if referrer matches known AI platform.
-		$platform_config = self::identify_ai_platform( $host );
+		// METHOD 2: Fallback to HTTP_REFERER if no UTM detected.
 		if ( ! $platform_config ) {
-			return false;
-		}
+			$referer = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : null;
 
-		// Extract search query if available.
-		$search_query = self::extract_search_query( $parsed_url, $platform_config );
+			if ( empty( $referer ) ) {
+				return false; // No UTM, no referer = not AI traffic.
+			}
+
+			// Parse referrer URL.
+			$parsed_url = wp_parse_url( $referer );
+			if ( ! isset( $parsed_url['host'] ) ) {
+				return false;
+			}
+
+			$host = strtolower( $parsed_url['host'] );
+
+			// Check if referrer matches known AI platform.
+			$platform_config = self::identify_ai_platform( $host );
+			if ( ! $platform_config ) {
+				return false;
+			}
+
+			// Extract search query if available from referer.
+			$search_query = self::extract_search_query( $parsed_url, $platform_config );
+			$detection_method = 'http_referer';
+		}
 
 		// Determine source and medium (similar to Google Analytics).
 		$source = $platform_config['name'];
 		$medium = 'ai_citation';
 
+		// Get referer if available (may be null for UTM-only detection).
+		$referer = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : null;
+
 		return array(
-			'platform'       => $platform_config['name'],
-			'platform_color' => $platform_config['color'],
-			'referer'        => $referer,
-			'search_query'   => $search_query,
-			'source'         => $source,
-			'medium'         => $medium,
-			'traffic_type'   => 'citation_click',
+			'platform'         => $platform_config['name'],
+			'platform_color'   => $platform_config['color'],
+			'referer'          => $referer,
+			'search_query'     => $search_query,
+			'source'           => $source,
+			'medium'           => $medium,
+			'traffic_type'     => 'citation_click',
+			'detection_method' => $detection_method, // 'utm_parameter' or 'http_referer'
 		);
 	}
 
