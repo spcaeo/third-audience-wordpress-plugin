@@ -372,7 +372,7 @@ Accept: text/markdown
 
 /* Container */
 .ta-about-page {
-	margin: 10px 10px 10px 0;
+	margin: 8px 0;
 }
 
 .ta-about-page .wp-heading-inline {
@@ -387,7 +387,7 @@ Accept: text/markdown
 }
 
 .ta-about-container {
-	max-width: 1200px;
+	max-width: 100%;
 	margin: 10px 0;
 }
 
@@ -457,7 +457,7 @@ Accept: text/markdown
 	line-height: 1.6;
 	font-size: 13px;
 	margin: 10px auto;
-	max-width: 900px;
+	max-width: 100%;
 }
 
 /* Typography - Apple SF Pro Style */

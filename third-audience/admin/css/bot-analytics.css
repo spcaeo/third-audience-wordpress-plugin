@@ -7,7 +7,7 @@
 
 /* Dashboard Container */
 .ta-bot-analytics {
-	margin: 12px 12px 12px 0;
+	margin: 8px 0;
 }
 
 /* Live Feed Widget - Apple Style */
@@ -1325,3 +1325,10 @@ body.ta-modal-open {
 		left: 0;
 	}
 }
+
+/* Ultra compact overrides */
+.wrap { margin: 8px 8px 8px 0 !important; }
+.ta-card { margin-bottom: 8px !important; }
+.ta-summary-grid { gap: 8px !important; }
+.ta-table td, .ta-table th { padding: 6px 8px !important; }
+.ta-stat { padding: 8px !important; }
