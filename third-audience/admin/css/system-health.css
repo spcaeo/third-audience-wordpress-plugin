@@ -81,12 +81,6 @@
 	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.ta-card-actions .button .dashicons {
-	font-size: 13px;
-	width: 18px;
-	height: 18px;
-}
-
 .ta-card-actions .button-primary {
 	background: #007aff;
 	border: none;
@@ -138,15 +132,15 @@
 }
 
 .ta-status-ok .ta-status-icon {
-	background: linear-gradient(135deg, #34c759 0%, #30d158 100%);
+	background: #34c759;
 }
 
 .ta-status-warning .ta-status-icon {
-	background: linear-gradient(135deg, #ff9500 0%, #ff8c00 100%);
+	background: #ff9500;
 }
 
 .ta-status-error .ta-status-icon {
-	background: linear-gradient(135deg, #ff3b30 0%, #d70015 100%);
+	background: #ff3b30;
 }
 
 .ta-status-content h2 {
@@ -556,7 +550,7 @@
 
 /* Features Grid */
 .ta-features-card {
-	background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
+	background: #007aff;
 	border: none;
 }
 
