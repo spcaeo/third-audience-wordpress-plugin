@@ -7,14 +7,14 @@
 
 /* Dashboard Container */
 .ta-cache-browser {
-	margin: 8px 0;
+	margin: 6px 0;
 }
 
 /* Summary Cards - Apple Style */
 .ta-summary-cards {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 8px;
+	gap: 6px;
 	margin: 24px 0;
 }
 
@@ -22,10 +22,10 @@
 	background: #f5f5f7;
 	border: none;
 	border-radius: 6px;
-	padding: 8px;
+	padding: 6px;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -96,12 +96,12 @@
 }
 
 .ta-warmup-header {
-	padding: 8px 14px 20px;
+	padding: 6px 14px 20px;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
-	gap: 8px;
+	gap: 6px;
 }
 
 .ta-warmup-title h2 {
@@ -149,19 +149,19 @@
 }
 
 .ta-warmup-body {
-	padding: 8px 28px 24px;
+	padding: 6px 28px 24px;
 }
 
 .ta-warmup-controls {
 	display: flex;
-	gap: 8px;
-	margin-bottom: 10px;
+	gap: 6px;
+	margin-bottom: 6px;
 }
 
 .ta-warmup-controls .button-primary {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 	background: #007aff;
 	border: none;
 	border-radius: 6px;
@@ -193,7 +193,7 @@
 	background: #e5e5ea;
 	border-radius: 6px;
 	overflow: hidden;
-	margin-bottom: 8px;
+	margin-bottom: 6px;
 }
 
 .ta-warmup-progress .progress-fill {
@@ -229,7 +229,7 @@
 	justify-content: space-between;
 	font-size: 13px;
 	color: #86868b;
-	margin-top: 8px;
+	margin-top: 6px;
 }
 
 .ta-warmup-progress .progress-text #ta-warmup-percentage {
@@ -242,7 +242,7 @@
 	background: #ffffff;
 	border: none;
 	border-radius: 6px;
-	padding: 8px 14px;
+	padding: 6px 14px;
 	margin: 24px 0;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -255,7 +255,7 @@
 .ta-filter-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: 6px;
 	align-items: flex-end;
 }
 
@@ -277,7 +277,7 @@
 .ta-filter-group input[type="text"],
 .ta-filter-group input[type="number"],
 .ta-filter-group select {
-	padding: 8px 12px;
+	padding: 4px 6px;
 	border: 1px solid #d1d1d6;
 	border-radius: 6px;
 	font-size: 13px;
@@ -302,7 +302,7 @@
 .ta-filter-range {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 }
 
 .ta-filter-range input {
@@ -316,7 +316,7 @@
 
 .ta-filter-actions {
 	display: flex;
-	gap: 8px;
+	gap: 6px;
 	align-items: flex-end;
 }
 
@@ -358,12 +358,12 @@
 	justify-content: space-between;
 	align-items: center;
 	margin: 24px 0;
-	padding: 8px 14px;
+	padding: 6px 14px;
 	background: #ffffff;
 	border: none;
 	border-radius: 6px;
 	flex-wrap: wrap;
-	gap: 8px;
+	gap: 6px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -375,7 +375,7 @@
 .ta-actions-left,
 .ta-actions-right {
 	display: flex;
-	gap: 8px;
+	gap: 6px;
 	align-items: center;
 }
 
@@ -475,8 +475,8 @@
 .ta-export-option {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 12px;
+	gap: 6px;
+	padding: 4px 6px;
 	text-decoration: none;
 	color: #1d1d1f;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -560,7 +560,7 @@
 }
 
 .ta-cache-table thead th {
-	padding: 8px 16px;
+	padding: 6px 16px;
 	text-align: left;
 	font-size: 12px;
 	font-weight: 600;
@@ -585,7 +585,7 @@
 }
 
 .ta-cache-table tbody td {
-	padding: 8px 16px;
+	padding: 6px 16px;
 	font-size: 13px;
 	color: #1d2327;
 	vertical-align: middle;
@@ -593,7 +593,7 @@
 
 .ta-cache-table th.check-column {
 	width: 2.2em;
-	padding: 8px 0 8px 16px;
+	padding: 6px 0 8px 16px;
 }
 
 .ta-cache-table .ta-cache-checkbox {
@@ -780,7 +780,7 @@
 
 .ta-cache-content-modal .ta-modal-body pre {
 	background: #f5f5f7;
-	padding: 8px;
+	padding: 6px;
 	border-radius: 6px;
 	overflow-x: auto;
 	white-space: pre-wrap;
@@ -898,7 +898,7 @@ body.ta-modal-open {
 	}
 
 	.ta-cache-content-modal .ta-modal-header {
-		padding: 8px 24px 20px;
+		padding: 6px 24px 20px;
 	}
 
 	.ta-cache-content-modal .ta-modal-header h2 {
@@ -906,7 +906,7 @@ body.ta-modal-open {
 	}
 
 	.ta-cache-content-modal .ta-modal-body {
-		padding: 8px;
+		padding: 6px;
 	}
 
 	.ta-cache-table th.ta-sortable {
@@ -923,9 +923,17 @@ body.ta-modal-open {
 	}
 }
 
-/* Ultra compact overrides */
-.wrap { margin: 8px 8px 8px 0 !important; }
-.ta-card { margin-bottom: 8px !important; }
-.ta-summary-grid { gap: 8px !important; }
-.ta-table td, .ta-table th { padding: 6px 8px !important; }
-.ta-stat { padding: 8px !important; }
+
+/* Minimal padding overrides */
+.wrap { margin: 6px 6px 6px 0 !important; }
+.ta-card { margin-bottom: 6px !important; padding: 6px !important; }
+.ta-card-header { padding: 6px 10px !important; }
+.ta-card-body { padding: 6px 10px !important; }
+.ta-summary-grid { gap: 6px !important; }
+.ta-summary-card { padding: 6px !important; }
+.ta-table td, .ta-table th { padding: 4px 6px !important; font-size: 12px !important; }
+.ta-stat { padding: 6px !important; }
+.ta-stat-value { font-size: 18px !important; }
+.ta-stat-label { font-size: 11px !important; }
+.ta-form-table th, .ta-form-table td { padding: 6px 8px !important; }
+.button { padding: 4px 10px !important; height: 30px !important; font-size: 12px !important; }

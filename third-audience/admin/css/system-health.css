@@ -7,7 +7,7 @@
 
 /* Container */
 .ta-system-health {
-	margin: 10px 16px 16px 0;
+	margin: 6px 16px 16px 0;
 	font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
@@ -22,7 +22,7 @@
 	font-size: 13px;
 	color: #86868b;
 	margin-top: 6px;
-	margin-bottom: 10px;
+	margin-bottom: 6px;
 }
 
 /* Card Styles */
@@ -31,7 +31,7 @@
 	border: none;
 	border-radius: 6px;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-	margin-bottom: 10px;
+	margin-bottom: 6px;
 	overflow: hidden;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -42,7 +42,7 @@
 }
 
 .ta-card-header {
-	padding: 8px 14px 14px;
+	padding: 6px 14px 14px;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 	background: #ffffff;
 }
@@ -55,16 +55,16 @@
 	letter-spacing: -0.3px;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 }
 
 .ta-card-body {
-	padding: 8px 14px;
+	padding: 6px 14px;
 }
 
 .ta-card-actions {
 	display: flex;
-	gap: 8px;
+	gap: 6px;
 	margin-top: 20px;
 	flex-wrap: wrap;
 }
@@ -72,8 +72,8 @@
 .ta-card-actions .button {
 	display: inline-flex;
 	align-items: center;
-	gap: 8px;
-	padding: 8px 16px;
+	gap: 6px;
+	padding: 6px 16px;
 	height: 28px;
 	border-radius: 6px;
 	font-weight: 500;
@@ -167,14 +167,14 @@
 /* Info Grid */
 .ta-info-grid {
 	display: grid;
-	gap: 8px;
+	gap: 6px;
 }
 
 .ta-info-item {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 8px;
+	padding: 6px;
 	background: #f5f5f7;
 	border-radius: 6px;
 	transition: all 0.2s ease;
@@ -195,7 +195,7 @@
 	color: #1d1d1f;
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 	flex-wrap: wrap;
 	justify-content: flex-end;
 }
@@ -261,7 +261,7 @@
 /* Changelog */
 .ta-changelog {
 	background: #f5f5f7;
-	padding: 8px;
+	padding: 6px;
 	border-radius: 6px;
 	border-left: 4px solid #007aff;
 	font-size: 13px;
@@ -295,13 +295,13 @@
 /* Diagnostics Grid */
 .ta-diagnostics-grid {
 	display: grid;
-	gap: 8px;
+	gap: 6px;
 }
 
 .ta-diagnostic-item {
 	display: flex;
-	gap: 8px;
-	padding: 8px;
+	gap: 6px;
+	padding: 6px;
 	background: #f5f5f7;
 	border-radius: 6px;
 	transition: all 0.2s ease;
@@ -368,12 +368,12 @@
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
-	margin-bottom: 10px;
+	margin-bottom: 6px;
 }
 
 .ta-diagnostic-row {
 	display: flex;
-	gap: 8px;
+	gap: 6px;
 	font-size: 13px;
 }
 
@@ -480,15 +480,15 @@
 .ta-install-method {
 	background: #f5f5f7;
 	border-radius: 6px;
-	padding: 8px;
-	margin: 8px 0;
+	padding: 6px;
+	margin: 6px 0;
 }
 
 .ta-method-header {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	margin-bottom: 10px;
+	gap: 6px;
+	margin-bottom: 6px;
 }
 
 .ta-method-badge {
@@ -514,25 +514,25 @@
 .ta-install-method p {
 	font-size: 13px;
 	color: #646970;
-	margin: 8px 0;
+	margin: 6px 0;
 }
 
 .ta-install-method pre {
 	background: #2c3338;
 	color: #f0f0f0;
-	padding: 8px;
+	padding: 6px;
 	border-radius: 6px;
 	font-family: 'Monaco', 'Courier New', monospace;
 	font-size: 12px;
 	overflow-x: auto;
-	margin: 8px 0 0;
+	margin: 6px 0 0;
 }
 
 .ta-help-note {
 	display: flex;
 	align-items: flex-start;
-	gap: 8px;
-	padding: 8px;
+	gap: 6px;
+	padding: 6px;
 	background: rgba(0, 122, 255, 0.06);
 	border-radius: 6px;
 	margin-top: 16px;
@@ -576,12 +576,12 @@
 .ta-features-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-	gap: 8px;
+	gap: 6px;
 }
 
 .ta-feature-item {
 	display: flex;
-	gap: 8px;
+	gap: 6px;
 	padding: 18px;
 	background: rgba(255, 255, 255, 0.1);
 	border-radius: 6px;
@@ -636,7 +636,7 @@
 
 @media screen and (max-width: 782px) {
 	.ta-system-health {
-		margin: 10px;
+		margin: 6px;
 	}
 
 	.ta-system-health .wp-heading-inline {
@@ -649,19 +649,19 @@
 
 	.ta-card-header,
 	.ta-card-body {
-		padding: 8px;
+		padding: 6px;
 	}
 
 	.ta-status-card {
 		flex-direction: column;
 		align-items: flex-start;
-		padding: 8px;
+		padding: 6px;
 	}
 
 	.ta-info-item {
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 8px;
+		gap: 6px;
 	}
 
 	.ta-info-value {
@@ -684,7 +684,7 @@
 
 	.ta-troubleshoot-section {
 		flex-direction: column;
-		padding: 8px;
+		padding: 6px;
 	}
 
 	.ta-features-grid {
@@ -692,13 +692,21 @@
 	}
 
 	.ta-feature-item {
-		padding: 8px;
+		padding: 6px;
 	}
 }
 
-/* Ultra compact overrides */
-.wrap { margin: 8px 8px 8px 0 !important; }
-.ta-card { margin-bottom: 8px !important; }
-.ta-summary-grid { gap: 8px !important; }
-.ta-table td, .ta-table th { padding: 6px 8px !important; }
-.ta-stat { padding: 8px !important; }
+
+/* Minimal padding overrides */
+.wrap { margin: 6px 6px 6px 0 !important; }
+.ta-card { margin-bottom: 6px !important; padding: 6px !important; }
+.ta-card-header { padding: 6px 10px !important; }
+.ta-card-body { padding: 6px 10px !important; }
+.ta-summary-grid { gap: 6px !important; }
+.ta-summary-card { padding: 6px !important; }
+.ta-table td, .ta-table th { padding: 4px 6px !important; font-size: 12px !important; }
+.ta-stat { padding: 6px !important; }
+.ta-stat-value { font-size: 18px !important; }
+.ta-stat-label { font-size: 11px !important; }
+.ta-form-table th, .ta-form-table td { padding: 6px 8px !important; }
+.button { padding: 4px 10px !important; height: 30px !important; font-size: 12px !important; }
