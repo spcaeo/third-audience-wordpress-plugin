@@ -7,14 +7,14 @@
 
 /* Dashboard Container */
 .ta-bot-analytics {
-	margin: 20px 20px 20px 0;
+	margin: 12px 12px 12px 0;
 }
 
 /* Live Feed Widget - Apple Style */
 .ta-live-feed-widget {
 	background: #ffffff;
 	border: none;
-	border-radius: 12px;
+	border-radius: 6px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 	margin: 24px 0;
@@ -29,7 +29,7 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	padding: 16px 20px 20px;
+	padding: 8px 14px 20px;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 	background: #ffffff;
 }
@@ -37,13 +37,13 @@
 .ta-live-feed-title {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 8px;
 	flex: 1;
 }
 
 .ta-live-feed-title h2 {
 	margin: 0;
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.3px;
@@ -79,8 +79,8 @@
 	align-items: center;
 	gap: 8px;
 	padding: 6px 14px;
-	height: 36px;
-	border-radius: 8px;
+	height: 28px;
+	border-radius: 6px;
 	border: 1px solid #d1d1d6;
 	background: #ffffff;
 	color: #1d1d1f;
@@ -97,7 +97,7 @@
 }
 
 .ta-feed-toggle-btn .dashicons {
-	font-size: 14px;
+	font-size: 13px;
 	width: 18px;
 	height: 18px;
 }
@@ -122,7 +122,7 @@
 }
 
 .ta-live-feed-table th {
-	padding: 14px 16px;
+	padding: 8px 16px;
 	text-align: left;
 	font-size: 12px;
 	font-weight: 600;
@@ -157,7 +157,7 @@
 }
 
 .ta-live-feed-table td {
-	padding: 12px 16px;
+	padding: 8px 16px;
 	font-size: 13px;
 	color: #1d2327;
 	vertical-align: middle;
@@ -228,7 +228,7 @@
 }
 
 .ta-live-feed-footer {
-	padding: 12px 16px;
+	padding: 8px 16px;
 	background: #f9f9f9;
 	border-top: 1px solid rgba(0, 0, 0, 0.04);
 	text-align: center;
@@ -252,10 +252,10 @@
 
 @media screen and (max-width: 782px) {
 	.ta-live-feed-header {
-		padding: 16px 20px 12px;
+		padding: 8px 14px 12px;
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 12px;
+		gap: 8px;
 	}
 
 	.ta-live-feed-title {
@@ -273,7 +273,7 @@
 
 	.ta-live-feed-table th,
 	.ta-live-feed-table td {
-		padding: 10px 12px;
+		padding: 8px 12px;
 	}
 
 	.ta-feed-time {
@@ -289,8 +289,8 @@
 .ta-analytics-filters {
 	background: #ffffff;
 	border: none;
-	border-radius: 12px;
-	padding: 16px 20px;
+	border-radius: 6px;
+	padding: 8px 14px;
 	margin: 24px 0;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -303,7 +303,7 @@
 .ta-filter-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 12px;
+	gap: 8px;
 	align-items: flex-end;
 }
 
@@ -326,9 +326,9 @@
 .ta-filter-group select {
 	padding: 8px 12px;
 	border: 1px solid #d1d1d6;
-	border-radius: 8px;
-	font-size: 14px;
-	min-height: 36px;
+	border-radius: 6px;
+	font-size: 13px;
+	min-height: 28px;
 	background: #ffffff;
 	transition: all 0.2s ease;
 }
@@ -347,14 +347,14 @@
 
 .ta-filter-actions {
 	display: flex;
-	gap: 10px;
+	gap: 8px;
 	align-items: flex-end;
 }
 
 .ta-filter-actions .button {
-	height: 36px;
+	height: 28px;
 	line-height: 34px;
-	border-radius: 8px;
+	border-radius: 6px;
 	font-weight: 500;
 	padding: 0 16px;
 	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -387,18 +387,18 @@
 .ta-summary-cards {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 12px;
+	gap: 8px;
 	margin: 24px 0;
 }
 
 .ta-summary-card {
 	background: #f5f5f7;
 	border: none;
-	border-radius: 12px;
-	padding: 16px;
+	border-radius: 6px;
+	padding: 8px;
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 8px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -412,7 +412,7 @@
 .ta-summary-icon {
 	width: 50px;
 	height: 50px;
-	border-radius: 12px;
+	border-radius: 6px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -422,7 +422,7 @@
 
 .ta-summary-icon .dashicons {
 	color: #fff;
-	font-size: 26px;
+	font-size: 13px;
 	width: 32px;
 	height: 32px;
 }
@@ -433,7 +433,7 @@
 
 .ta-summary-content h3 {
 	margin: 0;
-	font-size: 24px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	line-height: 1;
@@ -475,14 +475,14 @@
 .ta-charts-row {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-	gap: 12px;
+	gap: 8px;
 	margin: 24px 0;
 }
 
 .ta-chart-card {
 	background: #ffffff;
 	border: none;
-	border-radius: 12px;
+	border-radius: 6px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -502,7 +502,7 @@
 }
 
 .ta-chart-header {
-	padding: 16px 20px 20px;
+	padding: 8px 14px 20px;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 	display: flex;
 	justify-content: space-between;
@@ -512,7 +512,7 @@
 
 .ta-chart-header h2 {
 	margin: 0;
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.3px;
@@ -526,7 +526,7 @@
 }
 
 .ta-chart-body {
-	padding: 14px;
+	padding: 8px;
 	min-height: 300px;
 	position: relative;
 }
@@ -544,7 +544,7 @@
 .ta-legend-item {
 	display: flex;
 	align-items: center;
-	padding: 10px 0;
+	padding: 8px 0;
 	border-bottom: 1px solid #f0f0f1;
 }
 
@@ -580,7 +580,7 @@
 }
 
 .ta-top-pages-table thead th {
-	padding: 12px 10px;
+	padding: 8px 10px;
 	text-align: left;
 	font-size: 12px;
 	font-weight: 600;
@@ -591,7 +591,7 @@
 }
 
 .ta-top-pages-table tbody td {
-	padding: 12px 10px;
+	padding: 8px 10px;
 	border-bottom: 1px solid #f0f0f1;
 	font-size: 13px;
 	color: #1d2327;
@@ -631,14 +631,14 @@
 	background: #fff;
 	border: 1px solid #ccd0d4;
 	border-radius: 6px;
-	padding: 14px;
+	padding: 8px;
 	margin: 20px 0;
 	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
 .ta-recent-visits h2 {
 	margin: 0 0 20px;
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d2327;
 }
@@ -649,7 +649,7 @@
 }
 
 .ta-recent-visits .wp-list-table th {
-	padding: 12px 10px;
+	padding: 8px 10px;
 	font-size: 12px;
 	font-weight: 600;
 	color: #646970;
@@ -657,7 +657,7 @@
 }
 
 .ta-recent-visits .wp-list-table td {
-	padding: 12px 10px;
+	padding: 8px 10px;
 	vertical-align: middle;
 }
 
@@ -694,7 +694,7 @@
 	color: #0073aa;
 	border: 1px solid #d0e5f5;
 	text-align: center;
-	min-width: 36px;
+	min-width: 28px;
 }
 
 .ta-cache-hit {
@@ -845,14 +845,14 @@
 
 .ta-empty-state h3 {
 	margin: 0 0 10px;
-	font-size: 14px;
+	font-size: 13px;
 	color: #50575e;
 }
 
 .ta-empty-state p {
 	margin: 0;
 	color: #8c8f94;
-	font-size: 14px;
+	font-size: 13px;
 }
 
 /* Section header with help button */
@@ -865,7 +865,7 @@
 
 .ta-section-header h2 {
 	margin: 0;
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d2327;
 }
@@ -888,7 +888,7 @@
 }
 
 .ta-cache-help-toggle .dashicons {
-	font-size: 14px;
+	font-size: 13px;
 	width: 18px;
 	height: 18px;
 }
@@ -943,7 +943,7 @@
 
 .ta-cache-modal-header h2 {
 	margin: 0;
-	font-size: 24px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.5px;
@@ -969,7 +969,7 @@
 }
 
 .ta-cache-modal-close .dashicons {
-	font-size: 20px;
+	font-size: 13px;
 	width: 20px;
 	height: 20px;
 	color: #86868b;
@@ -983,7 +983,7 @@
 
 .ta-cache-modal-intro {
 	text-align: center;
-	font-size: 14px;
+	font-size: 13px;
 	color: #86868b;
 	margin: 0 0 28px;
 	line-height: 1.5;
@@ -1008,7 +1008,7 @@ body.ta-modal-open {
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 	display: flex;
 	flex-direction: column;
-	padding: 14px 22px;
+	padding: 8px 22px;
 }
 
 .ta-cache-status-card:hover {
@@ -1019,11 +1019,11 @@ body.ta-modal-open {
 
 .ta-cache-card-icon {
 	text-align: left;
-	margin-bottom: 12px;
+	margin-bottom: 8px;
 }
 
 .ta-cache-card-icon .dashicons {
-	font-size: 24px;
+	font-size: 13px;
 	width: 28px;
 	height: 28px;
 }
@@ -1047,7 +1047,7 @@ body.ta-modal-open {
 
 .ta-cache-card-content h4 {
 	margin: 0 0 6px;
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.2px;
@@ -1076,7 +1076,7 @@ body.ta-modal-open {
 }
 
 .ta-cache-performance .dashicons {
-	font-size: 14px;
+	font-size: 13px;
 	width: 14px;
 	height: 14px;
 }
@@ -1115,7 +1115,7 @@ body.ta-modal-open {
 	gap: 8px;
 	padding: 8px 12px;
 	background: rgba(0, 122, 255, 0.06);
-	border-radius: 8px;
+	border-radius: 6px;
 	font-size: 12px;
 	color: #007aff;
 	margin-top: 6px;
@@ -1128,7 +1128,7 @@ body.ta-modal-open {
 
 .ta-cache-tip .dashicons {
 	flex-shrink: 0;
-	font-size: 14px;
+	font-size: 13px;
 	width: 16px;
 	height: 16px;
 }
@@ -1161,9 +1161,9 @@ body.ta-modal-open {
 	align-items: center;
 	gap: 6px;
 	padding: 0 12px;
-	height: 36px;
+	height: 28px;
 	line-height: 34px;
-	border-radius: 8px;
+	border-radius: 6px;
 	font-weight: 500;
 	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 	background: #ffffff;
@@ -1178,13 +1178,13 @@ body.ta-modal-open {
 }
 
 .ta-export-dropdown-toggle .dashicons {
-	font-size: 14px;
+	font-size: 13px;
 	width: 18px;
 	height: 18px;
 }
 
 .ta-export-dropdown-toggle .dashicons-arrow-down-alt2 {
-	font-size: 14px;
+	font-size: 13px;
 	width: 16px;
 	height: 16px;
 	transition: transform 0.2s;
@@ -1200,7 +1200,7 @@ body.ta-modal-open {
 	right: 0;
 	min-width: 280px;
 	background: #ffffff;
-	border-radius: 12px;
+	border-radius: 6px;
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 	opacity: 0;
 	visibility: hidden;
@@ -1219,8 +1219,8 @@ body.ta-modal-open {
 .ta-export-option {
 	display: flex;
 	align-items: center;
-	gap: 14px;
-	padding: 14px 18px;
+	gap: 8px;
+	padding: 8px 12px;
 	text-decoration: none;
 	color: #1d1d1f;
 	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
@@ -1237,7 +1237,7 @@ body.ta-modal-open {
 }
 
 .ta-export-option .dashicons {
-	font-size: 24px;
+	font-size: 13px;
 	width: 24px;
 	height: 24px;
 	flex-shrink: 0;
@@ -1257,7 +1257,7 @@ body.ta-modal-open {
 }
 
 .ta-export-option strong {
-	font-size: 14px;
+	font-size: 13px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.2px;
@@ -1279,7 +1279,7 @@ body.ta-modal-open {
 	.ta-section-header {
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 10px;
+		gap: 8px;
 	}
 
 	.ta-cache-help-toggle {
@@ -1289,7 +1289,7 @@ body.ta-modal-open {
 
 	.ta-cache-status-grid {
 		grid-template-columns: 1fr;
-		gap: 12px;
+		gap: 8px;
 	}
 
 	.ta-cache-modal {
@@ -1300,15 +1300,15 @@ body.ta-modal-open {
 	}
 
 	.ta-cache-modal-header {
-		padding: 16px 24px 20px;
+		padding: 8px 24px 20px;
 	}
 
 	.ta-cache-modal-header h2 {
-		font-size: 14px;
+		font-size: 13px;
 	}
 
 	.ta-cache-modal-body {
-		padding: 16px;
+		padding: 8px;
 	}
 
 	.ta-cache-modal-overlay {
@@ -1317,7 +1317,7 @@ body.ta-modal-open {
 	}
 
 	.ta-cache-status-card {
-		padding: 16px 20px;
+		padding: 8px 14px;
 	}
 
 	.ta-export-dropdown-menu {
