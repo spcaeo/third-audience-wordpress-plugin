@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
- * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with local conversion - no external dependencies!
- * Version: 2.7.0
+ * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with AI-Friendliness scoring and content optimization recommendations!
+ * Version: 2.8.0
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '2.7.0' );
+define( 'TA_VERSION', '2.8.0' );
 
 /**
  * Database version for migrations.

@@ -51,6 +51,13 @@ class TA_Admin {
 	private $cache_admin;
 
 	/**
+	 * Post columns instance.
+	 *
+	 * @var TA_Post_Columns
+	 */
+	private $post_columns;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 1.1.0
@@ -60,6 +67,7 @@ class TA_Admin {
 		$this->logger        = TA_Logger::get_instance();
 		$this->notifications = TA_Notifications::get_instance();
 		$this->cache_admin   = new TA_Cache_Admin( $this->security );
+		$this->post_columns  = new TA_Post_Columns();
 	}
 
 	/**
@@ -74,9 +82,17 @@ class TA_Admin {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_notices', array( $this, 'display_configuration_notices' ) );
+		add_action( 'admin_notices', array( $this, 'display_citation_alerts' ) );
 
 		// Initialize cache admin (handles Cache Browser and Warmup).
 		$this->cache_admin->init();
+
+		// Initialize post columns (AI score column).
+		$this->post_columns->init();
+
+		// AI-Friendliness Score meta box.
+		add_action( 'add_meta_boxes', array( $this, 'add_ai_score_metabox' ) );
+		add_action( 'save_post', array( $this, 'calculate_ai_score_on_save' ), 10, 2 );
 
 		// Admin post handlers.
 		add_action( 'admin_post_ta_clear_cache', array( $this, 'handle_clear_cache' ) );
@@ -101,6 +117,9 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_warm_cache_batch', array( $this, 'ajax_warm_cache_batch' ) );
 		add_action( 'wp_ajax_ta_get_recent_accesses', array( $this, 'ajax_get_recent_accesses' ) );
 		add_action( 'wp_ajax_ta_regenerate_all_markdown', array( $this, 'ajax_regenerate_all_markdown' ) );
+		add_action( 'wp_ajax_ta_dismiss_alert', array( $this, 'ajax_dismiss_alert' ) );
+		add_action( 'wp_ajax_ta_update_robots_txt', array( $this, 'ajax_update_robots_txt' ) );
+		add_action( 'wp_ajax_ta_recalculate_ai_score', array( $this, 'ajax_recalculate_ai_score' ) );
 
 		// Metadata settings hooks - clear pre-generated markdown when settings change.
 		add_action( 'update_option_ta_enable_enhanced_metadata', array( $this, 'on_metadata_settings_change' ), 10, 2 );
@@ -161,7 +180,7 @@ class TA_Admin {
 			wp_localize_script( 'ta-admin', 'taAdmin', array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => $this->security->create_nonce( 'admin_ajax' ),
-			'homeUrl' => trailingslashit( home_url() ),
+				'homeUrl' => trailingslashit( home_url() ),
 				'i18n'    => array(
 					'testing'        => __( 'Testing...', 'third-audience' ),
 					'clearing'       => __( 'Clearing...', 'third-audience' ),
@@ -170,6 +189,11 @@ class TA_Admin {
 					'confirmClear'   => __( 'Are you sure you want to clear all cached items?', 'third-audience' ),
 					'confirmClearErrors' => __( 'Are you sure you want to clear all error logs?', 'third-audience' ),
 				),
+			) );
+
+			// Add nonce for WordPress AJAX settings (for alert dismissal).
+			wp_localize_script( 'ta-admin', 'wpAjax', array(
+				'nonce' => wp_create_nonce( 'ta_dismiss_alert' ),
 			) );
 		}
 
@@ -280,6 +304,30 @@ class TA_Admin {
 				array(),
 				TA_VERSION
 			);
+		}
+
+		// AI Score meta box (post editor).
+		$screen = get_current_screen();
+		if ( $screen && in_array( $screen->base, array( 'post', 'page' ), true ) ) {
+			wp_enqueue_style(
+				'ta-ai-score',
+				TA_PLUGIN_URL . 'admin/css/ai-score.css',
+				array(),
+				TA_VERSION
+			);
+
+			wp_enqueue_script(
+				'ta-ai-score',
+				TA_PLUGIN_URL . 'admin/js/ai-score.js',
+				array( 'jquery' ),
+				TA_VERSION,
+				true
+			);
+
+			wp_localize_script( 'ta-ai-score', 'taAIScore', array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => $this->security->create_nonce( 'ai_score' ),
+			) );
 		}
 	}
 
@@ -597,6 +645,16 @@ class TA_Admin {
 			'manage_options',
 			'third-audience-about',
 			array( $this, 'render_about_page' )
+		);
+
+		// Citation Alerts submenu (hidden from menu, accessible via direct link).
+		add_submenu_page(
+			null, // Hidden from menu.
+			__( 'Citation Alerts', 'third-audience' ),
+			__( 'Citation Alerts', 'third-audience' ),
+			'manage_options',
+			'third-audience-citation-alerts',
+			array( $this, 'render_citation_alerts_page' )
 		);
 	}
 
@@ -1258,6 +1316,77 @@ class TA_Admin {
 	}
 
 	/**
+	 * AJAX handler for updating robots.txt.
+	 *
+	 * @since 2.8.0
+	 * @return void
+	 */
+	public function ajax_update_robots_txt() {
+		// Verify nonce.
+		check_ajax_referer( 'ta_update_robots_txt', 'nonce' );
+
+		// Check user permissions.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'You do not have permission to update robots.txt.', 'third-audience' ),
+			) );
+		}
+
+		// Get the rule to add.
+		$rule = isset( $_POST['rule'] ) ? sanitize_text_field( wp_unslash( $_POST['rule'] ) ) : '';
+
+		if ( empty( $rule ) ) {
+			wp_send_json_error( array(
+				'message' => __( 'No rule specified.', 'third-audience' ),
+			) );
+		}
+
+		// Get current robots.txt content.
+		$robots_file = ABSPATH . 'robots.txt';
+		$robots_content = '';
+
+		if ( file_exists( $robots_file ) ) {
+			$robots_content = file_get_contents( $robots_file );
+		}
+
+		// Check if rule already exists.
+		if ( strpos( $robots_content, $rule ) !== false ) {
+			wp_send_json_success( array(
+				'message' => __( 'Rule already exists in robots.txt.', 'third-audience' ),
+			) );
+			return;
+		}
+
+		// Add the rule (append to User-agent: * section or create new one).
+		if ( strpos( $robots_content, 'User-agent: *' ) !== false ) {
+			// Add after User-agent: * line.
+			$robots_content = str_replace(
+				'User-agent: *',
+				"User-agent: *\n" . $rule,
+				$robots_content
+			);
+		} else {
+			// Create new User-agent: * section.
+			$robots_content .= "\n\nUser-agent: *\n" . $rule . "\n";
+		}
+
+		// Write to robots.txt.
+		$result = file_put_contents( $robots_file, $robots_content );
+
+		if ( $result === false ) {
+			wp_send_json_error( array(
+				'message' => __( 'Failed to write to robots.txt. Check file permissions.', 'third-audience' ),
+			) );
+		}
+
+		$this->logger->info( 'Robots.txt updated via AJAX.', array( 'rule' => $rule ) );
+
+		wp_send_json_success( array(
+			'message' => __( 'Robots.txt updated successfully!', 'third-audience' ),
+		) );
+	}
+
+	/**
 	 * Redirect to settings page with optional tab.
 	 *
 	 * @since 1.1.0
@@ -1621,6 +1750,264 @@ class TA_Admin {
 			/* translators: %d: Number of posts cleared */
 			'message' => sprintf( __( 'Cleared pre-generated markdown for %d posts. New markdown will be generated with current settings on next access.', 'third-audience' ), $cleared ),
 			'count'   => $cleared,
+		) );
+	}
+
+	/**
+	 * Display citation alerts as admin notices.
+	 *
+	 * @since 2.8.0
+	 * @return void
+	 */
+	public function display_citation_alerts() {
+		// Only show on Third Audience pages.
+		$screen = get_current_screen();
+		if ( ! $screen || false === strpos( $screen->id, 'third-audience' ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! class_exists( 'TA_Citation_Alerts' ) ) {
+			return;
+		}
+
+		$citation_alerts = TA_Citation_Alerts::get_instance();
+		$alerts          = $citation_alerts->check_alerts();
+
+		if ( empty( $alerts ) ) {
+			return;
+		}
+
+		foreach ( $alerts as $alert ) {
+			$notice_class = 'notice';
+
+			switch ( $alert['severity'] ) {
+				case 'warning':
+					$notice_class .= ' notice-warning';
+					break;
+				case 'success':
+					$notice_class .= ' notice-success';
+					break;
+				default:
+					$notice_class .= ' notice-info';
+					break;
+			}
+
+			$alert_id = isset( $alert['id'] ) ? intval( $alert['id'] ) : 0;
+			?>
+			<div class="<?php echo esc_attr( $notice_class ); ?> is-dismissible ta-citation-alert" data-alert-id="<?php echo esc_attr( $alert_id ); ?>">
+				<p>
+					<strong><?php esc_html_e( 'Third Audience:', 'third-audience' ); ?></strong>
+					<?php echo esc_html( $alert['title'] ); ?> –
+					<?php echo esc_html( $alert['message'] ); ?>
+				</p>
+			</div>
+			<?php
+		}
+	}
+
+	/**
+	 * AJAX handler: Dismiss citation alert.
+	 *
+	 * @since 2.8.0
+	 * @return void
+	 */
+	public function ajax_dismiss_alert() {
+		check_ajax_referer( 'ta_dismiss_alert', '_ajax_nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'third-audience' ) ) );
+			return;
+		}
+
+		$alert_id = isset( $_POST['alert_id'] ) ? absint( $_POST['alert_id'] ) : 0;
+
+		if ( empty( $alert_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid alert ID.', 'third-audience' ) ) );
+			return;
+		}
+
+		if ( ! class_exists( 'TA_Citation_Alerts' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Citation alerts system not available.', 'third-audience' ) ) );
+			return;
+		}
+
+		$citation_alerts = TA_Citation_Alerts::get_instance();
+		$result          = $citation_alerts->dismiss_alert( $alert_id );
+
+		if ( $result ) {
+			wp_send_json_success( array( 'message' => __( 'Alert dismissed.', 'third-audience' ) ) );
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Failed to dismiss alert.', 'third-audience' ) ) );
+		}
+	}
+
+	/**
+	 * Render Citation Alerts page.
+	 *
+	 * @since 2.8.0
+	 * @return void
+	 */
+	public function render_citation_alerts_page() {
+		$this->security->verify_admin_capability();
+
+		if ( ! class_exists( 'TA_Citation_Alerts' ) ) {
+			echo '<div class="wrap"><h1>' . esc_html__( 'Citation Alerts', 'third-audience' ) . '</h1>';
+			echo '<p>' . esc_html__( 'Citation alerts system is not available.', 'third-audience' ) . '</p></div>';
+			return;
+		}
+
+		$citation_alerts = TA_Citation_Alerts::get_instance();
+
+		// Pagination.
+		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$per_page     = 50;
+		$offset       = ( $current_page - 1 ) * $per_page;
+
+		// Filters.
+		$filters = array(
+			'alert_type' => isset( $_GET['alert_type'] ) ? sanitize_text_field( wp_unslash( $_GET['alert_type'] ) ) : '',
+			'severity'   => isset( $_GET['severity'] ) ? sanitize_text_field( wp_unslash( $_GET['severity'] ) ) : '',
+			'dismissed'  => isset( $_GET['dismissed'] ) ? absint( $_GET['dismissed'] ) : null,
+		);
+
+		$alert_history = $citation_alerts->get_alert_history( array(
+			'limit'      => $per_page,
+			'offset'     => $offset,
+			'alert_type' => $filters['alert_type'],
+			'severity'   => $filters['severity'],
+			'dismissed'  => $filters['dismissed'],
+		) );
+
+		$statistics = $citation_alerts->get_statistics();
+
+		include TA_PLUGIN_DIR . 'admin/views/citation-alerts-page.php';
+	}
+
+	/**
+	 * Add AI-Friendliness Score meta box.
+	 *
+	 * @since 2.8.0
+	 * @return void
+	 */
+	public function add_ai_score_metabox() {
+		$enabled_post_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
+
+		foreach ( $enabled_post_types as $post_type ) {
+			add_meta_box(
+				'ta_ai_score_metabox',
+				__( 'AI-Friendliness Score', 'third-audience' ),
+				array( $this, 'render_ai_score_metabox' ),
+				$post_type,
+				'side',
+				'high'
+			);
+		}
+	}
+
+	/**
+	 * Render AI-Friendliness Score meta box.
+	 *
+	 * @since 2.8.0
+	 * @param WP_Post $post Post object.
+	 * @return void
+	 */
+	public function render_ai_score_metabox( $post ) {
+		$post_id = $post->ID;
+
+		// Get cached score.
+		$analyzer = TA_Content_Analyzer::get_instance();
+		$score = $analyzer->get_cached_score( $post_id );
+
+		// Get detailed score if exists.
+		$score_details = get_post_meta( $post_id, '_ta_ai_score_details', true );
+		$recommendations = array();
+
+		if ( $score && $score_details ) {
+			$recommendations = $analyzer->get_content_recommendations( $post_id, $score_details );
+		}
+
+		include TA_PLUGIN_DIR . 'admin/views/ai-score-metabox.php';
+	}
+
+	/**
+	 * Calculate AI-Friendliness score when post is saved.
+	 *
+	 * @since 2.8.0
+	 * @param int     $post_id Post ID.
+	 * @param WP_Post $post    Post object.
+	 * @return void
+	 */
+	public function calculate_ai_score_on_save( $post_id, $post ) {
+		// Skip autosaves and revisions.
+		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		// Only for enabled post types.
+		$enabled_post_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
+		if ( ! in_array( $post->post_type, $enabled_post_types, true ) ) {
+			return;
+		}
+
+		// Only for published posts.
+		if ( 'publish' !== $post->post_status ) {
+			return;
+		}
+
+		// Calculate score.
+		$this->recalculate_ai_score( $post_id );
+	}
+
+	/**
+	 * Recalculate AI-Friendliness score for a post.
+	 *
+	 * @since 2.8.0
+	 * @param int $post_id Post ID.
+	 * @return array|null Score data or null on failure.
+	 */
+	private function recalculate_ai_score( $post_id ) {
+		$analyzer = TA_Content_Analyzer::get_instance();
+		$score_data = $analyzer->calculate_ai_friendliness_score( $post_id );
+
+		if ( null === $score_data ) {
+			return null;
+		}
+
+		// Cache the score.
+		update_post_meta( $post_id, '_ta_ai_score', $score_data['score'] );
+		update_post_meta( $post_id, '_ta_ai_score_details', $score_data );
+
+		return $score_data;
+	}
+
+	/**
+	 * AJAX handler: Recalculate AI-Friendliness score.
+	 *
+	 * @since 2.8.0
+	 * @return void
+	 */
+	public function ajax_recalculate_ai_score() {
+		$this->security->verify_ajax_request( 'ai_score' );
+
+		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
+
+		if ( empty( $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid post ID.', 'third-audience' ) ) );
+		}
+
+		$score_data = $this->recalculate_ai_score( $post_id );
+
+		if ( null === $score_data ) {
+			wp_send_json_error( array( 'message' => __( 'Failed to calculate score.', 'third-audience' ) ) );
+		}
+
+		wp_send_json_success( array(
+			'message' => __( 'Score recalculated successfully.', 'third-audience' ),
+			'score'   => $score_data['score'],
 		) );
 	}
 }

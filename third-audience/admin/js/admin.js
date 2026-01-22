@@ -44,6 +44,9 @@
 
 			// Regenerate all markdown
 			$('#ta-regenerate-all-markdown').on('click', this.regenerateAllMarkdown.bind(this));
+
+			// Citation alert dismissal
+			$(document).on('click', '.ta-citation-alert .notice-dismiss', this.dismissCitationAlert.bind(this));
 		},
 
 		/**
@@ -387,6 +390,44 @@
 						}
 						// Could also update the error table here
 					}
+				}
+			});
+		},
+
+		/**
+		 * Dismiss citation alert via AJAX.
+		 *
+		 * @param {Event} e Click event.
+		 */
+		dismissCitationAlert: function(e) {
+			var $notice = $(e.target).closest('.ta-citation-alert');
+			var alertId = $notice.data('alert-id');
+
+			if (!alertId) {
+				return;
+			}
+
+			// Get nonce from wpAjax global (localized in PHP)
+			var nonce = (typeof wpAjax !== 'undefined' && wpAjax.nonce) ? wpAjax.nonce : '';
+
+			$.ajax({
+				url: taAdmin.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'ta_dismiss_alert',
+					_ajax_nonce: nonce,
+					alert_id: alertId
+				},
+				success: function(response) {
+					if (response.success) {
+						$notice.fadeOut(300, function() {
+							$(this).remove();
+						});
+					}
+				},
+				error: function() {
+					// Alert will still be dismissed visually by WordPress default behavior
+					console.log('Error dismissing alert, but notice removed visually');
 				}
 			});
 		}

@@ -1,0 +1,293 @@
+/**
+ * AI-Friendliness Score - Styles
+ *
+ * @package ThirdAudience
+ * @since   2.8.0
+ */
+
+/* Meta Box Container */
+.ta-ai-score-metabox {
+	padding: 12px;
+}
+
+/* Score Display */
+.ta-score-display {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	margin-bottom: 20px;
+	padding: 20px;
+	background: #f9f9f9;
+	border-radius: 8px;
+}
+
+.ta-score-circle {
+	position: relative;
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	border: 6px solid #ddd;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	background: white;
+	flex-shrink: 0;
+}
+
+.ta-score-value {
+	font-size: 28px;
+	font-weight: bold;
+	line-height: 1;
+	margin-bottom: 2px;
+}
+
+.ta-score-label {
+	font-size: 12px;
+	color: #666;
+	line-height: 1;
+}
+
+.ta-score-text {
+	flex: 1;
+}
+
+.ta-score-text strong {
+	display: block;
+	font-size: 18px;
+	margin-bottom: 4px;
+}
+
+.ta-score-text p {
+	margin: 0;
+	color: #666;
+	font-size: 13px;
+}
+
+/* Score Breakdown */
+.ta-score-breakdown {
+	margin-bottom: 20px;
+}
+
+.ta-score-breakdown h4 {
+	margin: 0 0 12px 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: #23282d;
+}
+
+.ta-score-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 10px;
+}
+
+.ta-score-label-text {
+	width: 100px;
+	font-size: 13px;
+	color: #555;
+	flex-shrink: 0;
+}
+
+.ta-score-bar {
+	flex: 1;
+	height: 8px;
+	background: #e5e5e5;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.ta-score-fill {
+	height: 100%;
+	background: linear-gradient(90deg, #5ac8fa 0%, #34c759 100%);
+	transition: width 0.3s ease;
+}
+
+.ta-score-number {
+	font-size: 12px;
+	color: #666;
+	font-weight: 500;
+	width: 40px;
+	text-align: right;
+	flex-shrink: 0;
+}
+
+/* Recommendations */
+.ta-recommendations {
+	margin-bottom: 20px;
+}
+
+.ta-recommendations h4 {
+	margin: 0 0 12px 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: #23282d;
+}
+
+.ta-recommendations ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ta-recommendations li {
+	display: flex;
+	gap: 10px;
+	padding: 12px;
+	margin-bottom: 8px;
+	border-radius: 4px;
+	background: #f9f9f9;
+	border-left: 3px solid #ddd;
+}
+
+.ta-recommendations li.ta-rec-high {
+	background: #fff3cd;
+	border-left-color: #ff3b30;
+}
+
+.ta-recommendations li.ta-rec-medium {
+	background: #fff9e6;
+	border-left-color: #ff9500;
+}
+
+.ta-recommendations li.ta-rec-low {
+	background: #f0f9ff;
+	border-left-color: #5ac8fa;
+}
+
+.ta-recommendations .dashicons {
+	flex-shrink: 0;
+	margin-top: 2px;
+}
+
+.ta-rec-high .dashicons {
+	color: #ff3b30;
+}
+
+.ta-rec-medium .dashicons {
+	color: #ff9500;
+}
+
+.ta-rec-low .dashicons {
+	color: #5ac8fa;
+}
+
+.ta-rec-content {
+	flex: 1;
+}
+
+.ta-rec-content strong {
+	display: block;
+	font-size: 13px;
+	margin-bottom: 4px;
+	color: #23282d;
+}
+
+.ta-rec-content p {
+	margin: 0;
+	font-size: 12px;
+	color: #666;
+	line-height: 1.5;
+}
+
+/* No Recommendations */
+.ta-recommendations-empty {
+	padding: 16px;
+	background: #f0f9f0;
+	border-radius: 4px;
+	text-align: center;
+	margin-bottom: 20px;
+}
+
+.ta-recommendations-empty p {
+	margin: 0;
+	font-size: 14px;
+}
+
+.ta-recommendations-empty .dashicons {
+	vertical-align: middle;
+	margin-right: 4px;
+}
+
+/* Actions */
+.ta-score-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding-top: 12px;
+	border-top: 1px solid #ddd;
+}
+
+.ta-recalculate-score {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.ta-recalculate-score .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.ta-score-loading {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: #666;
+	font-size: 13px;
+}
+
+.ta-score-loading .spinner {
+	float: none;
+	margin: 0;
+}
+
+/* Timestamp */
+.ta-score-timestamp {
+	margin: 8px 0 0 0;
+	font-size: 12px;
+	color: #999;
+	font-style: italic;
+}
+
+/* Placeholder */
+.ta-score-placeholder {
+	padding: 20px;
+	text-align: center;
+	background: #f9f9f9;
+	border-radius: 8px;
+}
+
+.ta-score-placeholder p {
+	margin: 0 0 10px 0;
+	color: #666;
+}
+
+.ta-score-placeholder em {
+	font-size: 12px;
+	color: #999;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+	.ta-score-display {
+		flex-direction: column;
+		text-align: center;
+	}
+
+	.ta-score-item {
+		flex-wrap: wrap;
+	}
+
+	.ta-score-label-text {
+		width: 100%;
+		margin-bottom: 4px;
+	}
+
+	.ta-score-bar {
+		flex: 1;
+		min-width: 100px;
+	}
+}

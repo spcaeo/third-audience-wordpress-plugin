@@ -750,6 +750,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		<?php endif; ?>
 	</div>
 </div>
+
+	<!-- Crawl Budget Recommendations (v2.8.0) -->
+	<?php include __DIR__ . '/crawl-recommendations-card.php'; ?>
+
 	<!-- Activity Timeline Chart -->
 	<div class="ta-card">
 		<div class="ta-card-header">

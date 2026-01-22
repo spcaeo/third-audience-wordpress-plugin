@@ -1046,6 +1046,21 @@ class TA_Bot_Analytics {
 		// Update session tracking after recording visit.
 		$this->update_session_tracking( $insert_data );
 
+		// Check for citation alerts (first citation, new platform).
+		if ( 'citation_click' === $insert_data['traffic_type'] && class_exists( 'TA_Citation_Alerts' ) ) {
+			$citation_alerts = TA_Citation_Alerts::get_instance();
+
+			// Check for first citation from this platform.
+			if ( ! empty( $insert_data['ai_platform'] ) ) {
+				$citation_alerts->check_first_citation( $insert_data['ai_platform'] );
+			}
+
+			// Check for new platform.
+			if ( ! empty( $insert_data['ai_platform'] ) ) {
+				$citation_alerts->check_new_platform( $insert_data['ai_platform'] );
+			}
+		}
+
 		return $wpdb->insert_id;
 	}
 
