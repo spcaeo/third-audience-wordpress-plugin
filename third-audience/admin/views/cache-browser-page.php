@@ -111,7 +111,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<span class="dashicons dashicons-arrow-down-alt2"></span>
 		</button>
 
-		<div class="ta-filters-content" style="display:none;">
+		<div class="ta-filters-content">
 			<form method="get" action="" id="ta-filters-form">
 				<input type="hidden" name="page" value="third-audience-cache-browser">
 
