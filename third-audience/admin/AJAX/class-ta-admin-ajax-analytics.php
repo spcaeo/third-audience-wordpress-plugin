@@ -130,25 +130,72 @@ class TA_Admin_AJAX_Analytics {
 	}
 
 	/**
-	 * Export bot distribution data.
+	 * Export bot distribution data - Full raw data export.
 	 *
 	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with all columns and unlimited rows.
 	 * @param TA_Bot_Analytics $analytics Analytics instance.
 	 * @return string CSV data.
 	 */
 	private function export_bot_distribution( $analytics ) {
-		$bot_stats = $analytics->get_visits_by_bot( array(), 50 );
-		$csv       = "Bot Name,Bot Type,Visits,Share %\n";
-		$total     = array_sum( wp_list_pluck( $bot_stats, 'count' ) );
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+		// Get comprehensive bot stats with all metrics - no limit.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$bot_stats = $wpdb->get_results(
+			"SELECT
+				bot_type,
+				bot_name,
+				COUNT(*) as total_visits,
+				COUNT(DISTINCT url) as unique_pages,
+				COUNT(DISTINCT ip_address) as unique_ips,
+				COUNT(DISTINCT DATE(visit_timestamp)) as active_days,
+				MIN(visit_timestamp) as first_seen,
+				MAX(visit_timestamp) as last_seen,
+				ROUND(AVG(response_time), 0) as avg_response_ms,
+				SUM(response_size) as total_bandwidth,
+				SUM(CASE WHEN cache_status IN ('HIT', 'PRE_GENERATED') THEN 1 ELSE 0 END) as cache_hits,
+				SUM(CASE WHEN cache_status = 'MISS' THEN 1 ELSE 0 END) as cache_misses,
+				COUNT(DISTINCT country_code) as countries_count,
+				GROUP_CONCAT(DISTINCT country_code) as countries_list,
+				SUM(CASE WHEN traffic_type = 'citation_click' THEN 1 ELSE 0 END) as citation_clicks,
+				SUM(CASE WHEN traffic_type = 'bot_crawl' THEN 1 ELSE 0 END) as crawl_visits
+			FROM {$table_name}
+			GROUP BY bot_type, bot_name
+			ORDER BY total_visits DESC",
+			ARRAY_A
+		);
+
+		$total = array_sum( wp_list_pluck( $bot_stats, 'total_visits' ) );
+
+		$csv = "Bot Name,Bot Type,Total Visits,Share %,Unique Pages,Unique IPs,Active Days,First Seen,Last Seen,Avg Response (ms),Total Bandwidth,Cache Hits,Cache Misses,Cache Hit Rate %,Countries,Countries List,Citation Clicks,Crawl Visits\n";
 
 		foreach ( $bot_stats as $bot ) {
-			$share = $total > 0 ? round( ( $bot['count'] / $total ) * 100, 1 ) : 0;
-			$csv  .= sprintf(
-				"\"%s\",\"%s\",%d,%.1f\n",
+			$share          = $total > 0 ? round( ( $bot['total_visits'] / $total ) * 100, 2 ) : 0;
+			$cache_total    = $bot['cache_hits'] + $bot['cache_misses'];
+			$cache_hit_rate = $cache_total > 0 ? round( ( $bot['cache_hits'] / $cache_total ) * 100, 1 ) : 0;
+
+			$csv .= sprintf(
+				"\"%s\",\"%s\",%d,%.2f,%d,%d,%d,\"%s\",\"%s\",%d,%d,%d,%d,%.1f,%d,\"%s\",%d,%d\n",
 				str_replace( '"', '""', $bot['bot_name'] ),
 				str_replace( '"', '""', $bot['bot_type'] ),
-				$bot['count'],
-				$share
+				$bot['total_visits'],
+				$share,
+				$bot['unique_pages'],
+				$bot['unique_ips'],
+				$bot['active_days'],
+				$bot['first_seen'],
+				$bot['last_seen'],
+				$bot['avg_response_ms'] ?? 0,
+				$bot['total_bandwidth'] ?? 0,
+				$bot['cache_hits'],
+				$bot['cache_misses'],
+				$cache_hit_rate,
+				$bot['countries_count'],
+				$bot['countries_list'] ?? '',
+				$bot['citation_clicks'],
+				$bot['crawl_visits']
 			);
 		}
 
@@ -156,22 +203,80 @@ class TA_Admin_AJAX_Analytics {
 	}
 
 	/**
-	 * Export top content data.
+	 * Export top content data - Full raw data export.
 	 *
 	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with all columns and unlimited rows.
 	 * @param TA_Bot_Analytics $analytics Analytics instance.
 	 * @return string CSV data.
 	 */
 	private function export_top_content( $analytics ) {
-		$top_pages = $analytics->get_top_pages( array(), 100 );
-		$csv       = "Page URL,Post Title,Visits\n";
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+		// Get comprehensive page stats - no limit.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$top_pages = $wpdb->get_results(
+			"SELECT
+				url,
+				post_id,
+				MAX(post_title) as post_title,
+				MAX(post_type) as post_type,
+				COUNT(*) as total_visits,
+				COUNT(DISTINCT bot_name) as unique_bots,
+				COUNT(DISTINCT bot_type) as unique_bot_types,
+				COUNT(DISTINCT ip_address) as unique_ips,
+				COUNT(DISTINCT DATE(visit_timestamp)) as active_days,
+				MIN(visit_timestamp) as first_crawl,
+				MAX(visit_timestamp) as last_crawl,
+				ROUND(AVG(response_time), 0) as avg_response_ms,
+				SUM(response_size) as total_bandwidth,
+				SUM(CASE WHEN cache_status IN ('HIT', 'PRE_GENERATED') THEN 1 ELSE 0 END) as cache_hits,
+				SUM(CASE WHEN cache_status = 'MISS' THEN 1 ELSE 0 END) as cache_misses,
+				SUM(CASE WHEN traffic_type = 'citation_click' THEN 1 ELSE 0 END) as citations,
+				SUM(CASE WHEN traffic_type = 'bot_crawl' THEN 1 ELSE 0 END) as crawls,
+				GROUP_CONCAT(DISTINCT bot_type) as bot_types_list,
+				MAX(content_word_count) as word_count,
+				MAX(content_heading_count) as heading_count,
+				MAX(content_has_schema) as has_schema
+			FROM {$table_name}
+			GROUP BY url, post_id
+			ORDER BY total_visits DESC",
+			ARRAY_A
+		);
+
+		$csv = "Page URL,Post ID,Post Title,Post Type,Total Visits,Unique Bots,Unique Bot Types,Unique IPs,Active Days,First Crawl,Last Crawl,Avg Response (ms),Total Bandwidth,Cache Hits,Cache Misses,Cache Hit Rate %,Citations,Crawls,Citation Rate %,Bot Types,Word Count,Heading Count,Has Schema\n";
 
 		foreach ( $top_pages as $page ) {
+			$cache_total    = $page['cache_hits'] + $page['cache_misses'];
+			$cache_hit_rate = $cache_total > 0 ? round( ( $page['cache_hits'] / $cache_total ) * 100, 1 ) : 0;
+			$citation_rate  = $page['crawls'] > 0 ? round( ( $page['citations'] / $page['crawls'] ) * 100, 1 ) : 0;
+
 			$csv .= sprintf(
-				"\"%s\",\"%s\",%d\n",
+				"\"%s\",%d,\"%s\",\"%s\",%d,%d,%d,%d,%d,\"%s\",\"%s\",%d,%d,%d,%d,%.1f,%d,%d,%.1f,\"%s\",%d,%d,%d\n",
 				str_replace( '"', '""', $page['url'] ),
+				$page['post_id'] ?? 0,
 				str_replace( '"', '""', $page['post_title'] ?? '' ),
-				$page['visit_count']
+				str_replace( '"', '""', $page['post_type'] ?? '' ),
+				$page['total_visits'],
+				$page['unique_bots'],
+				$page['unique_bot_types'],
+				$page['unique_ips'],
+				$page['active_days'],
+				$page['first_crawl'],
+				$page['last_crawl'],
+				$page['avg_response_ms'] ?? 0,
+				$page['total_bandwidth'] ?? 0,
+				$page['cache_hits'],
+				$page['cache_misses'],
+				$cache_hit_rate,
+				$page['citations'],
+				$page['crawls'],
+				$citation_rate,
+				str_replace( '"', '""', $page['bot_types_list'] ?? '' ),
+				$page['word_count'] ?? 0,
+				$page['heading_count'] ?? 0,
+				$page['has_schema'] ?? 0
 			);
 		}
 
@@ -179,83 +284,259 @@ class TA_Admin_AJAX_Analytics {
 	}
 
 	/**
-	 * Export session activity data.
+	 * Export session activity data - Full raw data export.
 	 *
 	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with all columns and unlimited rows.
 	 * @param TA_Bot_Analytics $analytics Analytics instance.
 	 * @return string CSV data.
 	 */
 	private function export_session_activity( $analytics ) {
-		$top_bots = $analytics->get_top_bots_by_metric( 'session_depth', 20 );
-		$csv      = "Bot Type,User Agent,Pages/Session,Session Duration (min),Total Visits\n";
+		global $wpdb;
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+		$analytics_table    = $wpdb->prefix . 'ta_bot_analytics';
 
-		foreach ( $top_bots as $bot ) {
-			$duration_mins = round( $bot['session_duration_avg'] / 60, 1 );
-			$csv          .= sprintf(
-				"\"%s\",\"%s\",%.1f,%.1f,%d\n",
-				str_replace( '"', '""', $bot['bot_type'] ),
-				str_replace( '"', '""', $bot['user_agent'] ),
-				$bot['pages_per_session_avg'],
-				$duration_mins,
-				$bot['visit_count']
+		// Check if fingerprints table exists.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$table_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s AND table_name = %s',
+				DB_NAME,
+				$fingerprints_table
+			)
+		);
+
+		if ( $table_exists ) {
+			// Get from fingerprints table - no limit.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$fingerprints = $wpdb->get_results(
+				"SELECT
+					f.*,
+					(SELECT COUNT(*) FROM {$analytics_table} a WHERE a.user_agent = f.user_agent) as total_visits,
+					(SELECT COUNT(DISTINCT url) FROM {$analytics_table} a WHERE a.user_agent = f.user_agent) as unique_pages,
+					(SELECT MAX(visit_timestamp) FROM {$analytics_table} a WHERE a.user_agent = f.user_agent) as last_activity
+				FROM {$fingerprints_table} f
+				ORDER BY f.total_requests DESC",
+				ARRAY_A
 			);
+
+			$csv = "Fingerprint Hash,User Agent,IP Address,Bot Type,Classification,Total Requests,Unique Pages,First Seen,Last Seen,Last Activity,Request Interval Avg (sec),Request Interval StdDev,Typical Request Hour,Common Referer,Verification Status,Verification Method,Risk Score,Notes\n";
+
+			foreach ( $fingerprints as $fp ) {
+				$csv .= sprintf(
+					"\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d,%d,\"%s\",\"%s\",\"%s\",%d,%d,%d,\"%s\",\"%s\",\"%s\",%.2f,\"%s\"\n",
+					$fp['fingerprint_hash'] ?? '',
+					str_replace( '"', '""', $fp['user_agent'] ?? '' ),
+					$fp['ip_address'] ?? '',
+					str_replace( '"', '""', $fp['bot_type'] ?? '' ),
+					$fp['classification'] ?? '',
+					$fp['total_requests'] ?? 0,
+					$fp['unique_pages'] ?? 0,
+					$fp['first_seen'] ?? '',
+					$fp['last_seen'] ?? '',
+					$fp['last_activity'] ?? '',
+					$fp['request_interval_avg'] ?? 0,
+					$fp['request_interval_stddev'] ?? 0,
+					$fp['typical_request_hour'] ?? 0,
+					str_replace( '"', '""', $fp['common_referer'] ?? '' ),
+					$fp['verification_status'] ?? '',
+					$fp['verification_method'] ?? '',
+					$fp['risk_score'] ?? 0,
+					str_replace( '"', '""', $fp['notes'] ?? '' )
+				);
+			}
+		} else {
+			// Fallback: aggregate from analytics table.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$sessions = $wpdb->get_results(
+				"SELECT
+					bot_type,
+					bot_name,
+					user_agent,
+					ip_address,
+					COUNT(*) as total_visits,
+					COUNT(DISTINCT url) as unique_pages,
+					COUNT(DISTINCT DATE(visit_timestamp)) as active_days,
+					MIN(visit_timestamp) as first_seen,
+					MAX(visit_timestamp) as last_seen,
+					ROUND(AVG(response_time), 0) as avg_response_ms,
+					SUM(response_size) as total_bandwidth,
+					TIMESTAMPDIFF(SECOND, MIN(visit_timestamp), MAX(visit_timestamp)) as session_duration_sec,
+					GROUP_CONCAT(DISTINCT country_code) as countries
+				FROM {$analytics_table}
+				GROUP BY bot_type, bot_name, user_agent, ip_address
+				ORDER BY total_visits DESC",
+				ARRAY_A
+			);
+
+			$csv = "Bot Type,Bot Name,User Agent,IP Address,Total Visits,Unique Pages,Active Days,First Seen,Last Seen,Session Duration (sec),Pages/Day,Avg Response (ms),Total Bandwidth,Countries\n";
+
+			foreach ( $sessions as $s ) {
+				$pages_per_day = $s['active_days'] > 0 ? round( $s['total_visits'] / $s['active_days'], 1 ) : 0;
+
+				$csv .= sprintf(
+					"\"%s\",\"%s\",\"%s\",\"%s\",%d,%d,%d,\"%s\",\"%s\",%d,%.1f,%d,%d,\"%s\"\n",
+					str_replace( '"', '""', $s['bot_type'] ),
+					str_replace( '"', '""', $s['bot_name'] ),
+					str_replace( '"', '""', $s['user_agent'] ),
+					$s['ip_address'] ?? '',
+					$s['total_visits'],
+					$s['unique_pages'],
+					$s['active_days'],
+					$s['first_seen'],
+					$s['last_seen'],
+					$s['session_duration_sec'] ?? 0,
+					$pages_per_day,
+					$s['avg_response_ms'] ?? 0,
+					$s['total_bandwidth'] ?? 0,
+					str_replace( '"', '""', $s['countries'] ?? '' )
+				);
+			}
 		}
 
 		return $csv;
 	}
 
 	/**
-	 * Export crawl budget data.
+	 * Export crawl budget data - Full raw data export by time period.
 	 *
 	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with hourly breakdown and bot-level detail.
 	 * @param TA_Bot_Analytics $analytics Analytics instance.
 	 * @return string CSV data.
 	 */
 	private function export_crawl_budget( $analytics ) {
-		$day_metrics  = $analytics->get_crawl_budget_metrics( null, 'day' );
-		$hour_metrics = $analytics->get_crawl_budget_metrics( null, 'hour' );
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-		$csv  = "Period,Total Requests,Unique Pages,Bandwidth (MB),Cache Hit Rate %,Avg Response Time (ms)\n";
-		$csv .= sprintf(
-			"\"Last 24 Hours\",%d,%d,%.2f,%.1f,%d\n",
-			$day_metrics['total_requests'],
-			$day_metrics['unique_pages'],
-			$day_metrics['total_bandwidth_mb'],
-			$day_metrics['cache_hit_rate'],
-			$day_metrics['avg_response_time']
+		// Get hourly crawl budget breakdown for last 7 days.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$hourly_data = $wpdb->get_results(
+			"SELECT
+				DATE(visit_timestamp) as date,
+				HOUR(visit_timestamp) as hour,
+				bot_type,
+				COUNT(*) as requests,
+				COUNT(DISTINCT url) as unique_pages,
+				COUNT(DISTINCT ip_address) as unique_ips,
+				SUM(response_size) as bandwidth_bytes,
+				ROUND(AVG(response_time), 0) as avg_response_ms,
+				SUM(CASE WHEN cache_status IN ('HIT', 'PRE_GENERATED') THEN 1 ELSE 0 END) as cache_hits,
+				SUM(CASE WHEN cache_status = 'MISS' THEN 1 ELSE 0 END) as cache_misses
+			FROM {$table_name}
+			WHERE visit_timestamp >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+			GROUP BY DATE(visit_timestamp), HOUR(visit_timestamp), bot_type
+			ORDER BY date DESC, hour DESC, requests DESC",
+			ARRAY_A
 		);
-		$csv .= sprintf(
-			"\"Last Hour\",%d,%d,%.2f,%.1f,%d\n",
-			$hour_metrics['total_requests'],
-			$hour_metrics['unique_pages'],
-			$hour_metrics['total_bandwidth_mb'],
-			$hour_metrics['cache_hit_rate'],
-			$hour_metrics['avg_response_time']
-		);
+
+		$csv = "Date,Hour,Bot Type,Requests,Unique Pages,Unique IPs,Bandwidth (bytes),Bandwidth (MB),Avg Response (ms),Cache Hits,Cache Misses,Cache Hit Rate %\n";
+
+		foreach ( $hourly_data as $row ) {
+			$bandwidth_mb   = round( ( $row['bandwidth_bytes'] ?? 0 ) / 1048576, 2 );
+			$cache_total    = $row['cache_hits'] + $row['cache_misses'];
+			$cache_hit_rate = $cache_total > 0 ? round( ( $row['cache_hits'] / $cache_total ) * 100, 1 ) : 0;
+
+			$csv .= sprintf(
+				"\"%s\",%d,\"%s\",%d,%d,%d,%d,%.2f,%d,%d,%d,%.1f\n",
+				$row['date'],
+				$row['hour'],
+				str_replace( '"', '""', $row['bot_type'] ),
+				$row['requests'],
+				$row['unique_pages'],
+				$row['unique_ips'],
+				$row['bandwidth_bytes'] ?? 0,
+				$bandwidth_mb,
+				$row['avg_response_ms'] ?? 0,
+				$row['cache_hits'],
+				$row['cache_misses'],
+				$cache_hit_rate
+			);
+		}
 
 		return $csv;
 	}
 
 	/**
-	 * Export citation performance data.
+	 * Export citation performance data - Full raw data export.
 	 *
 	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with all columns and unlimited rows.
 	 * @param TA_Bot_Analytics $analytics Analytics instance.
 	 * @return string CSV data.
 	 */
 	private function export_citation_performance( $analytics ) {
-		$citation_data = $analytics->get_citation_to_crawl_ratio( array(), 100 );
-		$csv           = "Page URL,Post Title,Crawls,Citations,Citation Rate %\n";
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+		// Get comprehensive citation/crawl data per page - no limit.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$citation_data = $wpdb->get_results(
+			"SELECT
+				url,
+				post_id,
+				MAX(post_title) as post_title,
+				MAX(post_type) as post_type,
+				SUM(CASE WHEN traffic_type = 'bot_crawl' THEN 1 ELSE 0 END) as crawls,
+				SUM(CASE WHEN traffic_type = 'citation_click' THEN 1 ELSE 0 END) as citations,
+				COUNT(DISTINCT CASE WHEN traffic_type = 'citation_click' THEN ai_platform END) as citation_platforms,
+				GROUP_CONCAT(DISTINCT CASE WHEN traffic_type = 'citation_click' THEN ai_platform END) as platforms_list,
+				COUNT(DISTINCT CASE WHEN traffic_type = 'bot_crawl' THEN bot_type END) as crawl_bot_types,
+				GROUP_CONCAT(DISTINCT CASE WHEN traffic_type = 'bot_crawl' THEN bot_type END) as crawl_bots_list,
+				MIN(CASE WHEN traffic_type = 'bot_crawl' THEN visit_timestamp END) as first_crawl,
+				MAX(CASE WHEN traffic_type = 'bot_crawl' THEN visit_timestamp END) as last_crawl,
+				MIN(CASE WHEN traffic_type = 'citation_click' THEN visit_timestamp END) as first_citation,
+				MAX(CASE WHEN traffic_type = 'citation_click' THEN visit_timestamp END) as last_citation,
+				MAX(content_word_count) as word_count,
+				MAX(content_heading_count) as heading_count,
+				MAX(content_image_count) as image_count,
+				MAX(content_has_schema) as has_schema,
+				MAX(content_freshness_days) as freshness_days,
+				COUNT(DISTINCT search_query) as unique_queries,
+				GROUP_CONCAT(DISTINCT search_query SEPARATOR ' | ') as search_queries
+			FROM {$table_name}
+			GROUP BY url, post_id
+			HAVING crawls > 0 OR citations > 0
+			ORDER BY citations DESC, crawls DESC",
+			ARRAY_A
+		);
+
+		$csv = "Page URL,Post ID,Post Title,Post Type,Crawls,Citations,Citation Rate %,Citation Platforms,Platforms List,Crawl Bot Types,Crawl Bots List,First Crawl,Last Crawl,First Citation,Last Citation,Days to First Citation,Word Count,Heading Count,Image Count,Has Schema,Freshness (days),Unique Search Queries,Search Queries\n";
 
 		foreach ( $citation_data as $page ) {
-			$rate = round( $page['citation_rate'] * 100, 1 );
+			$citation_rate      = $page['crawls'] > 0 ? round( ( $page['citations'] / $page['crawls'] ) * 100, 2 ) : 0;
+			$days_to_citation   = '';
+			if ( $page['first_crawl'] && $page['first_citation'] ) {
+				$crawl_date       = strtotime( $page['first_crawl'] );
+				$citation_date    = strtotime( $page['first_citation'] );
+				$days_to_citation = max( 0, round( ( $citation_date - $crawl_date ) / 86400 ) );
+			}
+
 			$csv .= sprintf(
-				"\"%s\",\"%s\",%d,%d,%.1f\n",
+				"\"%s\",%d,\"%s\",\"%s\",%d,%d,%.2f,%d,\"%s\",%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%s,%d,%d,%d,%d,%d,%d,\"%s\"\n",
 				str_replace( '"', '""', $page['url'] ),
+				$page['post_id'] ?? 0,
 				str_replace( '"', '""', $page['post_title'] ?? '' ),
+				str_replace( '"', '""', $page['post_type'] ?? '' ),
 				$page['crawls'],
 				$page['citations'],
-				$rate
+				$citation_rate,
+				$page['citation_platforms'],
+				str_replace( '"', '""', $page['platforms_list'] ?? '' ),
+				$page['crawl_bot_types'],
+				str_replace( '"', '""', $page['crawl_bots_list'] ?? '' ),
+				$page['first_crawl'] ?? '',
+				$page['last_crawl'] ?? '',
+				$page['first_citation'] ?? '',
+				$page['last_citation'] ?? '',
+				$days_to_citation,
+				$page['word_count'] ?? 0,
+				$page['heading_count'] ?? 0,
+				$page['image_count'] ?? 0,
+				$page['has_schema'] ?? 0,
+				$page['freshness_days'] ?? 0,
+				$page['unique_queries'] ?? 0,
+				str_replace( '"', '""', substr( $page['search_queries'] ?? '', 0, 500 ) )
 			);
 		}
 
@@ -263,67 +544,74 @@ class TA_Admin_AJAX_Analytics {
 	}
 
 	/**
-	 * Export content insights data.
+	 * Export content insights data - Full raw data export per post.
 	 *
 	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with per-post breakdown.
 	 * @param TA_Bot_Analytics $analytics Analytics instance.
 	 * @return string CSV data.
 	 */
 	private function export_content_insights( $analytics ) {
-		$content_perf = $analytics->get_content_performance_analysis( array() );
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-		$csv  = "Metric,Cited Posts,Crawled Posts\n";
-		$csv .= sprintf(
-			"\"Total Count\",%d,%d\n",
-			$content_perf['cited_posts']['total_count'],
-			$content_perf['crawled_posts']['total_count']
-		);
-		$csv .= sprintf(
-			"\"Avg Word Count\",%d,%d\n",
-			$content_perf['cited_posts']['avg_word_count'],
-			$content_perf['crawled_posts']['avg_word_count']
-		);
-		$csv .= sprintf(
-			"\"Avg Headings\",%.1f,%.1f\n",
-			$content_perf['cited_posts']['avg_heading_count'],
-			$content_perf['crawled_posts']['avg_heading_count']
-		);
-		$csv .= sprintf(
-			"\"Avg Images\",%.1f,%.1f\n",
-			$content_perf['cited_posts']['avg_image_count'],
-			$content_perf['crawled_posts']['avg_image_count']
-		);
-		$csv .= sprintf(
-			"\"Schema Markup %%\",%.1f,%.1f\n",
-			$content_perf['cited_posts']['schema_percentage'],
-			$content_perf['crawled_posts']['schema_percentage']
-		);
-		$csv .= sprintf(
-			"\"Avg Freshness (days)\",%d,%d\n",
-			$content_perf['cited_posts']['avg_freshness_days'],
-			$content_perf['crawled_posts']['avg_freshness_days']
+		// Get per-post content analysis data - no limit.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$content_data = $wpdb->get_results(
+			"SELECT
+				url,
+				post_id,
+				MAX(post_title) as post_title,
+				MAX(post_type) as post_type,
+				MAX(content_word_count) as word_count,
+				MAX(content_heading_count) as heading_count,
+				MAX(content_image_count) as image_count,
+				MAX(content_has_schema) as has_schema,
+				MAX(content_freshness_days) as freshness_days,
+				COUNT(*) as total_visits,
+				SUM(CASE WHEN traffic_type = 'bot_crawl' THEN 1 ELSE 0 END) as crawls,
+				SUM(CASE WHEN traffic_type = 'citation_click' THEN 1 ELSE 0 END) as citations,
+				COUNT(DISTINCT bot_type) as unique_bot_types,
+				GROUP_CONCAT(DISTINCT bot_type) as bot_types,
+				MIN(visit_timestamp) as first_visit,
+				MAX(visit_timestamp) as last_visit,
+				ROUND(AVG(response_time), 0) as avg_response_ms,
+				SUM(CASE WHEN cache_status IN ('HIT', 'PRE_GENERATED') THEN 1 ELSE 0 END) as cache_hits
+			FROM {$table_name}
+			WHERE post_id IS NOT NULL AND post_id > 0
+			GROUP BY url, post_id
+			ORDER BY citations DESC, crawls DESC",
+			ARRAY_A
 		);
 
-		return $csv;
-	}
+		$csv = "Page URL,Post ID,Post Title,Post Type,Word Count,Heading Count,Image Count,Has Schema,Freshness (days),Total Visits,Crawls,Citations,Citation Rate %,Unique Bot Types,Bot Types,First Visit,Last Visit,Avg Response (ms),Cache Hits,Cache Hit Rate %\n";
 
-	/**
-	 * Export activity timeline data.
-	 *
-	 * @since 3.3.3
-	 * @param TA_Bot_Analytics $analytics Analytics instance.
-	 * @return string CSV data.
-	 */
-	private function export_activity_timeline( $analytics ) {
-		$timeline = $analytics->get_visits_over_time( array(), 'day', 30 );
-		$csv      = "Period,Total Visits,Unique Bots\n";
+		foreach ( $content_data as $row ) {
+			$citation_rate  = $row['crawls'] > 0 ? round( ( $row['citations'] / $row['crawls'] ) * 100, 2 ) : 0;
+			$cache_hit_rate = $row['total_visits'] > 0 ? round( ( $row['cache_hits'] / $row['total_visits'] ) * 100, 1 ) : 0;
 
-		foreach ( $timeline as $item ) {
 			$csv .= sprintf(
-				"\"%s\",%d,%d\n",
-				$item['period'],
-				$item['visits'],
-				$item['unique_bots']
+				"\"%s\",%d,\"%s\",\"%s\",%d,%d,%d,%d,%d,%d,%d,%d,%.2f,%d,\"%s\",\"%s\",\"%s\",%d,%d,%.1f\n",
+				str_replace( '"', '""', $row['url'] ),
+				$row['post_id'] ?? 0,
+				str_replace( '"', '""', $row['post_title'] ?? '' ),
+				str_replace( '"', '""', $row['post_type'] ?? '' ),
+				$row['word_count'] ?? 0,
+				$row['heading_count'] ?? 0,
+				$row['image_count'] ?? 0,
+				$row['has_schema'] ?? 0,
+				$row['freshness_days'] ?? 0,
+				$row['total_visits'],
+				$row['crawls'],
+				$row['citations'],
+				$citation_rate,
+				$row['unique_bot_types'],
+				str_replace( '"', '""', $row['bot_types'] ?? '' ),
+				$row['first_visit'] ?? '',
+				$row['last_visit'] ?? '',
+				$row['avg_response_ms'] ?? 0,
+				$row['cache_hits'],
+				$cache_hit_rate
 			);
 		}
 
@@ -331,27 +619,160 @@ class TA_Admin_AJAX_Analytics {
 	}
 
 	/**
-	 * Export live activity data.
+	 * Export activity timeline data - Full raw data export.
 	 *
 	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with hourly granularity and all metrics.
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_activity_timeline( $analytics ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+		// Get comprehensive timeline data - all available history.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$timeline = $wpdb->get_results(
+			"SELECT
+				DATE(visit_timestamp) as date,
+				HOUR(visit_timestamp) as hour,
+				COUNT(*) as total_visits,
+				COUNT(DISTINCT bot_name) as unique_bots,
+				COUNT(DISTINCT bot_type) as unique_bot_types,
+				COUNT(DISTINCT url) as unique_pages,
+				COUNT(DISTINCT ip_address) as unique_ips,
+				SUM(response_size) as total_bandwidth,
+				ROUND(AVG(response_time), 0) as avg_response_ms,
+				SUM(CASE WHEN cache_status IN ('HIT', 'PRE_GENERATED') THEN 1 ELSE 0 END) as cache_hits,
+				SUM(CASE WHEN cache_status = 'MISS' THEN 1 ELSE 0 END) as cache_misses,
+				SUM(CASE WHEN traffic_type = 'citation_click' THEN 1 ELSE 0 END) as citations,
+				SUM(CASE WHEN traffic_type = 'bot_crawl' THEN 1 ELSE 0 END) as crawls,
+				GROUP_CONCAT(DISTINCT bot_type) as bot_types,
+				GROUP_CONCAT(DISTINCT country_code) as countries
+			FROM {$table_name}
+			GROUP BY DATE(visit_timestamp), HOUR(visit_timestamp)
+			ORDER BY date DESC, hour DESC",
+			ARRAY_A
+		);
+
+		$csv = "Date,Hour,Total Visits,Unique Bots,Unique Bot Types,Unique Pages,Unique IPs,Total Bandwidth (bytes),Bandwidth (MB),Avg Response (ms),Cache Hits,Cache Misses,Cache Hit Rate %,Citations,Crawls,Bot Types,Countries\n";
+
+		foreach ( $timeline as $row ) {
+			$bandwidth_mb   = round( ( $row['total_bandwidth'] ?? 0 ) / 1048576, 2 );
+			$cache_total    = $row['cache_hits'] + $row['cache_misses'];
+			$cache_hit_rate = $cache_total > 0 ? round( ( $row['cache_hits'] / $cache_total ) * 100, 1 ) : 0;
+
+			$csv .= sprintf(
+				"\"%s\",%d,%d,%d,%d,%d,%d,%d,%.2f,%d,%d,%d,%.1f,%d,%d,\"%s\",\"%s\"\n",
+				$row['date'],
+				$row['hour'],
+				$row['total_visits'],
+				$row['unique_bots'],
+				$row['unique_bot_types'],
+				$row['unique_pages'],
+				$row['unique_ips'],
+				$row['total_bandwidth'] ?? 0,
+				$bandwidth_mb,
+				$row['avg_response_ms'] ?? 0,
+				$row['cache_hits'],
+				$row['cache_misses'],
+				$cache_hit_rate,
+				$row['citations'],
+				$row['crawls'],
+				str_replace( '"', '""', $row['bot_types'] ?? '' ),
+				str_replace( '"', '""', $row['countries'] ?? '' )
+			);
+		}
+
+		return $csv;
+	}
+
+	/**
+	 * Export live activity data - Full raw data export (ALL records).
+	 *
+	 * @since 3.3.3
+	 * @since 3.3.9 Enhanced with all columns and all records (no limit).
 	 * @param TA_Bot_Analytics $analytics Analytics instance.
 	 * @return string CSV data.
 	 */
 	private function export_live_activity( $analytics ) {
-		$recent = $analytics->get_recent_visits( array(), 100, 0 );
-		$csv    = "Timestamp,Bot Name,Bot Type,Page URL,IP Address,Country,Cache Status,Response Time (ms)\n";
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-		foreach ( $recent as $visit ) {
+		// Get ALL raw visit records - complete export.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$visits = $wpdb->get_results(
+			"SELECT
+				id,
+				bot_type,
+				bot_name,
+				user_agent,
+				url,
+				post_id,
+				post_type,
+				post_title,
+				request_method,
+				cache_status,
+				response_time,
+				response_size,
+				ip_address,
+				referer,
+				country_code,
+				traffic_type,
+				content_type,
+				ai_platform,
+				search_query,
+				referer_source,
+				referer_medium,
+				detection_method,
+				confidence_score,
+				content_word_count,
+				content_heading_count,
+				content_image_count,
+				content_has_schema,
+				content_freshness_days,
+				visit_timestamp,
+				created_at
+			FROM {$table_name}
+			ORDER BY visit_timestamp DESC",
+			ARRAY_A
+		);
+
+		$csv = "ID,Bot Type,Bot Name,User Agent,URL,Post ID,Post Type,Post Title,Request Method,Cache Status,Response Time (ms),Response Size (bytes),IP Address,Referer,Country Code,Traffic Type,Content Type,AI Platform,Search Query,Referer Source,Referer Medium,Detection Method,Confidence Score,Word Count,Heading Count,Image Count,Has Schema,Freshness (days),Visit Timestamp,Created At\n";
+
+		foreach ( $visits as $v ) {
 			$csv .= sprintf(
-				"\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d\n",
-				$visit['visit_time'],
-				str_replace( '"', '""', $visit['bot_name'] ),
-				str_replace( '"', '""', $visit['bot_type'] ),
-				str_replace( '"', '""', $visit['url'] ),
-				$visit['ip_address'] ?? '',
-				$visit['country'] ?? '',
-				$visit['cache_status'] ?? '',
-				$visit['response_time'] ?? 0
+				"%d,\"%s\",\"%s\",\"%s\",\"%s\",%d,\"%s\",\"%s\",\"%s\",\"%s\",%d,%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%.2f,%d,%d,%d,%d,%d,\"%s\",\"%s\"\n",
+				$v['id'],
+				str_replace( '"', '""', $v['bot_type'] ?? '' ),
+				str_replace( '"', '""', $v['bot_name'] ?? '' ),
+				str_replace( '"', '""', substr( $v['user_agent'] ?? '', 0, 200 ) ),
+				str_replace( '"', '""', $v['url'] ?? '' ),
+				$v['post_id'] ?? 0,
+				str_replace( '"', '""', $v['post_type'] ?? '' ),
+				str_replace( '"', '""', $v['post_title'] ?? '' ),
+				str_replace( '"', '""', $v['request_method'] ?? '' ),
+				str_replace( '"', '""', $v['cache_status'] ?? '' ),
+				$v['response_time'] ?? 0,
+				$v['response_size'] ?? 0,
+				$v['ip_address'] ?? '',
+				str_replace( '"', '""', substr( $v['referer'] ?? '', 0, 200 ) ),
+				$v['country_code'] ?? '',
+				str_replace( '"', '""', $v['traffic_type'] ?? '' ),
+				str_replace( '"', '""', $v['content_type'] ?? '' ),
+				str_replace( '"', '""', $v['ai_platform'] ?? '' ),
+				str_replace( '"', '""', substr( $v['search_query'] ?? '', 0, 200 ) ),
+				str_replace( '"', '""', $v['referer_source'] ?? '' ),
+				str_replace( '"', '""', $v['referer_medium'] ?? '' ),
+				str_replace( '"', '""', $v['detection_method'] ?? '' ),
+				$v['confidence_score'] ?? 0,
+				$v['content_word_count'] ?? 0,
+				$v['content_heading_count'] ?? 0,
+				$v['content_image_count'] ?? 0,
+				$v['content_has_schema'] ?? 0,
+				$v['content_freshness_days'] ?? 0,
+				$v['visit_timestamp'] ?? '',
+				$v['created_at'] ?? ''
 			);
 		}
 
