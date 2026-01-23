@@ -345,7 +345,7 @@
 				url: taCacheBrowser.ajaxUrl,
 				type: 'POST',
 				data: {
-					action: 'ta_start_warmup_batch',
+					action: 'ta_warm_cache_batch',
 					nonce: taCacheBrowser.nonce,
 					batch_size: 10,
 					offset: offset
@@ -372,12 +372,19 @@
 							self.finishWarmup(totalWarmed, false);
 						}
 					} else {
-						alert(taCacheBrowser.i18n.error);
+						var errorMsg = response.data && response.data.message ? response.data.message : taCacheBrowser.i18n.error;
+						alert('Cache warmup error: ' + errorMsg);
+						$('#ta-warmup-status').text('Error: ' + errorMsg);
 						self.finishWarmup(totalWarmed, false);
 					}
 				},
-				error: function() {
-					alert(taCacheBrowser.i18n.error);
+				error: function(xhr, status, error) {
+					var errorMsg = 'Request failed: ' + (error || status || 'Unknown error');
+					if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+						errorMsg = xhr.responseJSON.data.message;
+					}
+					alert('Cache warmup error: ' + errorMsg);
+					$('#ta-warmup-status').text('Error: ' + errorMsg);
 					self.finishWarmup(totalWarmed, false);
 				}
 			});

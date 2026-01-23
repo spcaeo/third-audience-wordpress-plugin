@@ -235,15 +235,53 @@ class TA_Admin_AJAX_Cache {
 		$this->security->verify_ajax_request( 'cache_browser' );
 
 		$batch_size = isset( $_POST['batch_size'] ) ? absint( $_POST['batch_size'] ) : 5;
-		$offset = isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0;
+		$offset     = isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0;
 
-		$cache_manager = new TA_Cache_Manager();
-		$result = $cache_manager->warm_cache_batch( array(
-			'limit'  => $batch_size,
-			'offset' => $offset,
-		) );
+		try {
+			$cache_manager = new TA_Cache_Manager();
 
-		wp_send_json_success( $result );
+			// Check if TA_Local_Converter is available.
+			if ( ! class_exists( 'TA_Local_Converter' ) ) {
+				wp_send_json_error( array(
+					'message' => __( 'Local Converter class not found. Please ensure the plugin is properly installed.', 'third-audience' ),
+				) );
+			}
+
+			$results = $cache_manager->warm_cache_batch( array(
+				'limit'  => $batch_size,
+				'offset' => $offset,
+			) );
+
+			// Get updated stats after warming.
+			$stats = $cache_manager->get_warmup_stats();
+
+			// Check if there were any failures.
+			if ( isset( $results['failed'] ) && $results['failed'] > 0 ) {
+				$this->logger->warning( 'Cache warmup batch had failures', array(
+					'results' => $results,
+					'offset'  => $offset,
+				) );
+			}
+
+			wp_send_json_success( array(
+				'results' => $results,
+				'stats'   => $stats,
+			) );
+
+		} catch ( Exception $e ) {
+			$this->logger->error( 'Cache warmup batch failed', array(
+				'error'   => $e->getMessage(),
+				'offset'  => $offset,
+			) );
+
+			wp_send_json_error( array(
+				'message' => sprintf(
+					/* translators: %s: error message */
+					__( 'Cache warmup failed: %s', 'third-audience' ),
+					$e->getMessage()
+				),
+			) );
+		}
 	}
 
 	/**
