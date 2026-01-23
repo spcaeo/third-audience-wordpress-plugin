@@ -83,7 +83,8 @@ class TA_Admin {
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_notices', array( $this, 'display_configuration_notices' ) );
-		add_action( 'admin_notices', array( $this, 'display_citation_alerts' ) );
+		// Disabled: Citation drop alerts were too noisy.
+		// add_action( 'admin_notices', array( $this, 'display_citation_alerts' ) );
 
 		// Initialize cache admin (handles Cache Browser and Warmup).
 		$this->cache_admin->init();
