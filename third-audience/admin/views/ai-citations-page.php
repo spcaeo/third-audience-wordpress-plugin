@@ -650,8 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
 					}
 				]
 			},
-			options: {
-				...commonOptions,
+			options: Object.assign({}, commonOptions, {
 				scales: {
 					y: {
 						beginAtZero: true,
@@ -670,7 +669,7 @@ document.addEventListener('DOMContentLoaded', function() {
 					intersect: false,
 					mode: 'index'
 				}
-			}
+			})
 		});
 	}
 
@@ -732,8 +731,7 @@ document.addEventListener('DOMContentLoaded', function() {
 					}
 				]
 			},
-			options: {
-				...commonOptions,
+			options: Object.assign({}, commonOptions, {
 				scales: {
 					y: {
 						beginAtZero: true,
@@ -746,7 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				},
 				barPercentage: 0.7,
 				categoryPercentage: 0.8
-			}
+			})
 		});
 	}
 });
