@@ -142,6 +142,343 @@ $api_key  = $wizard->get_api_key();
 </div>
 
 <?php if ( $settings['enabled'] && $api_key ) : ?>
+	<!-- Developer Setup Guide Button -->
+	<div class="ta-settings-section" style="margin-top: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 8px; color: white;">
+		<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+			<div>
+				<h2 style="margin: 0 0 8px 0; color: white; display: flex; align-items: center; gap: 10px;">
+					<span class="dashicons dashicons-book-alt" style="font-size: 28px;"></span>
+					<?php esc_html_e( 'Developer Setup Guide', 'third-audience' ); ?>
+				</h2>
+				<p style="margin: 0; opacity: 0.9; font-size: 14px;">
+					<?php esc_html_e( 'Step-by-step instructions to integrate citation tracking with your Next.js frontend.', 'third-audience' ); ?>
+				</p>
+			</div>
+			<button type="button" class="button button-large" id="ta-open-setup-guide" style="background: white; color: #667eea; border: none; font-weight: 600; padding: 10px 25px;">
+				<span class="dashicons dashicons-welcome-learn-more" style="margin-right: 5px;"></span>
+				<?php esc_html_e( 'Open Setup Guide', 'third-audience' ); ?>
+			</button>
+		</div>
+	</div>
+
+	<!-- Developer Setup Guide Modal -->
+	<div id="ta-setup-guide-modal" class="ta-modal" style="display: none;">
+		<div class="ta-modal-overlay"></div>
+		<div class="ta-modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+			<div class="ta-modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0;">
+				<h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+					<span class="dashicons dashicons-book-alt"></span>
+					<?php esc_html_e( 'Citation Tracking Setup Guide', 'third-audience' ); ?>
+				</h2>
+				<p style="margin: 10px 0 0 0; opacity: 0.9;">
+					<?php esc_html_e( 'Follow these steps to enable AI citation tracking on your headless frontend.', 'third-audience' ); ?>
+				</p>
+				<button type="button" class="ta-modal-close" style="position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
+			</div>
+			<div class="ta-modal-body" style="padding: 25px;">
+				<?php
+				$citation_api_key_modal = get_option( 'ta_headless_api_key', '' );
+				if ( empty( $citation_api_key_modal ) ) {
+					$citation_api_key_modal = wp_generate_password( 32, false );
+					update_option( 'ta_headless_api_key', $citation_api_key_modal );
+				}
+				$citation_endpoint_modal = rest_url( 'third-audience/v1/track-citation' );
+				?>
+
+				<!-- Step 1 -->
+				<div class="ta-setup-step" style="margin-bottom: 25px; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+					<div style="display: flex; align-items: flex-start; gap: 15px;">
+						<div style="background: #667eea; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">1</div>
+						<div style="flex: 1;">
+							<h3 style="margin: 0 0 10px 0; color: #1e1e1e;"><?php esc_html_e( 'Add Environment Variables', 'third-audience' ); ?></h3>
+							<p style="margin: 0 0 15px 0; color: #666;">
+								<?php esc_html_e( 'Add these to your .env.local file in your Next.js project root:', 'third-audience' ); ?>
+							</p>
+							<div style="background: #1e1e1e; border-radius: 6px; padding: 15px; position: relative;">
+								<pre style="margin: 0; color: #d4d4d4; font-size: 13px; overflow-x: auto;"><code id="env-vars-code">TA_CITATION_API_URL=<?php echo esc_html( $citation_endpoint_modal ); ?>
+
+TA_CITATION_API_KEY=<?php echo esc_html( $citation_api_key_modal ); ?></code></pre>
+								<button type="button" class="button ta-copy-btn" data-target="env-vars-code" style="position: absolute; top: 10px; right: 10px; padding: 5px 12px; font-size: 12px;">
+									<span class="dashicons dashicons-clipboard" style="font-size: 14px; margin-right: 3px;"></span><?php esc_html_e( 'Copy', 'third-audience' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Step 2 -->
+				<div class="ta-setup-step" style="margin-bottom: 25px; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+					<div style="display: flex; align-items: flex-start; gap: 15px;">
+						<div style="background: #667eea; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">2</div>
+						<div style="flex: 1;">
+							<h3 style="margin: 0 0 10px 0; color: #1e1e1e;"><?php esc_html_e( 'Create or Update middleware.ts', 'third-audience' ); ?></h3>
+							<p style="margin: 0 0 15px 0; color: #666;">
+								<?php esc_html_e( 'Create src/middleware.ts (or update existing) with this code:', 'third-audience' ); ?>
+							</p>
+							<div style="background: #1e1e1e; border-radius: 6px; padding: 15px; position: relative; max-height: 400px; overflow-y: auto;">
+								<pre style="margin: 0; color: #d4d4d4; font-size: 12px; overflow-x: auto;"><code id="middleware-code">import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+// AI platforms that cite content
+const AI_CITATION_SOURCES = [
+  { pattern: /chatgpt/i, name: 'ChatGPT' },
+  { pattern: /perplexity/i, name: 'Perplexity' },
+  { pattern: /claude/i, name: 'Claude' },
+  { pattern: /gemini/i, name: 'Gemini' },
+  { pattern: /copilot/i, name: 'Copilot' },
+  { pattern: /bing/i, name: 'Bing AI' },
+];
+
+/**
+ * Detect if request came from an AI citation
+ */
+function detectAICitation(request: NextRequest): { platform: string; query?: string } | null {
+  const url = request.nextUrl;
+  const referer = request.headers.get('referer') || '';
+
+  // Check utm_source parameter (e.g., ?utm_source=chatgpt.com)
+  const utmSource = url.searchParams.get('utm_source');
+  if (utmSource) {
+    for (const source of AI_CITATION_SOURCES) {
+      if (source.pattern.test(utmSource)) {
+        return { platform: source.name };
+      }
+    }
+  }
+
+  // Check referer header
+  for (const source of AI_CITATION_SOURCES) {
+    if (source.pattern.test(referer)) {
+      // Extract search query from Perplexity
+      if (source.name === 'Perplexity' && referer.includes('?q=')) {
+        const match = referer.match(/[?&]q=([^&]+)/);
+        return {
+          platform: source.name,
+          query: match ? decodeURIComponent(match[1]) : undefined
+        };
+      }
+      return { platform: source.name };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Track citation to WordPress (fire and forget)
+ */
+async function trackCitation(request: NextRequest, citation: { platform: string; query?: string }) {
+  try {
+    await fetch(process.env.TA_CITATION_API_URL!, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-TA-Api-Key': process.env.TA_CITATION_API_KEY!,
+      },
+      body: JSON.stringify({
+        url: request.nextUrl.pathname,
+        platform: citation.platform,
+        referer: request.headers.get('referer') || '',
+        search_query: citation.query || '',
+        ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+      }),
+    });
+  } catch (error) {
+    // Silently fail - don't block user request
+    console.error('Citation tracking failed:', error);
+  }
+}
+
+export async function middleware(request: NextRequest) {
+  // Detect AI citation
+  const citation = detectAICitation(request);
+
+  if (citation) {
+    // Track asynchronously (non-blocking)
+    trackCitation(request, citation);
+  }
+
+  return NextResponse.next();
+}
+
+// Configure which paths trigger middleware
+export const config = {
+  matcher: [
+    // Match all paths except static files and API routes
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+};</code></pre>
+								<button type="button" class="button ta-copy-btn" data-target="middleware-code" style="position: absolute; top: 10px; right: 10px; padding: 5px 12px; font-size: 12px;">
+									<span class="dashicons dashicons-clipboard" style="font-size: 14px; margin-right: 3px;"></span><?php esc_html_e( 'Copy', 'third-audience' ); ?>
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Step 3 -->
+				<div class="ta-setup-step" style="margin-bottom: 25px; padding: 20px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #667eea;">
+					<div style="display: flex; align-items: flex-start; gap: 15px;">
+						<div style="background: #667eea; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">3</div>
+						<div style="flex: 1;">
+							<h3 style="margin: 0 0 10px 0; color: #1e1e1e;"><?php esc_html_e( 'Deploy & Test', 'third-audience' ); ?></h3>
+							<p style="margin: 0 0 15px 0; color: #666;">
+								<?php esc_html_e( 'After deploying, test citation tracking:', 'third-audience' ); ?>
+							</p>
+							<ol style="margin: 0; padding-left: 20px; color: #444; line-height: 1.8;">
+								<li><?php esc_html_e( 'Restart your Next.js development server (or redeploy)', 'third-audience' ); ?></li>
+								<li>
+									<?php esc_html_e( 'Visit your site with a test parameter:', 'third-audience' ); ?>
+									<code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-size: 12px;">
+										<?php echo esc_html( $settings['frontend_url'] ); ?>?utm_source=chatgpt.com
+									</code>
+								</li>
+								<li><?php esc_html_e( 'Check WordPress Admin → Bot Analytics → AI Citations', 'third-audience' ); ?></li>
+								<li><?php esc_html_e( 'You should see the citation logged within a few seconds', 'third-audience' ); ?></li>
+							</ol>
+						</div>
+					</div>
+				</div>
+
+				<!-- Quick Reference Card -->
+				<div style="background: #e8f4fd; border: 1px solid #b8daff; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+					<h3 style="margin: 0 0 15px 0; color: #004085; display: flex; align-items: center; gap: 8px;">
+						<span class="dashicons dashicons-info"></span>
+						<?php esc_html_e( 'Quick Reference', 'third-audience' ); ?>
+					</h3>
+					<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+						<tr>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600; width: 140px;"><?php esc_html_e( 'API Endpoint', 'third-audience' ); ?></td>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
+								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;"><?php echo esc_html( $citation_endpoint_modal ); ?></code>
+							</td>
+						</tr>
+						<tr>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600;"><?php esc_html_e( 'API Key', 'third-audience' ); ?></td>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
+								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;"><?php echo esc_html( $citation_api_key_modal ); ?></code>
+							</td>
+						</tr>
+						<tr>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600;"><?php esc_html_e( 'Auth Header', 'third-audience' ); ?></td>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
+								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;">X-TA-Api-Key: [your-key]</code>
+							</td>
+						</tr>
+						<tr>
+							<td style="padding: 8px 0; font-weight: 600;"><?php esc_html_e( 'HTTP Method', 'third-audience' ); ?></td>
+							<td style="padding: 8px 0;">
+								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;">POST</code>
+							</td>
+						</tr>
+					</table>
+				</div>
+
+				<!-- Troubleshooting -->
+				<div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 20px;">
+					<h3 style="margin: 0 0 15px 0; color: #856404; display: flex; align-items: center; gap: 8px;">
+						<span class="dashicons dashicons-warning"></span>
+						<?php esc_html_e( 'Troubleshooting', 'third-audience' ); ?>
+					</h3>
+					<ul style="margin: 0; padding-left: 20px; color: #856404; line-height: 1.8; font-size: 13px;">
+						<li><strong><?php esc_html_e( 'Citations not appearing?', 'third-audience' ); ?></strong> <?php esc_html_e( 'Check browser console for errors. Verify env vars are set correctly.', 'third-audience' ); ?></li>
+						<li><strong><?php esc_html_e( 'CORS errors?', 'third-audience' ); ?></strong> <?php esc_html_e( 'Ensure your WordPress server allows requests from your frontend domain.', 'third-audience' ); ?></li>
+						<li><strong><?php esc_html_e( '401 Unauthorized?', 'third-audience' ); ?></strong> <?php esc_html_e( 'API key mismatch. Copy the key again from this page.', 'third-audience' ); ?></li>
+						<li><strong><?php esc_html_e( 'Middleware not running?', 'third-audience' ); ?></strong> <?php esc_html_e( 'Check the matcher config. Ensure middleware.ts is in src/ or root.', 'third-audience' ); ?></li>
+					</ul>
+				</div>
+			</div>
+			<div class="ta-modal-footer" style="padding: 15px 25px; border-top: 1px solid #ddd; text-align: right; background: #f8f9fa; border-radius: 0 0 8px 8px;">
+				<button type="button" class="button button-primary ta-modal-close-btn">
+					<?php esc_html_e( 'Got it!', 'third-audience' ); ?>
+				</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal Styles and Scripts -->
+	<style>
+		.ta-modal {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			z-index: 100000;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.ta-modal-overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.6);
+		}
+		.ta-modal-content {
+			position: relative;
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+			width: 90%;
+			animation: ta-modal-appear 0.2s ease-out;
+		}
+		@keyframes ta-modal-appear {
+			from {
+				opacity: 0;
+				transform: scale(0.95) translateY(-20px);
+			}
+			to {
+				opacity: 1;
+				transform: scale(1) translateY(0);
+			}
+		}
+		.ta-copy-btn.copied {
+			background: #46b450 !important;
+			color: white !important;
+			border-color: #46b450 !important;
+		}
+	</style>
+	<script>
+	jQuery(document).ready(function($) {
+		// Open modal
+		$('#ta-open-setup-guide').on('click', function() {
+			$('#ta-setup-guide-modal').fadeIn(200);
+			$('body').css('overflow', 'hidden');
+		});
+
+		// Close modal
+		$('.ta-modal-close, .ta-modal-close-btn, .ta-modal-overlay').on('click', function() {
+			$('#ta-setup-guide-modal').fadeOut(200);
+			$('body').css('overflow', '');
+		});
+
+		// Close on Escape key
+		$(document).on('keydown', function(e) {
+			if (e.key === 'Escape' && $('#ta-setup-guide-modal').is(':visible')) {
+				$('#ta-setup-guide-modal').fadeOut(200);
+				$('body').css('overflow', '');
+			}
+		});
+
+		// Copy buttons
+		$('.ta-copy-btn').on('click', function() {
+			var targetId = $(this).data('target');
+			var text = $('#' + targetId).text();
+			var btn = $(this);
+
+			navigator.clipboard.writeText(text).then(function() {
+				btn.addClass('copied').html('<span class="dashicons dashicons-yes" style="font-size: 14px; margin-right: 3px;"></span><?php echo esc_js( __( 'Copied!', 'third-audience' ) ); ?>');
+				setTimeout(function() {
+					btn.removeClass('copied').html('<span class="dashicons dashicons-clipboard" style="font-size: 14px; margin-right: 3px;"></span><?php echo esc_js( __( 'Copy', 'third-audience' ) ); ?>');
+				}, 2000);
+			});
+		});
+	});
+	</script>
+
 	<!-- API Key Section -->
 	<div class="ta-settings-section" style="margin-top: 30px;">
 		<h2><?php esc_html_e( 'API Configuration', 'third-audience' ); ?></h2>
