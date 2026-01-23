@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.3.0
+ * Version: 3.3.2
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.3.0' );
+define( 'TA_VERSION', '3.3.2' );
 
 /**
  * Database version for migrations.
@@ -487,6 +487,40 @@ function ta_register_rest_routes() {
 			return current_user_can( 'manage_options' );
 		},
 	) );
+
+	// Headless citation tracking endpoint (API key authenticated).
+	register_rest_route( 'third-audience/v1', '/track-citation', array(
+		'methods'             => 'POST',
+		'callback'            => 'ta_track_citation_callback',
+		'permission_callback' => 'ta_verify_citation_api_key',
+		'args'                => array(
+			'url'          => array(
+				'required'          => true,
+				'type'              => 'string',
+				'sanitize_callback' => 'esc_url_raw',
+			),
+			'platform'     => array(
+				'required'          => true,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'referer'      => array(
+				'required'          => false,
+				'type'              => 'string',
+				'sanitize_callback' => 'esc_url_raw',
+			),
+			'search_query' => array(
+				'required'          => false,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'ip'           => array(
+				'required'          => false,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+		),
+	) );
 }
 add_action( 'rest_api_init', 'ta_register_rest_routes' );
 
@@ -560,6 +594,121 @@ function ta_self_test_callback( $request ) {
 	$http_status = $results['failed'] > 0 ? 500 : 200;
 
 	return new WP_REST_Response( $results, $http_status );
+}
+
+/**
+ * Verify API key for headless citation tracking.
+ *
+ * @since 3.3.2
+ * @param WP_REST_Request $request The request object.
+ * @return bool|WP_Error True if valid, WP_Error if not.
+ */
+function ta_verify_citation_api_key( $request ) {
+	$api_key = $request->get_header( 'X-TA-Api-Key' );
+
+	// Get configured API key from options.
+	$configured_key = get_option( 'ta_headless_api_key', '' );
+
+	// If no key configured, generate one and allow first request.
+	if ( empty( $configured_key ) ) {
+		$configured_key = wp_generate_password( 32, false );
+		update_option( 'ta_headless_api_key', $configured_key );
+	}
+
+	// Verify key matches.
+	if ( empty( $api_key ) || ! hash_equals( $configured_key, $api_key ) ) {
+		return new WP_Error(
+			'unauthorized',
+			__( 'Invalid or missing API key.', 'third-audience' ),
+			array( 'status' => 401 )
+		);
+	}
+
+	return true;
+}
+
+/**
+ * Track citation callback for headless frontends.
+ *
+ * @since 3.3.2
+ * @param WP_REST_Request $request The request object.
+ * @return WP_REST_Response
+ */
+function ta_track_citation_callback( $request ) {
+	global $wpdb;
+
+	$url          = $request->get_param( 'url' );
+	$platform     = $request->get_param( 'platform' );
+	$referer      = $request->get_param( 'referer' );
+	$search_query = $request->get_param( 'search_query' );
+	$ip           = $request->get_param( 'ip' ) ?: 'unknown';
+
+	// Determine platform color.
+	$platform_colors = array(
+		'ChatGPT'           => '#10A37F',
+		'ChatGPT Search'    => '#10A37F',
+		'Perplexity'        => '#1FB6D0',
+		'Claude'            => '#D97757',
+		'Gemini'            => '#4285F4',
+		'Google AI Overview' => '#4285F4',
+		'Copilot'           => '#00BCF2',
+		'Bing AI'           => '#008373',
+	);
+	$platform_color = isset( $platform_colors[ $platform ] ) ? $platform_colors[ $platform ] : '#8B5CF6';
+
+	// Get page title from URL if possible.
+	$page_title = '';
+	$post_id    = url_to_postid( $url );
+	if ( $post_id ) {
+		$page_title = get_the_title( $post_id );
+	}
+
+	// Insert into bot analytics table.
+	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+	$result     = $wpdb->insert(
+		$table_name,
+		array(
+			'page_url'      => $url,
+			'page_title'    => $page_title,
+			'bot_name'      => $platform,
+			'bot_type'      => 'ai_citation',
+			'user_agent'    => 'Headless Frontend',
+			'ip_address'    => $ip,
+			'referer'       => $referer,
+			'status_code'   => 200,
+			'response_time' => 0,
+			'cache_hit'     => 0,
+			'is_citation'   => 1,
+			'search_query'  => $search_query,
+			'visited_at'    => current_time( 'mysql' ),
+		),
+		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%s', '%s' )
+	);
+
+	if ( false === $result ) {
+		return new WP_REST_Response( array(
+			'success' => false,
+			'error'   => 'Database insert failed',
+		), 500 );
+	}
+
+	// Log the citation.
+	if ( class_exists( 'TA_Logger' ) ) {
+		$logger = TA_Logger::get_instance();
+		$logger->log( sprintf(
+			'Citation tracked via API: %s from %s (query: %s)',
+			$url,
+			$platform,
+			$search_query ?: 'none'
+		), 'info' );
+	}
+
+	return new WP_REST_Response( array(
+		'success'  => true,
+		'message'  => 'Citation tracked successfully',
+		'platform' => $platform,
+		'url'      => $url,
+	), 200 );
 }
 
 /**

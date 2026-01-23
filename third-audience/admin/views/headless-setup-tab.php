@@ -225,14 +225,137 @@ $api_key  = $wizard->get_api_key();
 		</div>
 	<?php endif; ?>
 
+	<!-- Citation Tracking Section -->
+	<div class="ta-settings-section" style="margin-top: 30px;">
+		<h2><?php esc_html_e( 'Citation Tracking API', 'third-audience' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Track AI citation clicks (utm_source=chatgpt.com, etc.) from your headless frontend.', 'third-audience' ); ?>
+		</p>
+
+		<?php
+		$citation_api_key = get_option( 'ta_headless_api_key', '' );
+		if ( empty( $citation_api_key ) ) {
+			$citation_api_key = wp_generate_password( 32, false );
+			update_option( 'ta_headless_api_key', $citation_api_key );
+		}
+		$citation_endpoint = rest_url( 'third-audience/v1/track-citation' );
+		?>
+
+		<table class="form-table" role="presentation">
+			<tr>
+				<th scope="row">
+					<label><?php esc_html_e( 'Citation API Endpoint', 'third-audience' ); ?></label>
+				</th>
+				<td>
+					<code style="font-size: 14px; padding: 8px; background: #f0f0f1; display: inline-block;">
+						POST <?php echo esc_html( $citation_endpoint ); ?>
+					</code>
+					<button type="button" class="button" onclick="navigator.clipboard.writeText('<?php echo esc_js( $citation_endpoint ); ?>'); alert('Endpoint URL copied!');">
+						<?php esc_html_e( 'Copy', 'third-audience' ); ?>
+					</button>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row">
+					<label><?php esc_html_e( 'Citation API Key', 'third-audience' ); ?></label>
+				</th>
+				<td>
+					<code style="font-size: 14px; padding: 8px; background: #f0f0f1; display: inline-block;">
+						<?php echo esc_html( $citation_api_key ); ?>
+					</code>
+					<button type="button" class="button" onclick="navigator.clipboard.writeText('<?php echo esc_js( $citation_api_key ); ?>'); alert('API Key copied!');">
+						<?php esc_html_e( 'Copy', 'third-audience' ); ?>
+					</button>
+					<p class="description">
+						<?php esc_html_e( 'Send this key in X-TA-Api-Key header.', 'third-audience' ); ?>
+					</p>
+				</td>
+			</tr>
+		</table>
+
+		<div style="margin-top: 15px;">
+			<h3><?php esc_html_e( 'Next.js Middleware for Citation Tracking', 'third-audience' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Add this to your middleware.ts to track AI citations:', 'third-audience' ); ?></p>
+			<pre style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 13px;"><code>// .env.local
+TA_CITATION_API_URL=<?php echo esc_html( $citation_endpoint ); ?>
+
+TA_CITATION_API_KEY=<?php echo esc_html( $citation_api_key ); ?>
+
+
+// middleware.ts - Add this detection code
+const AI_CITATION_SOURCES = [
+  { pattern: /chatgpt/i, name: 'ChatGPT' },
+  { pattern: /perplexity/i, name: 'Perplexity' },
+  { pattern: /claude/i, name: 'Claude' },
+  { pattern: /gemini/i, name: 'Gemini' },
+];
+
+function detectAICitation(request: NextRequest): { platform: string; query?: string } | null {
+  const url = request.nextUrl;
+  const referer = request.headers.get('referer') || '';
+
+  // Check UTM parameters
+  const utmSource = url.searchParams.get('utm_source');
+  if (utmSource) {
+    for (const source of AI_CITATION_SOURCES) {
+      if (source.pattern.test(utmSource)) {
+        return { platform: source.name };
+      }
+    }
+  }
+
+  // Check referer
+  for (const source of AI_CITATION_SOURCES) {
+    if (source.pattern.test(referer)) {
+      // Extract query from Perplexity referer
+      if (source.name === 'Perplexity' && referer.includes('?q=')) {
+        const match = referer.match(/[?&]q=([^&]+)/);
+        return { platform: source.name, query: match ? decodeURIComponent(match[1]) : undefined };
+      }
+      return { platform: source.name };
+    }
+  }
+
+  return null;
+}
+
+// In your middleware function:
+export async function middleware(request: NextRequest) {
+  const citation = detectAICitation(request);
+  if (citation) {
+    // Fire and forget - non-blocking
+    fetch(process.env.TA_CITATION_API_URL!, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-TA-Api-Key': process.env.TA_CITATION_API_KEY!,
+      },
+      body: JSON.stringify({
+        url: request.nextUrl.pathname,
+        platform: citation.platform,
+        referer: request.headers.get('referer') || '',
+        search_query: citation.query || '',
+        ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+      }),
+    }).catch(() => {}); // Ignore errors
+  }
+
+  return NextResponse.next();
+}</code></pre>
+			<button type="button" class="button" onclick="navigator.clipboard.writeText(document.querySelector('pre code').textContent); alert('Code copied!');">
+				<?php esc_html_e( 'Copy Code', 'third-audience' ); ?>
+			</button>
+		</div>
+	</div>
+
 	<!-- Help Section -->
 	<div class="ta-settings-section" style="margin-top: 30px; background: #f0f6fc; padding: 20px; border-left: 4px solid #0073aa;">
 		<h3 style="margin-top: 0;"><?php esc_html_e( 'Next Steps', 'third-audience' ); ?></h3>
 		<ol style="line-height: 1.8;">
 			<li><?php esc_html_e( 'Copy the API key and add it to your frontend\'s environment variables', 'third-audience' ); ?></li>
-			<li><?php esc_html_e( 'Add the provided code snippet to your Next.js/framework project', 'third-audience' ); ?></li>
+			<li><?php esc_html_e( 'Add the citation tracking middleware code to your Next.js project', 'third-audience' ); ?></li>
 			<li><?php esc_html_e( 'Configure CORS headers on your WordPress server', 'third-audience' ); ?></li>
-			<li><?php esc_html_e( 'Test the connection by fetching markdown from your frontend', 'third-audience' ); ?></li>
+			<li><?php esc_html_e( 'Test by visiting your site with ?utm_source=chatgpt.com', 'third-audience' ); ?></li>
 		</ol>
 	</div>
 <?php endif; ?>
