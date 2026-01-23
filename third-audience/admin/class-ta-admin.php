@@ -88,6 +88,7 @@ class TA_Admin {
 		add_action( 'admin_post_ta_clear_cache', array( $this, 'handle_clear_cache' ) );
 		add_action( 'admin_post_ta_test_smtp', array( $this, 'handle_test_smtp' ) );
 		add_action( 'admin_post_ta_clear_errors', array( $this, 'handle_clear_errors' ) );
+		add_action( 'admin_post_ta_export_errors', array( $this, 'handle_export_errors' ) );
 
 		// Initialize delegated handler classes.
 		$this->init_handler_classes();
@@ -835,6 +836,50 @@ class TA_Admin {
 		add_settings_error( 'ta_messages', 'ta_errors_cleared', __( 'Error logs cleared.', 'third-audience' ), 'success' );
 
 		$this->redirect_to_settings( 'logs' );
+	}
+
+	/**
+	 * Handle export errors action.
+	 *
+	 * @since 3.3.2
+	 * @return void
+	 */
+	public function handle_export_errors() {
+		$this->security->verify_admin_capability();
+
+		// Verify nonce.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'ta_export_errors' ) ) {
+			wp_die( esc_html__( 'Security check failed.', 'third-audience' ), esc_html__( 'Error', 'third-audience' ), array( 'response' => 403 ) );
+		}
+
+		// Get errors and stats.
+		$errors = $this->logger->get_recent_errors( 100 ); // Get up to 100 errors.
+		$stats  = $this->logger->get_error_stats();
+
+		// Build export data.
+		$export_data = array(
+			'exported_at'   => gmdate( 'Y-m-d H:i:s' ) . ' UTC',
+			'site_url'      => home_url(),
+			'plugin_version' => TA_VERSION,
+			'php_version'   => PHP_VERSION,
+			'wp_version'    => get_bloginfo( 'version' ),
+			'statistics'    => $stats,
+			'errors'        => $errors,
+		);
+
+		// Set headers for JSON download.
+		$filename = 'third-audience-logs-' . gmdate( 'Y-m-d-His' ) . '.json';
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'Cache-Control: no-cache, no-store, must-revalidate' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo wp_json_encode( $export_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		exit;
 	}
 
 	/**

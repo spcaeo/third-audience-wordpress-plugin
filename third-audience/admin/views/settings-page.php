@@ -1005,13 +1005,21 @@ $security = TA_Security::get_instance();
 						<div class="ta-card">
 							<div class="ta-card-header">
 								<h2><?php esc_html_e( 'Recent Errors', 'third-audience' ); ?></h2>
-								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline">
-									<?php $security->nonce_field( 'clear_errors' ); ?>
-									<input type="hidden" name="action" value="ta_clear_errors" />
-									<button type="submit" class="button button-secondary" id="ta-clear-errors-btn">
-										<?php esc_html_e( 'Clear Errors', 'third-audience' ); ?>
-									</button>
-								</form>
+								<div class="ta-header-actions">
+									<?php if ( ! empty( $recent_errors ) ) : ?>
+									<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ta_export_errors' ), 'ta_export_errors', '_wpnonce' ) ); ?>" class="button button-secondary" id="ta-export-errors-btn">
+										<span class="dashicons dashicons-download" style="vertical-align: middle; margin-right: 4px;"></span>
+										<?php esc_html_e( 'Export Logs', 'third-audience' ); ?>
+									</a>
+									<?php endif; ?>
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline" style="display: inline;">
+										<?php $security->nonce_field( 'clear_errors' ); ?>
+										<input type="hidden" name="action" value="ta_clear_errors" />
+										<button type="submit" class="button button-secondary" id="ta-clear-errors-btn">
+											<?php esc_html_e( 'Clear Errors', 'third-audience' ); ?>
+										</button>
+									</form>
+								</div>
 							</div>
 
 							<?php if ( empty( $recent_errors ) ) : ?>
