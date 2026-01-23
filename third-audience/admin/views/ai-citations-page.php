@@ -130,6 +130,109 @@ $top_cited_pages = $wpdb->get_results(
 	LIMIT 10",
 	ARRAY_A
 );
+
+// === CHART DATA (v3.2.1) ===
+
+// Daily citations for last 30 days (for trend chart).
+$daily_citations = $wpdb->get_results(
+	"SELECT
+		DATE(visit_timestamp) as date,
+		COUNT(*) as citations
+	FROM {$table_name}
+	WHERE traffic_type = 'citation_click'
+		AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+	GROUP BY DATE(visit_timestamp)
+	ORDER BY date ASC",
+	ARRAY_A
+);
+
+// Daily crawls for last 30 days (for comparison chart).
+$daily_crawls = $wpdb->get_results(
+	"SELECT
+		DATE(visit_timestamp) as date,
+		COUNT(*) as crawls
+	FROM {$table_name}
+	WHERE traffic_type = 'bot_crawl'
+		AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+	GROUP BY DATE(visit_timestamp)
+	ORDER BY date ASC",
+	ARRAY_A
+);
+
+// Build chart data arrays.
+$chart_labels      = array();
+$chart_citations   = array();
+$chart_crawls      = array();
+$citations_by_date = array();
+$crawls_by_date    = array();
+
+// Index by date for easy lookup.
+foreach ( $daily_citations as $row ) {
+	$citations_by_date[ $row['date'] ] = (int) $row['citations'];
+}
+foreach ( $daily_crawls as $row ) {
+	$crawls_by_date[ $row['date'] ] = (int) $row['crawls'];
+}
+
+// Generate labels for last 30 days.
+for ( $i = 29; $i >= 0; $i-- ) {
+	$date            = gmdate( 'Y-m-d', strtotime( "-{$i} days" ) );
+	$chart_labels[]  = gmdate( 'M j', strtotime( $date ) );
+	$chart_citations[] = isset( $citations_by_date[ $date ] ) ? $citations_by_date[ $date ] : 0;
+	$chart_crawls[]    = isset( $crawls_by_date[ $date ] ) ? $crawls_by_date[ $date ] : 0;
+}
+
+// Platform chart data (for pie/doughnut chart).
+$platform_labels = array();
+$platform_data   = array();
+$platform_colors = array(
+	'#007aff', // Blue
+	'#34c759', // Green
+	'#ff9500', // Orange
+	'#ff3b30', // Red
+	'#5856d6', // Purple
+	'#af52de', // Magenta
+	'#00c7be', // Teal
+	'#ff2d55', // Pink
+);
+
+foreach ( $citations_by_platform as $index => $platform ) {
+	$platform_labels[] = $platform['ai_platform'];
+	$platform_data[]   = (int) $platform['count'];
+}
+
+// Weekly comparison data (last 4 weeks).
+$weekly_data = array();
+for ( $week = 3; $week >= 0; $week-- ) {
+	$week_start = gmdate( 'Y-m-d', strtotime( "-{$week} weeks monday" ) );
+	$week_end   = gmdate( 'Y-m-d', strtotime( "-{$week} weeks sunday" ) );
+
+	$week_citations = $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT COUNT(*) FROM {$table_name}
+			WHERE traffic_type = 'citation_click'
+			AND DATE(visit_timestamp) BETWEEN %s AND %s",
+			$week_start,
+			$week_end
+		)
+	);
+
+	$week_crawls = $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT COUNT(*) FROM {$table_name}
+			WHERE traffic_type = 'bot_crawl'
+			AND DATE(visit_timestamp) BETWEEN %s AND %s",
+			$week_start,
+			$week_end
+		)
+	);
+
+	$weekly_data[] = array(
+		'label'     => 'Week of ' . gmdate( 'M j', strtotime( $week_start ) ),
+		'citations' => (int) $week_citations,
+		'crawls'    => (int) $week_crawls,
+	);
+}
 ?>
 
 <div class="wrap ta-bot-analytics">
@@ -235,6 +338,48 @@ $top_cited_pages = $wpdb->get_results(
 						?>
 					</p>
 				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Charts Section (v3.2.1) -->
+	<div class="ta-charts-section" style="margin-top: 20px;">
+		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+			<!-- Daily Trend Chart -->
+			<div class="ta-card">
+				<div class="ta-card-header">
+					<h2><?php esc_html_e( 'Citation Trend (Last 30 Days)', 'third-audience' ); ?></h2>
+				</div>
+				<div class="ta-card-body" style="padding: 20px;">
+					<canvas id="ta-citations-trend-chart" height="200"></canvas>
+				</div>
+			</div>
+
+			<!-- Platform Distribution Chart -->
+			<div class="ta-card">
+				<div class="ta-card-header">
+					<h2><?php esc_html_e( 'Platform Distribution', 'third-audience' ); ?></h2>
+				</div>
+				<div class="ta-card-body" style="padding: 20px; display: flex; justify-content: center; align-items: center;">
+					<?php if ( ! empty( $platform_data ) ) : ?>
+						<canvas id="ta-platform-chart" height="200" style="max-width: 300px;"></canvas>
+					<?php else : ?>
+						<p style="color: #646970; text-align: center;"><?php esc_html_e( 'No platform data yet', 'third-audience' ); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+		</div>
+
+		<!-- Weekly Comparison Chart -->
+		<div class="ta-card" style="margin-top: 20px;">
+			<div class="ta-card-header">
+				<h2><?php esc_html_e( 'Citations vs Crawls (Weekly)', 'third-audience' ); ?></h2>
+				<p class="description" style="margin-top: 8px;">
+					<?php esc_html_e( 'Compare how many AI bot crawls resulted in actual citation clicks from users.', 'third-audience' ); ?>
+				</p>
+			</div>
+			<div class="ta-card-body" style="padding: 20px;">
+				<canvas id="ta-weekly-comparison-chart" height="120"></canvas>
 			</div>
 		</div>
 	</div>
@@ -443,3 +588,166 @@ $top_cited_pages = $wpdb->get_results(
 		</div>
 	</div>
 </div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+	// Chart data from PHP
+	var chartLabels = <?php echo wp_json_encode( $chart_labels ); ?>;
+	var chartCitations = <?php echo wp_json_encode( $chart_citations ); ?>;
+	var chartCrawls = <?php echo wp_json_encode( $chart_crawls ); ?>;
+	var platformLabels = <?php echo wp_json_encode( $platform_labels ); ?>;
+	var platformData = <?php echo wp_json_encode( $platform_data ); ?>;
+	var weeklyData = <?php echo wp_json_encode( $weekly_data ); ?>;
+	var platformColors = <?php echo wp_json_encode( array_slice( $platform_colors, 0, count( $platform_labels ) ) ); ?>;
+
+	// Common chart options
+	var commonOptions = {
+		responsive: true,
+		maintainAspectRatio: true,
+		plugins: {
+			legend: {
+				display: true,
+				position: 'top',
+				labels: {
+					usePointStyle: true,
+					padding: 15,
+					font: { size: 12 }
+				}
+			}
+		}
+	};
+
+	// 1. Daily Trend Line Chart
+	var trendCtx = document.getElementById('ta-citations-trend-chart');
+	if (trendCtx) {
+		new Chart(trendCtx, {
+			type: 'line',
+			data: {
+				labels: chartLabels,
+				datasets: [
+					{
+						label: 'Citations',
+						data: chartCitations,
+						borderColor: '#007aff',
+						backgroundColor: 'rgba(0, 122, 255, 0.1)',
+						fill: true,
+						tension: 0.4,
+						pointRadius: 2,
+						pointHoverRadius: 5
+					},
+					{
+						label: 'Crawls',
+						data: chartCrawls,
+						borderColor: '#8e8e93',
+						backgroundColor: 'transparent',
+						borderDash: [5, 5],
+						tension: 0.4,
+						pointRadius: 0,
+						pointHoverRadius: 3
+					}
+				]
+			},
+			options: {
+				...commonOptions,
+				scales: {
+					y: {
+						beginAtZero: true,
+						grid: { color: 'rgba(0, 0, 0, 0.05)' },
+						ticks: { stepSize: 1 }
+					},
+					x: {
+						grid: { display: false },
+						ticks: {
+							maxTicksLimit: 10,
+							font: { size: 11 }
+						}
+					}
+				},
+				interaction: {
+					intersect: false,
+					mode: 'index'
+				}
+			}
+		});
+	}
+
+	// 2. Platform Distribution Doughnut Chart
+	var platformCtx = document.getElementById('ta-platform-chart');
+	if (platformCtx && platformData.length > 0) {
+		new Chart(platformCtx, {
+			type: 'doughnut',
+			data: {
+				labels: platformLabels,
+				datasets: [{
+					data: platformData,
+					backgroundColor: platformColors,
+					borderWidth: 2,
+					borderColor: '#ffffff'
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: true,
+				plugins: {
+					legend: {
+						position: 'bottom',
+						labels: {
+							usePointStyle: true,
+							padding: 12,
+							font: { size: 11 }
+						}
+					}
+				},
+				cutout: '60%'
+			}
+		});
+	}
+
+	// 3. Weekly Comparison Bar Chart
+	var weeklyCtx = document.getElementById('ta-weekly-comparison-chart');
+	if (weeklyCtx) {
+		var weekLabels = weeklyData.map(function(w) { return w.label; });
+		var weekCitations = weeklyData.map(function(w) { return w.citations; });
+		var weekCrawls = weeklyData.map(function(w) { return w.crawls; });
+
+		new Chart(weeklyCtx, {
+			type: 'bar',
+			data: {
+				labels: weekLabels,
+				datasets: [
+					{
+						label: 'Citations',
+						data: weekCitations,
+						backgroundColor: '#007aff',
+						borderRadius: 4
+					},
+					{
+						label: 'Crawls',
+						data: weekCrawls,
+						backgroundColor: '#e5e5ea',
+						borderRadius: 4
+					}
+				]
+			},
+			options: {
+				...commonOptions,
+				scales: {
+					y: {
+						beginAtZero: true,
+						grid: { color: 'rgba(0, 0, 0, 0.05)' },
+						ticks: { stepSize: 1 }
+					},
+					x: {
+						grid: { display: false }
+					}
+				},
+				barPercentage: 0.7,
+				categoryPercentage: 0.8
+			}
+		});
+	}
+});
+</script>
