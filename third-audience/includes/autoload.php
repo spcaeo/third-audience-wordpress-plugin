@@ -152,6 +152,12 @@ class TA_Autoloader {
 
 			// Admin classes
 			'TA_Admin'               => 'admin/class-ta-admin.php',
+			'TA_Cache_Admin'         => 'admin/class-ta-cache-admin.php',
+			'TA_Post_Columns'        => 'admin/class-ta-post-columns.php',
+
+			// Content analysis classes
+			'TA_Citation_Alerts'     => 'includes/class-ta-citation-alerts.php',
+			'TA_Content_Analyzer'    => 'includes/class-ta-content-analyzer.php',
 
 			// Admin AJAX handlers (extracted from TA_Admin v3.3.1)
 			'TA_Admin_AJAX_Cache'     => 'admin/AJAX/class-ta-admin-ajax-cache.php',

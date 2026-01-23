@@ -45,13 +45,6 @@ class TA_Admin {
 	private $notifications;
 
 	/**
-	 * Cache admin instance.
-	 *
-	 * @var TA_Cache_Admin
-	 */
-	private $cache_admin;
-
-	/**
 	 * Post columns instance.
 	 *
 	 * @var TA_Post_Columns
@@ -67,7 +60,6 @@ class TA_Admin {
 		$this->security      = TA_Security::get_instance();
 		$this->logger        = TA_Logger::get_instance();
 		$this->notifications = TA_Notifications::get_instance();
-		$this->cache_admin   = new TA_Cache_Admin( $this->security );
 		$this->post_columns  = new TA_Post_Columns();
 	}
 
@@ -86,7 +78,6 @@ class TA_Admin {
 		add_action( 'admin_notices', array( $this, 'display_configuration_notices' ) );
 
 		// Initialize sub-components.
-		$this->cache_admin->init();
 		$this->post_columns->init();
 
 		// AI-Friendliness Score meta box.

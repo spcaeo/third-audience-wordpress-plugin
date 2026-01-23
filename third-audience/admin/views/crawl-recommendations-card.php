@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Get recommendations from analyzer
 $analyzer        = new TA_Crawl_Budget_Analyzer();
-$bot_type        = isset( $_GET['bot_type'] ) ? sanitize_text_field( $_GET['bot_type'] ) : null;
+$bot_type        = isset( $_GET['bot_type'] ) ? sanitize_text_field( wp_unslash( $_GET['bot_type'] ) ) : null;
 $period_days     = isset( $_GET['period'] ) ? (int) $_GET['period'] : 7;
 $recommendations = $analyzer->analyze_crawl_budget( $bot_type, $period_days );
 $quick_fixes     = $analyzer->get_quick_fixes();

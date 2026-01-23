@@ -18,9 +18,9 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 // Handle form submission.
 if ( isset( $_POST['ta_save_digest_settings'] ) && check_admin_referer( 'ta_digest_settings' ) ) {
 	update_option( 'ta_email_digest_enabled', isset( $_POST['ta_digest_enabled'] ) );
-	update_option( 'ta_email_digest_frequency', sanitize_text_field( $_POST['ta_digest_frequency'] ?? 'daily' ) );
-	update_option( 'ta_email_digest_time', sanitize_text_field( $_POST['ta_digest_time'] ?? '09:00' ) );
-	update_option( 'ta_email_digest_recipients', sanitize_text_field( $_POST['ta_digest_recipients'] ?? '' ) );
+	update_option( 'ta_email_digest_frequency', sanitize_text_field( wp_unslash( $_POST['ta_digest_frequency'] ?? 'daily' ) ) );
+	update_option( 'ta_email_digest_time', sanitize_text_field( wp_unslash( $_POST['ta_digest_time'] ?? '09:00' ) ) );
+	update_option( 'ta_email_digest_recipients', sanitize_text_field( wp_unslash( $_POST['ta_digest_recipients'] ?? '' ) ) );
 	update_option( 'ta_email_digest_attach_md', isset( $_POST['ta_digest_attach_md'] ) );
 	update_option( 'ta_digest_include_bots', isset( $_POST['ta_include_bots'] ) );
 	update_option( 'ta_digest_include_pages', isset( $_POST['ta_include_pages'] ) );
