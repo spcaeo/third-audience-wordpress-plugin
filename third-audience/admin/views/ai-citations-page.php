@@ -274,13 +274,16 @@ for ( $week = 3; $week >= 0; $week-- ) {
 				<?php esc_html_e( 'Citation tracking will capture clicks when users visit your site from AI platforms.', 'third-audience' ); ?>
 			</p>
 			<div style="background: rgba(255,255,255,0.7); padding: 16px; border-radius: 6px; margin-bottom: 16px;">
-				<strong style="display: block; margin-bottom: 8px; color: #92400e;"><?php esc_html_e( 'How to Test Citation Tracking:', 'third-audience' ); ?></strong>
-				<ol style="margin: 0 0 0 20px; padding: 0; color: #78350f; line-height: 1.8;">
-					<li><?php printf( esc_html__( 'Open a new incognito/private browser window', 'third-audience' ) ); ?></li>
-					<li><?php printf( esc_html__( 'Visit any page on your site with a UTM parameter: %s', 'third-audience' ), '<code style="background: #fef3c7; padding: 2px 6px; border-radius: 3px;">?utm_source=chatgpt.com</code>' ); ?></li>
-					<li><?php printf( esc_html__( 'Example: %s', 'third-audience' ), '<code style="background: #fef3c7; padding: 2px 6px; border-radius: 3px;">' . esc_html( home_url( '/?utm_source=chatgpt.com' ) ) . '</code>' ); ?></li>
-					<li><?php esc_html_e( 'Refresh this page to see the citation appear', 'third-audience' ); ?></li>
-				</ol>
+				<strong style="display: block; margin-bottom: 8px; color: #92400e;"><?php esc_html_e( 'How Citations Are Captured (Automatically):', 'third-audience' ); ?></strong>
+				<ul style="margin: 0 0 12px 20px; padding: 0; color: #78350f; line-height: 1.8;">
+					<li><strong>ChatGPT:</strong> <?php esc_html_e( 'Automatically adds utm_source=chatgpt.com when users click links', 'third-audience' ); ?></li>
+					<li><strong>Perplexity:</strong> <?php esc_html_e( 'Sends referrer header with search query', 'third-audience' ); ?></li>
+					<li><strong>Claude, Gemini:</strong> <?php esc_html_e( 'Sends referrer header identifying the platform', 'third-audience' ); ?></li>
+				</ul>
+				<p style="margin: 0; padding: 8px 12px; background: #fef3c7; border-radius: 4px; font-size: 12px; color: #92400e;">
+					<span class="dashicons dashicons-info" style="font-size: 14px; width: 14px; height: 14px; margin-right: 4px;"></span>
+					<?php esc_html_e( 'Only traffic from recognized AI platforms is tracked. Random UTM parameters are ignored.', 'third-audience' ); ?>
+				</p>
 			</div>
 			<p style="margin: 0; color: #78350f; font-size: 13px;">
 				<strong><?php esc_html_e( 'Note:', 'third-audience' ); ?></strong>
