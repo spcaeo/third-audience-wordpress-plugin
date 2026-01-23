@@ -2,8 +2,8 @@
 /**
  * Admin - Settings page and admin functionality.
  *
- * Handles the admin interface, settings registration, AJAX handlers,
- * and SMTP/notification configuration.
+ * Handles the admin interface, settings registration, and admin page rendering.
+ * AJAX handlers are delegated to specialized handler classes (v3.3.1).
  *
  * @package ThirdAudience
  * @since   1.0.0
@@ -16,7 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class TA_Admin
  *
- * Admin functionality for Third Audience plugin.
+ * Admin functionality orchestrator for Third Audience plugin.
+ * Delegates AJAX and settings operations to specialized handler classes.
  *
  * @since 1.0.0
  */
@@ -77,82 +78,62 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function init() {
-		add_action( 'admin_init', array( $this, 'handle_export_request' ), 5 ); // Priority 5 to run early.
-		add_action( 'admin_init', array( $this, 'handle_digest_download' ), 5 ); // Handle .md report download early.
+		add_action( 'admin_init', array( $this, 'handle_export_request' ), 5 );
+		add_action( 'admin_init', array( $this, 'handle_digest_download' ), 5 );
 		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_notices', array( $this, 'display_configuration_notices' ) );
-		// Disabled: Citation drop alerts were too noisy.
-		// add_action( 'admin_notices', array( $this, 'display_citation_alerts' ) );
 
-		// Initialize cache admin (handles Cache Browser and Warmup).
+		// Initialize sub-components.
 		$this->cache_admin->init();
-
-		// Initialize post columns (AI score column).
 		$this->post_columns->init();
 
 		// AI-Friendliness Score meta box.
 		add_action( 'add_meta_boxes', array( $this, 'add_ai_score_metabox' ) );
 		add_action( 'save_post', array( $this, 'calculate_ai_score_on_save' ), 10, 2 );
 
-		// Admin post handlers.
+		// Admin post handlers (non-settings).
 		add_action( 'admin_post_ta_clear_cache', array( $this, 'handle_clear_cache' ) );
 		add_action( 'admin_post_ta_test_smtp', array( $this, 'handle_test_smtp' ) );
 		add_action( 'admin_post_ta_clear_errors', array( $this, 'handle_clear_errors' ) );
-		add_action( 'admin_post_ta_save_smtp_settings', array( $this, 'handle_save_smtp_settings' ) );
-		add_action( 'admin_post_ta_save_notification_settings', array( $this, 'handle_save_notification_settings' ) );
-		add_action( 'admin_post_ta_save_bot_config', array( $this, 'handle_save_bot_config' ) );
-		add_action( 'admin_post_ta_save_headless_settings', array( $this, 'handle_save_headless_settings' ) );
-		add_action( 'admin_post_ta_save_ga4_settings', array( $this, 'handle_save_ga4_settings' ) );
 
-		// AJAX handlers.
+		// Initialize delegated handler classes.
+		$this->init_handler_classes();
+
+		// Core AJAX handlers that remain in this class.
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
-		add_action( 'wp_ajax_ta_clear_cache', array( $this, 'ajax_clear_cache' ) );
-		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
 		add_action( 'wp_ajax_ta_clear_all_visits', array( $this, 'ajax_clear_all_visits' ) );
-		add_action( 'wp_ajax_ta_delete_cache_entry', array( $this, 'ajax_delete_cache_entry' ) );
-		add_action( 'wp_ajax_ta_bulk_delete_cache', array( $this, 'ajax_bulk_delete_cache' ) );
-		add_action( 'wp_ajax_ta_clear_expired_cache', array( $this, 'ajax_clear_expired_cache' ) );
-		add_action( 'wp_ajax_ta_regenerate_cache', array( $this, 'ajax_regenerate_cache' ) );
-		add_action( 'wp_ajax_ta_view_cache_content', array( $this, 'ajax_view_cache_content' ) );
-		add_action( 'wp_ajax_ta_get_warmup_stats', array( $this, 'ajax_get_warmup_stats' ) );
-		add_action( 'wp_ajax_ta_warm_cache_batch', array( $this, 'ajax_warm_cache_batch' ) );
-		add_action( 'wp_ajax_ta_get_recent_accesses', array( $this, 'ajax_get_recent_accesses' ) );
-		add_action( 'wp_ajax_ta_regenerate_all_markdown', array( $this, 'ajax_regenerate_all_markdown' ) );
-		add_action( 'wp_ajax_ta_dismiss_alert', array( $this, 'ajax_dismiss_alert' ) );
+		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
 		add_action( 'wp_ajax_ta_update_robots_txt', array( $this, 'ajax_update_robots_txt' ) );
+		add_action( 'wp_ajax_ta_dismiss_alert', array( $this, 'ajax_dismiss_alert' ) );
 		add_action( 'wp_ajax_ta_recalculate_ai_score', array( $this, 'ajax_recalculate_ai_score' ) );
 		add_action( 'wp_ajax_ta_test_ga4_connection', array( $this, 'ajax_test_ga4_connection' ) );
-
-		// Competitor Benchmarking AJAX handlers.
-		add_action( 'wp_ajax_ta_add_competitor', array( $this, 'ajax_add_competitor' ) );
-		add_action( 'wp_ajax_ta_delete_competitor', array( $this, 'ajax_delete_competitor' ) );
-		add_action( 'wp_ajax_ta_generate_prompts', array( $this, 'ajax_generate_prompts' ) );
-		add_action( 'wp_ajax_ta_record_test', array( $this, 'ajax_record_test' ) );
-		add_action( 'wp_ajax_ta_delete_test', array( $this, 'ajax_delete_test' ) );
-
-		// Email Digest AJAX handlers.
 		add_action( 'wp_ajax_ta_send_test_digest', array( $this, 'ajax_send_test_digest' ) );
+	}
 
-		// Session Analytics drill-down AJAX handler.
-		add_action( 'wp_ajax_ta_get_session_details', array( $this, 'ajax_get_session_details' ) );
+	/**
+	 * Initialize delegated handler classes.
+	 *
+	 * @since 3.3.1
+	 * @return void
+	 */
+	private function init_handler_classes() {
+		// Cache AJAX handlers.
+		$cache_ajax = TA_Admin_AJAX_Cache::get_instance();
+		$cache_ajax->register_hooks();
 
-		// Hero Metrics drill-down AJAX handler.
-		add_action( 'wp_ajax_ta_get_hero_metric_details', array( $this, 'ajax_get_hero_metric_details' ) );
+		// Analytics AJAX handlers.
+		$analytics_ajax = TA_Admin_AJAX_Analytics::get_instance();
+		$analytics_ajax->register_hooks();
 
-		// Bot Management diagnostic modal AJAX handler.
-		add_action( 'wp_ajax_ta_get_bot_details', array( $this, 'ajax_get_bot_details' ) );
+		// Benchmark AJAX handlers.
+		$benchmark_ajax = TA_Admin_AJAX_Benchmark::get_instance();
+		$benchmark_ajax->register_hooks();
 
-		// Metadata settings hooks - clear pre-generated markdown when settings change.
-		add_action( 'update_option_ta_enable_enhanced_metadata', array( $this, 'on_metadata_settings_change' ), 10, 2 );
-		add_action( 'update_option_ta_metadata_word_count', array( $this, 'on_metadata_settings_change' ), 10, 2 );
-		add_action( 'update_option_ta_metadata_reading_time', array( $this, 'on_metadata_settings_change' ), 10, 2 );
-		add_action( 'update_option_ta_metadata_summary', array( $this, 'on_metadata_settings_change' ), 10, 2 );
-		add_action( 'update_option_ta_metadata_language', array( $this, 'on_metadata_settings_change' ), 10, 2 );
-		add_action( 'update_option_ta_metadata_last_modified', array( $this, 'on_metadata_settings_change' ), 10, 2 );
-		add_action( 'update_option_ta_metadata_schema_type', array( $this, 'on_metadata_settings_change' ), 10, 2 );
-		add_action( 'update_option_ta_metadata_related_posts', array( $this, 'on_metadata_settings_change' ), 10, 2 );
+		// Settings handlers.
+		$settings = TA_Admin_Settings::get_instance();
+		$settings->register_hooks();
 	}
 
 	/**
@@ -176,125 +157,47 @@ class TA_Admin {
 		);
 
 		if ( in_array( $hook, $ta_pages, true ) ) {
-			wp_enqueue_style(
-				'ta-apple-theme',
-				TA_PLUGIN_URL . 'admin/css/apple-theme.css',
-				array(),
-				TA_VERSION
-			);
+			wp_enqueue_style( 'ta-apple-theme', TA_PLUGIN_URL . 'admin/css/apple-theme.css', array(), TA_VERSION );
 		}
 
 		// Settings page.
 		if ( 'settings_page_third-audience' === $hook ) {
-			wp_enqueue_style(
-				'ta-admin',
-				TA_PLUGIN_URL . 'admin/css/admin.css',
-				array(),
-				TA_VERSION
-			);
-
-			wp_enqueue_script(
-				'ta-admin',
-				TA_PLUGIN_URL . 'admin/js/admin.js',
-				array( 'jquery' ),
-				TA_VERSION,
-				true
-			);
-
+			wp_enqueue_style( 'ta-admin', TA_PLUGIN_URL . 'admin/css/admin.css', array(), TA_VERSION );
+			wp_enqueue_script( 'ta-admin', TA_PLUGIN_URL . 'admin/js/admin.js', array( 'jquery' ), TA_VERSION, true );
 			wp_localize_script( 'ta-admin', 'taAdmin', array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => $this->security->create_nonce( 'admin_ajax' ),
 				'homeUrl' => trailingslashit( home_url() ),
 				'i18n'    => array(
-					'testing'        => __( 'Testing...', 'third-audience' ),
-					'clearing'       => __( 'Clearing...', 'third-audience' ),
-					'success'        => __( 'Success!', 'third-audience' ),
-					'error'          => __( 'Error', 'third-audience' ),
-					'confirmClear'   => __( 'Are you sure you want to clear all cached items?', 'third-audience' ),
+					'testing'            => __( 'Testing...', 'third-audience' ),
+					'clearing'           => __( 'Clearing...', 'third-audience' ),
+					'success'            => __( 'Success!', 'third-audience' ),
+					'error'              => __( 'Error', 'third-audience' ),
+					'confirmClear'       => __( 'Are you sure you want to clear all cached items?', 'third-audience' ),
 					'confirmClearErrors' => __( 'Are you sure you want to clear all error logs?', 'third-audience' ),
 				),
 			) );
-
-			// Add nonce for WordPress AJAX settings (for alert dismissal).
-			wp_localize_script( 'ta-admin', 'wpAjax', array(
-				'nonce' => wp_create_nonce( 'ta_dismiss_alert' ),
-			) );
+			wp_localize_script( 'ta-admin', 'wpAjax', array( 'nonce' => wp_create_nonce( 'ta_dismiss_alert' ) ) );
 		}
 
 		// Bot Analytics page.
 		if ( 'toplevel_page_third-audience-bot-analytics' === $hook ) {
-			// Enqueue Chart.js from CDN.
-			wp_enqueue_script(
-				'chartjs',
-				'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
-				array(),
-				'4.4.0',
-				true
-			);
-
-			// Enqueue bot analytics styles.
-			wp_enqueue_style(
-				'ta-bot-analytics',
-				TA_PLUGIN_URL . 'admin/css/bot-analytics.css',
-				array(),
-				TA_VERSION
-			);
-
-			// Enqueue bot analytics scripts.
-			wp_enqueue_script(
-				'ta-bot-analytics',
-				TA_PLUGIN_URL . 'admin/js/bot-analytics.js',
-				array( 'jquery', 'chartjs' ),
-				TA_VERSION,
-				true
-			);
+			wp_enqueue_script( 'chartjs', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js', array(), '4.4.0', true );
+			wp_enqueue_style( 'ta-bot-analytics', TA_PLUGIN_URL . 'admin/css/bot-analytics.css', array(), TA_VERSION );
+			wp_enqueue_script( 'ta-bot-analytics', TA_PLUGIN_URL . 'admin/js/bot-analytics.js', array( 'jquery', 'chartjs' ), TA_VERSION, true );
 		}
 
 		// AI Citations page.
 		if ( 'bot-analytics_page_third-audience-ai-citations' === $hook ) {
-			// Enqueue bot analytics styles (reuse existing styles).
-			wp_enqueue_style(
-				'ta-bot-analytics',
-				TA_PLUGIN_URL . 'admin/css/bot-analytics.css',
-				array(),
-				TA_VERSION
-			);
-
-			// Enqueue bot analytics JavaScript for filter toggle.
-			wp_enqueue_script(
-				'ta-bot-analytics',
-				TA_PLUGIN_URL . 'admin/js/bot-analytics.js',
-				array( 'jquery' ),
-				TA_VERSION,
-				true
-			);
+			wp_enqueue_style( 'ta-bot-analytics', TA_PLUGIN_URL . 'admin/css/bot-analytics.css', array(), TA_VERSION );
+			wp_enqueue_script( 'ta-bot-analytics', TA_PLUGIN_URL . 'admin/js/bot-analytics.js', array( 'jquery' ), TA_VERSION, true );
 		}
 
 		// Cache Browser page.
 		if ( 'bot-analytics_page_third-audience-cache-browser' === $hook ) {
-			// Enqueue shared bot analytics styles first.
-			wp_enqueue_style(
-				'ta-bot-analytics',
-				TA_PLUGIN_URL . 'admin/css/bot-analytics.css',
-				array(),
-				TA_VERSION
-			);
-
-			wp_enqueue_style(
-				'ta-cache-browser',
-				TA_PLUGIN_URL . 'admin/css/cache-browser.css',
-				array( 'ta-bot-analytics' ),
-				TA_VERSION
-			);
-
-			wp_enqueue_script(
-				'ta-cache-browser',
-				TA_PLUGIN_URL . 'admin/js/cache-browser.js',
-				array( 'jquery' ),
-				TA_VERSION,
-				true
-			);
-
+			wp_enqueue_style( 'ta-bot-analytics', TA_PLUGIN_URL . 'admin/css/bot-analytics.css', array(), TA_VERSION );
+			wp_enqueue_style( 'ta-cache-browser', TA_PLUGIN_URL . 'admin/css/cache-browser.css', array( 'ta-bot-analytics' ), TA_VERSION );
+			wp_enqueue_script( 'ta-cache-browser', TA_PLUGIN_URL . 'admin/js/cache-browser.js', array( 'jquery' ), TA_VERSION, true );
 			wp_localize_script( 'ta-cache-browser', 'taCacheBrowser', array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => $this->security->create_nonce( 'cache_browser' ),
@@ -312,56 +215,33 @@ class TA_Admin {
 
 		// Bot Management page.
 		if ( 'bot-analytics_page_third-audience-bot-management' === $hook ) {
-			wp_enqueue_style(
-				'ta-bot-management',
-				TA_PLUGIN_URL . 'admin/css/bot-management.css',
-				array(),
-				TA_VERSION
-			);
+			wp_enqueue_style( 'ta-bot-management', TA_PLUGIN_URL . 'admin/css/bot-management.css', array(), TA_VERSION );
 		}
 
 		// System Health page.
 		if ( 'bot-analytics_page_third-audience-system-health' === $hook ) {
-			wp_enqueue_style(
-				'ta-system-health',
-				TA_PLUGIN_URL . 'admin/css/system-health.css',
-				array(),
-				TA_VERSION
-			);
+			wp_enqueue_style( 'ta-system-health', TA_PLUGIN_URL . 'admin/css/system-health.css', array(), TA_VERSION );
 		}
 
 		// Competitor Benchmarking page.
 		if ( 'bot-analytics_page_third-audience-competitor-benchmarking' === $hook ) {
-			wp_enqueue_style(
-				'ta-competitor-benchmarking',
-				TA_PLUGIN_URL . 'admin/css/competitor-benchmarking.css',
-				array( 'ta-apple-theme' ),
-				TA_VERSION
-			);
-
-			wp_enqueue_script(
-				'ta-competitor-benchmarking',
-				TA_PLUGIN_URL . 'admin/js/competitor-benchmarking.js',
-				array( 'jquery' ),
-				TA_VERSION,
-				true
-			);
-
+			wp_enqueue_style( 'ta-competitor-benchmarking', TA_PLUGIN_URL . 'admin/css/competitor-benchmarking.css', array( 'ta-apple-theme' ), TA_VERSION );
+			wp_enqueue_script( 'ta-competitor-benchmarking', TA_PLUGIN_URL . 'admin/js/competitor-benchmarking.js', array( 'jquery' ), TA_VERSION, true );
 			wp_localize_script( 'ta-competitor-benchmarking', 'taCompetitorBenchmarking', array(
 				'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
 				'nonce'      => $this->security->create_nonce( 'competitor_benchmarking' ),
 				'resultsUrl' => admin_url( 'admin.php?page=third-audience-competitor-benchmarking&tab=results' ),
 				'i18n'       => array(
-					'saving'                   => __( 'Saving...', 'third-audience' ),
-					'generating'               => __( 'Generating...', 'third-audience' ),
-					'error'                    => __( 'An error occurred. Please try again.', 'third-audience' ),
-					'selectCompetitor'         => __( 'Please select a competitor first.', 'third-audience' ),
-					'confirmDeleteCompetitor'  => __( 'Delete competitor "%s"? All associated test results will remain.', 'third-audience' ),
-					'confirmDeleteResult'      => __( 'Delete this test result?', 'third-audience' ),
-					'usePrompt'                => __( 'Use in Test', 'third-audience' ),
-					'copied'                   => __( 'Copied!', 'third-audience' ),
-					'copyFailed'               => __( 'Failed to copy. Please copy manually.', 'third-audience' ),
-					'fillFields'               => __( 'Fill in the fields above to generate a custom prompt...', 'third-audience' ),
+					'saving'                  => __( 'Saving...', 'third-audience' ),
+					'generating'              => __( 'Generating...', 'third-audience' ),
+					'error'                   => __( 'An error occurred. Please try again.', 'third-audience' ),
+					'selectCompetitor'        => __( 'Please select a competitor first.', 'third-audience' ),
+					'confirmDeleteCompetitor' => __( 'Delete competitor "%s"? All associated test results will remain.', 'third-audience' ),
+					'confirmDeleteResult'     => __( 'Delete this test result?', 'third-audience' ),
+					'usePrompt'               => __( 'Use in Test', 'third-audience' ),
+					'copied'                  => __( 'Copied!', 'third-audience' ),
+					'copyFailed'              => __( 'Failed to copy. Please copy manually.', 'third-audience' ),
+					'fillFields'              => __( 'Fill in the fields above to generate a custom prompt...', 'third-audience' ),
 				),
 			) );
 		}
@@ -369,21 +249,8 @@ class TA_Admin {
 		// AI Score meta box (post editor).
 		$screen = get_current_screen();
 		if ( $screen && in_array( $screen->base, array( 'post', 'page' ), true ) ) {
-			wp_enqueue_style(
-				'ta-ai-score',
-				TA_PLUGIN_URL . 'admin/css/ai-score.css',
-				array(),
-				TA_VERSION
-			);
-
-			wp_enqueue_script(
-				'ta-ai-score',
-				TA_PLUGIN_URL . 'admin/js/ai-score.js',
-				array( 'jquery' ),
-				TA_VERSION,
-				true
-			);
-
+			wp_enqueue_style( 'ta-ai-score', TA_PLUGIN_URL . 'admin/css/ai-score.css', array(), TA_VERSION );
+			wp_enqueue_script( 'ta-ai-score', TA_PLUGIN_URL . 'admin/js/ai-score.js', array( 'jquery' ), TA_VERSION, true );
 			wp_localize_script( 'ta-ai-score', 'taAIScore', array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => $this->security->create_nonce( 'ai_score' ),
@@ -398,7 +265,6 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function handle_export_request() {
-		// Only handle on bot analytics or AI citations page with export action.
 		if ( ! isset( $_GET['page'] ) ) {
 			return;
 		}
@@ -412,10 +278,8 @@ class TA_Admin {
 			return;
 		}
 
-		// Determine which nonce to check based on page.
 		$nonce_action = ( 'third-audience-ai-citations' === $page ) ? 'ta_export_citations' : 'ta_export_analytics';
 
-		// Verify nonce and capability.
 		if ( ! check_admin_referer( $nonce_action ) ) {
 			wp_die( esc_html__( 'Invalid security token.', 'third-audience' ) );
 		}
@@ -424,11 +288,9 @@ class TA_Admin {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'third-audience' ) );
 		}
 
-		// Get export format and type.
 		$export_format = isset( $_GET['export_format'] ) ? sanitize_text_field( wp_unslash( $_GET['export_format'] ) ) : 'csv';
 		$export_type   = isset( $_GET['export_type'] ) ? sanitize_text_field( wp_unslash( $_GET['export_type'] ) ) : 'detailed';
 
-		// Validate format and type.
 		if ( ! in_array( $export_format, array( 'csv', 'json' ), true ) ) {
 			$export_format = 'csv';
 		}
@@ -436,11 +298,9 @@ class TA_Admin {
 			$export_type = 'detailed';
 		}
 
-		// Prepare filters.
 		$analytics = TA_Bot_Analytics::get_instance();
 		$filters   = array();
 
-		// AI Citations page filters.
 		if ( 'third-audience-ai-citations' === $page ) {
 			if ( ! empty( $_GET['platform'] ) ) {
 				$filters['platform'] = sanitize_text_field( wp_unslash( $_GET['platform'] ) );
@@ -455,12 +315,10 @@ class TA_Admin {
 				$filters['search'] = sanitize_text_field( wp_unslash( $_GET['search'] ) );
 			}
 
-			// Export citations data.
 			$this->export_citations_to_csv( $filters );
 			exit;
 		}
 
-		// Bot Analytics page filters.
 		if ( ! empty( $_GET['bot_type'] ) ) {
 			$filters['bot_type'] = sanitize_text_field( wp_unslash( $_GET['bot_type'] ) );
 		}
@@ -471,7 +329,6 @@ class TA_Admin {
 			$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
 		}
 
-		// Export and exit.
 		if ( 'json' === $export_format ) {
 			$analytics->export_to_json( $filters, $export_type );
 		} else {
@@ -490,7 +347,6 @@ class TA_Admin {
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-		// Build WHERE clause.
 		$where_clauses = array( "traffic_type = 'citation_click'" );
 
 		if ( ! empty( $filters['platform'] ) ) {
@@ -509,122 +365,42 @@ class TA_Admin {
 
 		$where_sql = implode( ' AND ', $where_clauses );
 
-		// Query ALL fields for comprehensive export.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$results = $wpdb->get_results(
-			"SELECT
-				id,
-				bot_type,
-				bot_name,
-				user_agent,
-				url,
-				post_id,
-				post_type,
-				post_title,
-				request_method,
-				cache_status,
-				response_time,
-				response_size,
-				ip_address,
-				referer,
-				country_code,
-				traffic_type,
-				ai_platform,
-				search_query,
-				referer_source,
-				referer_medium,
-				detection_method,
-				confidence_score,
-				visit_timestamp,
-				created_at
+			"SELECT id, bot_type, bot_name, user_agent, url, post_id, post_type, post_title, request_method,
+				cache_status, response_time, response_size, ip_address, referer, country_code, traffic_type,
+				ai_platform, search_query, referer_source, referer_medium, detection_method, confidence_score,
+				visit_timestamp, created_at
 			FROM {$table_name}
 			WHERE {$where_sql}
 			ORDER BY visit_timestamp DESC",
 			ARRAY_A
 		);
 
-		// Generate filename.
 		$filename = 'ai-citations-' . gmdate( 'Y-m-d-H-i-s' ) . '.csv';
 
-		// Set headers for download.
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
 		header( 'Pragma: no-cache' );
 		header( 'Expires: 0' );
 
-		// Open output stream.
 		$output = fopen( 'php://output', 'w' );
-
-		// Add BOM for UTF-8.
 		fprintf( $output, chr( 0xEF ) . chr( 0xBB ) . chr( 0xBF ) );
 
-		// Add header metadata.
 		fputcsv( $output, array( 'Third Audience AI Citations Export' ) );
 		fputcsv( $output, array( 'Generated', gmdate( 'Y-m-d H:i:s' ) . ' UTC' ) );
 		fputcsv( $output, array( 'Total Records', count( $results ) ) );
 		fputcsv( $output, array() );
 
-		// CSV headers - ALL fields.
-		fputcsv(
-			$output,
-			array(
-				'ID',
-				'Bot Type',
-				'Bot Name',
-				'User Agent',
-				'URL',
-				'Post ID',
-				'Post Type',
-				'Post Title',
-				'Request Method',
-				'Cache Status',
-				'Response Time (ms)',
-				'Response Size',
-				'IP Address',
-				'Referer',
-				'Country Code',
-				'Traffic Type',
-				'AI Platform',
-				'Search Query',
-				'Referer Source',
-				'Referer Medium',
-				'Detection Method',
-				'Confidence Score',
-				'Visit Time (UTC)',
-				'Created At (UTC)',
-			)
-		);
+		fputcsv( $output, array(
+			'ID', 'Bot Type', 'Bot Name', 'User Agent', 'URL', 'Post ID', 'Post Type', 'Post Title',
+			'Request Method', 'Cache Status', 'Response Time (ms)', 'Response Size', 'IP Address', 'Referer',
+			'Country Code', 'Traffic Type', 'AI Platform', 'Search Query', 'Referer Source', 'Referer Medium',
+			'Detection Method', 'Confidence Score', 'Visit Time (UTC)', 'Created At (UTC)',
+		) );
 
-		// Export data rows.
 		foreach ( $results as $row ) {
-			fputcsv(
-				$output,
-				array(
-					$row['id'],
-					$row['bot_type'],
-					$row['bot_name'],
-					$row['user_agent'],
-					$row['url'],
-					$row['post_id'],
-					$row['post_type'],
-					$row['post_title'],
-					$row['request_method'],
-					$row['cache_status'],
-					$row['response_time'],
-					$row['response_size'],
-					$row['ip_address'],
-					$row['referer'],
-					$row['country_code'],
-					$row['traffic_type'],
-					$row['ai_platform'],
-					$row['search_query'],
-					$row['referer_source'],
-					$row['referer_medium'],
-					$row['detection_method'],
-					$row['confidence_score'],
-					$row['visit_timestamp'],
-					$row['created_at'],
-				)
-			);
+			fputcsv( $output, array_values( $row ) );
 		}
 
 		fclose( $output );
@@ -637,105 +413,16 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function add_settings_page() {
-		// Main settings page.
-		add_options_page(
-			__( 'Third Audience Settings', 'third-audience' ),
-			__( 'Third Audience', 'third-audience' ),
-			'manage_options',
-			'third-audience',
-			array( $this, 'render_settings_page' )
-		);
-
-		// Bot Analytics page (as top-level menu item).
-		add_menu_page(
-			__( 'Bot Analytics', 'third-audience' ),
-			__( 'Bot Analytics', 'third-audience' ),
-			'manage_options',
-			'third-audience-bot-analytics',
-			array( $this, 'render_bot_analytics_page' ),
-			'dashicons-chart-line',
-			30
-		);
-
-		// Bot Management submenu.
-		add_submenu_page(
-			'third-audience-bot-analytics',
-			__( 'Bot Management', 'third-audience' ),
-			__( 'Bot Management', 'third-audience' ),
-			'manage_options',
-			'third-audience-bot-management',
-			array( $this, 'render_bot_management_page' )
-		);
-
-		// AI Citations submenu.
-		add_submenu_page(
-			'third-audience-bot-analytics',
-			__( 'AI Citations', 'third-audience' ),
-			__( 'AI Citations', 'third-audience' ),
-			'manage_options',
-			'third-audience-ai-citations',
-			array( $this, 'render_ai_citations_page' )
-		);
-
-		// Cache Browser submenu.
-		add_submenu_page(
-			'third-audience-bot-analytics',
-			__( 'Cache Browser', 'third-audience' ),
-			__( 'Cache Browser', 'third-audience' ),
-			'manage_options',
-			'third-audience-cache-browser',
-			array( $this, 'render_cache_browser_page' )
-		);
-
-		// System Health submenu.
-		add_submenu_page(
-			'third-audience-bot-analytics',
-			__( 'System Health', 'third-audience' ),
-			__( 'System Health', 'third-audience' ),
-			'manage_options',
-			'third-audience-system-health',
-			array( $this, 'render_system_health_page' )
-		);
-
-		// Competitor Benchmarking submenu (hidden from menu, accessible via direct link).
-		add_submenu_page(
-			null, // Hidden from menu.
-			__( 'Competitor Benchmarking', 'third-audience' ),
-			__( 'Competitor Benchmarking', 'third-audience' ),
-			'manage_options',
-			'third-audience-competitor-benchmarking',
-			array( $this, 'render_competitor_benchmarking_page' )
-		);
-
-		// Email Digest submenu.
-		add_submenu_page(
-			'third-audience-bot-analytics',
-			__( 'Email Digest', 'third-audience' ),
-			__( 'Email Digest', 'third-audience' ),
-			'manage_options',
-			'third-audience-email-digest',
-			array( $this, 'render_email_digest_page' )
-		);
-
-		// About submenu (at the end).
-		add_submenu_page(
-			'third-audience-bot-analytics',
-			__( 'About', 'third-audience' ),
-			__( 'About', 'third-audience' ),
-			'manage_options',
-			'third-audience-about',
-			array( $this, 'render_about_page' )
-		);
-
-		// Citation Alerts submenu (hidden from menu, accessible via direct link).
-		add_submenu_page(
-			null, // Hidden from menu.
-			__( 'Citation Alerts', 'third-audience' ),
-			__( 'Citation Alerts', 'third-audience' ),
-			'manage_options',
-			'third-audience-citation-alerts',
-			array( $this, 'render_citation_alerts_page' )
-		);
+		add_options_page( __( 'Third Audience Settings', 'third-audience' ), __( 'Third Audience', 'third-audience' ), 'manage_options', 'third-audience', array( $this, 'render_settings_page' ) );
+		add_menu_page( __( 'Bot Analytics', 'third-audience' ), __( 'Bot Analytics', 'third-audience' ), 'manage_options', 'third-audience-bot-analytics', array( $this, 'render_bot_analytics_page' ), 'dashicons-chart-line', 30 );
+		add_submenu_page( 'third-audience-bot-analytics', __( 'Bot Management', 'third-audience' ), __( 'Bot Management', 'third-audience' ), 'manage_options', 'third-audience-bot-management', array( $this, 'render_bot_management_page' ) );
+		add_submenu_page( 'third-audience-bot-analytics', __( 'AI Citations', 'third-audience' ), __( 'AI Citations', 'third-audience' ), 'manage_options', 'third-audience-ai-citations', array( $this, 'render_ai_citations_page' ) );
+		add_submenu_page( 'third-audience-bot-analytics', __( 'Cache Browser', 'third-audience' ), __( 'Cache Browser', 'third-audience' ), 'manage_options', 'third-audience-cache-browser', array( $this, 'render_cache_browser_page' ) );
+		add_submenu_page( 'third-audience-bot-analytics', __( 'System Health', 'third-audience' ), __( 'System Health', 'third-audience' ), 'manage_options', 'third-audience-system-health', array( $this, 'render_system_health_page' ) );
+		add_submenu_page( null, __( 'Competitor Benchmarking', 'third-audience' ), __( 'Competitor Benchmarking', 'third-audience' ), 'manage_options', 'third-audience-competitor-benchmarking', array( $this, 'render_competitor_benchmarking_page' ) );
+		add_submenu_page( 'third-audience-bot-analytics', __( 'Email Digest', 'third-audience' ), __( 'Email Digest', 'third-audience' ), 'manage_options', 'third-audience-email-digest', array( $this, 'render_email_digest_page' ) );
+		add_submenu_page( 'third-audience-bot-analytics', __( 'About', 'third-audience' ), __( 'About', 'third-audience' ), 'manage_options', 'third-audience-about', array( $this, 'render_about_page' ) );
+		add_submenu_page( null, __( 'Citation Alerts', 'third-audience' ), __( 'Citation Alerts', 'third-audience' ), 'manage_options', 'third-audience-citation-alerts', array( $this, 'render_citation_alerts_page' ) );
 	}
 
 	/**
@@ -745,118 +432,24 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function register_settings() {
-		// Cache settings.
-		register_setting( 'ta_settings', 'ta_cache_ttl', array(
-			'type'              => 'integer',
-			'sanitize_callback' => 'absint',
-			'default'           => 86400,
-		) );
-
-		// Feature settings.
-		register_setting( 'ta_settings', 'ta_enabled_post_types', array(
-			'type'              => 'array',
-			'sanitize_callback' => array( $this->security, 'sanitize_post_types' ),
-			'default'           => array( 'post', 'page' ),
-		) );
-
-		register_setting( 'ta_settings', 'ta_enable_content_negotiation', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_enable_discovery_tags', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_enable_pre_generation', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		// Homepage markdown pattern.
-		register_setting( 'ta_settings', 'ta_homepage_md_pattern', array(
-			'type'              => 'string',
-			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
-			'default'           => 'index.md',
-		) );
-
-		register_setting( 'ta_settings', 'ta_homepage_md_pattern_custom', array(
-			'type'              => 'string',
-			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
-			'default'           => '',
-		) );
-
-		// AI-Optimized Metadata settings.
-		register_setting( 'ta_settings', 'ta_enable_enhanced_metadata', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_metadata_word_count', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_metadata_reading_time', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_metadata_summary', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_metadata_language', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_metadata_last_modified', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_metadata_schema_type', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		register_setting( 'ta_settings', 'ta_metadata_related_posts', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => true,
-		) );
-
-		// GA4 Integration settings.
-		register_setting( 'ta_settings', 'ta_ga4_enabled', array(
-			'type'              => 'boolean',
-			'sanitize_callback' => 'rest_sanitize_boolean',
-			'default'           => false,
-		) );
-
-		register_setting( 'ta_settings', 'ta_ga4_measurement_id', array(
-			'type'              => 'string',
-			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
-			'default'           => '',
-		) );
-
-		register_setting( 'ta_settings', 'ta_ga4_api_secret', array(
-			'type'              => 'string',
-			'sanitize_callback' => array( $this->security, 'sanitize_text' ),
-			'default'           => '',
-		) );
+		register_setting( 'ta_settings', 'ta_cache_ttl', array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 86400 ) );
+		register_setting( 'ta_settings', 'ta_enabled_post_types', array( 'type' => 'array', 'sanitize_callback' => array( $this->security, 'sanitize_post_types' ), 'default' => array( 'post', 'page' ) ) );
+		register_setting( 'ta_settings', 'ta_enable_content_negotiation', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_enable_discovery_tags', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_enable_pre_generation', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_homepage_md_pattern', array( 'type' => 'string', 'sanitize_callback' => array( $this->security, 'sanitize_text' ), 'default' => 'index.md' ) );
+		register_setting( 'ta_settings', 'ta_homepage_md_pattern_custom', array( 'type' => 'string', 'sanitize_callback' => array( $this->security, 'sanitize_text' ), 'default' => '' ) );
+		register_setting( 'ta_settings', 'ta_enable_enhanced_metadata', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_metadata_word_count', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_metadata_reading_time', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_metadata_summary', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_metadata_language', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_metadata_last_modified', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_metadata_schema_type', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_metadata_related_posts', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_ga4_enabled', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => false ) );
+		register_setting( 'ta_settings', 'ta_ga4_measurement_id', array( 'type' => 'string', 'sanitize_callback' => array( $this->security, 'sanitize_text' ), 'default' => '' ) );
+		register_setting( 'ta_settings', 'ta_ga4_api_secret', array( 'type' => 'string', 'sanitize_callback' => array( $this->security, 'sanitize_text' ), 'default' => '' ) );
 	}
 
 	/**
@@ -866,51 +459,38 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function display_configuration_notices() {
-		// Only show on plugin pages.
 		$screen = get_current_screen();
 		if ( ! $screen || strpos( $screen->id, 'third-audience' ) === false ) {
 			return;
 		}
 
-		// Check if HTML to Markdown library is installed.
 		if ( ! TA_Local_Converter::is_library_available() ) {
 			?>
 			<div class="notice notice-error">
-				<p>
-					<strong><?php esc_html_e( 'Third Audience - Library Missing', 'third-audience' ); ?></strong>
-				</p>
-				<p>
-					<?php
-					printf(
-						/* translators: %s: System Health page URL */
-						esc_html__( 'The HTML to Markdown conversion library is not installed. Please check the %s page for installation instructions.', 'third-audience' ),
-						'<a href="' . esc_url( admin_url( 'admin.php?page=third-audience-system-health' ) ) . '">' . esc_html__( 'System Health', 'third-audience' ) . '</a>'
-					);
-					?>
-				</p>
+				<p><strong><?php esc_html_e( 'Third Audience - Library Missing', 'third-audience' ); ?></strong></p>
+				<p><?php printf( esc_html__( 'The HTML to Markdown conversion library is not installed. Please check the %s page for installation instructions.', 'third-audience' ), '<a href="' . esc_url( admin_url( 'admin.php?page=third-audience-system-health' ) ) . '">' . esc_html__( 'System Health', 'third-audience' ) . '</a>' ); ?></p>
 			</div>
 			<?php
 			return;
 		}
 
-		// Check if bot analytics table exists.
 		global $wpdb;
-		$table_name  = $wpdb->prefix . 'ta_bot_analytics';
+		$table_name   = $wpdb->prefix . 'ta_bot_analytics';
 		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) ) === $table_name;
 
 		if ( ! $table_exists ) {
 			?>
 			<div class="notice notice-warning">
-				<p>
-					<strong><?php esc_html_e( 'Third Audience Analytics Table Missing', 'third-audience' ); ?></strong>
-				</p>
-				<p>
-					<?php esc_html_e( 'The bot analytics table was not created. Please deactivate and reactivate the plugin to create the required database tables.', 'third-audience' ); ?>
-				</p>
+				<p><strong><?php esc_html_e( 'Third Audience Analytics Table Missing', 'third-audience' ); ?></strong></p>
+				<p><?php esc_html_e( 'The bot analytics table was not created. Please deactivate and reactivate the plugin to create the required database tables.', 'third-audience' ); ?></p>
 			</div>
 			<?php
 		}
 	}
+
+	// =========================================================================
+	// RENDER METHODS
+	// =========================================================================
 
 	/**
 	 * Render settings page.
@@ -920,26 +500,15 @@ class TA_Admin {
 	 */
 	public function render_settings_page() {
 		$this->security->verify_admin_capability();
-
-		// Show admin notices.
 		settings_errors( 'ta_messages' );
-
-		// Get cache stats.
-		$cache_manager = new TA_Cache_Manager();
-		$cache_stats   = $cache_manager->get_stats();
-
-		// Get error stats.
-		$error_stats   = $this->logger->get_stats();
-		$recent_errors = $this->logger->get_recent_errors( 10 );
-
-		// Get notification settings.
+		$cache_manager         = new TA_Cache_Manager();
+		$cache_stats           = $cache_manager->get_stats();
+		$error_stats           = $this->logger->get_stats();
+		$recent_errors         = $this->logger->get_recent_errors( 10 );
 		$smtp_settings         = $this->notifications->get_smtp_settings();
 		$notification_settings = $this->notifications->get_notification_settings();
-
-		// Get current tab.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$current_tab = isset( $_GET['tab'] ) ? $this->security->sanitize_text( $_GET['tab'] ) : 'general';
-
 		include TA_PLUGIN_DIR . 'admin/views/settings-page.php';
 	}
 
@@ -951,7 +520,6 @@ class TA_Admin {
 	 */
 	public function render_bot_analytics_page() {
 		$this->security->verify_admin_capability();
-
 		include TA_PLUGIN_DIR . 'admin/views/bot-analytics-page.php';
 	}
 
@@ -963,7 +531,6 @@ class TA_Admin {
 	 */
 	public function render_bot_management_page() {
 		$this->security->verify_admin_capability();
-
 		include TA_PLUGIN_DIR . 'admin/views/bot-management-page.php';
 	}
 
@@ -975,10 +542,7 @@ class TA_Admin {
 	 */
 	public function render_ai_citations_page() {
 		$this->security->verify_admin_capability();
-
-		// Get citation analytics data.
 		$analytics = TA_Bot_Analytics::get_instance();
-
 		include TA_PLUGIN_DIR . 'admin/views/ai-citations-page.php';
 	}
 
@@ -990,7 +554,6 @@ class TA_Admin {
 	 */
 	public function render_system_health_page() {
 		$this->security->verify_admin_capability();
-
 		include TA_PLUGIN_DIR . 'admin/views/system-health-page.php';
 	}
 
@@ -1002,7 +565,6 @@ class TA_Admin {
 	 */
 	public function render_about_page() {
 		$this->security->verify_admin_capability();
-
 		include TA_PLUGIN_DIR . 'admin/views/about-page.php';
 	}
 
@@ -1015,14 +577,10 @@ class TA_Admin {
 	public function render_competitor_benchmarking_page() {
 		$this->security->verify_admin_capability();
 
-		// Handle export action.
 		if ( isset( $_GET['action'] ) && 'export' === $_GET['action'] ) {
 			check_admin_referer( 'ta_export_benchmarks' );
-
 			$benchmarking = TA_Competitor_Benchmarking::get_instance();
-
-			// Get filters.
-			$filters = array();
+			$filters      = array();
 			if ( ! empty( $_GET['competitor_url'] ) ) {
 				$filters['competitor_url'] = sanitize_text_field( wp_unslash( $_GET['competitor_url'] ) );
 			}
@@ -1035,8 +593,7 @@ class TA_Admin {
 			if ( ! empty( $_GET['date_to'] ) ) {
 				$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
 			}
-
-			$benchmarking->export_to_csv( $filters );
+			$benchmarking->export_tests_to_csv( $filters );
 			exit;
 		}
 
@@ -1044,434 +601,185 @@ class TA_Admin {
 	}
 
 	/**
-	 * Handle digest report download (runs early on admin_init).
+	 * Handle digest report download request.
 	 *
 	 * @since 3.2.0
 	 * @return void
 	 */
 	public function handle_digest_download() {
-		// Check if this is a digest download request.
 		if ( ! isset( $_GET['page'] ) || 'third-audience-email-digest' !== $_GET['page'] ) {
 			return;
 		}
-
-		if ( ! isset( $_GET['action'] ) || 'download_md' !== $_GET['action'] ) {
+		if ( ! isset( $_GET['action'] ) || 'download_report' !== $_GET['action'] ) {
 			return;
 		}
-
-		// Verify nonce and capability.
-		check_admin_referer( 'ta_download_report' );
-		$this->security->verify_admin_capability();
-
-		$period = isset( $_GET['period'] ) ? absint( $_GET['period'] ) : 24;
-		$digest = TA_Email_Digest::get_instance();
-		$data   = $digest->gather_digest_data( $period );
-		$report = $digest->generate_md_report( $data );
-
-		if ( $report && file_exists( $report ) ) {
-			$content = file_get_contents( $report ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-			wp_delete_file( $report ); // Clean up temp file.
-
-			// Send download headers.
-			nocache_headers();
-			header( 'Content-Type: text/markdown; charset=utf-8' );
-			header( 'Content-Disposition: attachment; filename="third-audience-report-' . gmdate( 'Y-m-d-H-i' ) . '.md"' );
-			header( 'Content-Length: ' . strlen( $content ) );
-
-			echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markdown content.
-			exit;
+		if ( ! check_admin_referer( 'ta_download_digest_report' ) ) {
+			wp_die( esc_html__( 'Invalid security token.', 'third-audience' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'third-audience' ) );
 		}
 
-		// If no report generated, redirect back with error.
-		wp_safe_redirect( admin_url( 'admin.php?page=third-audience-email-digest&error=no_data' ) );
+		$digest  = TA_Email_Digest::get_instance();
+		$content = $digest->generate_markdown_report();
+
+		$filename = 'third-audience-report-' . gmdate( 'Y-m-d-H-i' ) . '.md';
+		header( 'Content-Type: text/markdown; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'Content-Length: ' . strlen( $content ) );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+		echo $content;
 		exit;
 	}
 
 	/**
-	 * Render Email Digest settings page.
+	 * Render Email Digest page.
 	 *
 	 * @since 3.2.0
 	 * @return void
 	 */
 	public function render_email_digest_page() {
 		$this->security->verify_admin_capability();
-
-		include TA_PLUGIN_DIR . 'admin/views/email-digest-settings.php';
+		include TA_PLUGIN_DIR . 'admin/views/email-digest-page.php';
 	}
 
 	/**
-	 * AJAX handler for sending test digest email.
+	 * Render Cache Browser page.
 	 *
-	 * @since 3.2.0
+	 * @since 1.6.0
 	 * @return void
 	 */
-	public function ajax_send_test_digest() {
-		check_ajax_referer( 'ta_test_digest', 'nonce' );
+	public function render_cache_browser_page() {
 		$this->security->verify_admin_capability();
 
-		$digest = TA_Email_Digest::get_instance();
-		$result = $digest->send_test_digest();
+		$cache_manager = new TA_Cache_Manager();
+		$cache_stats   = $cache_manager->get_stats();
 
-		if ( $result ) {
-			wp_send_json_success( array( 'message' => __( 'Test email sent successfully.', 'third-audience' ) ) );
-		} else {
-			wp_send_json_error( array( 'message' => __( 'Failed to send test email. Check your SMTP settings.', 'third-audience' ) ) );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$per_page     = 50;
+		$offset       = ( $current_page - 1 ) * $per_page;
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$search = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$filters = array(
+			'status'    => isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : 'all',
+			'size_min'  => isset( $_GET['size_min'] ) ? absint( $_GET['size_min'] ) : 0,
+			'size_max'  => isset( $_GET['size_max'] ) ? absint( $_GET['size_max'] ) : 0,
+			'date_from' => isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GET['date_from'] ) ) : '',
+			'date_to'   => isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '',
+		);
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['size_preset'] ) && ! empty( $_GET['size_preset'] ) ) {
+			$preset = sanitize_text_field( wp_unslash( $_GET['size_preset'] ) );
+			switch ( $preset ) {
+				case 'small':
+					$filters['size_min'] = 0;
+					$filters['size_max'] = 10240;
+					break;
+				case 'medium':
+					$filters['size_min'] = 10240;
+					$filters['size_max'] = 51200;
+					break;
+				case 'large':
+					$filters['size_min'] = 51200;
+					$filters['size_max'] = 102400;
+					break;
+			}
 		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['date_preset'] ) && ! empty( $_GET['date_preset'] ) ) {
+			$preset = sanitize_text_field( wp_unslash( $_GET['date_preset'] ) );
+			switch ( $preset ) {
+				case '24h':
+					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-1 day' ) );
+					$filters['date_to']   = gmdate( 'Y-m-d' );
+					break;
+				case '7d':
+					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-7 days' ) );
+					$filters['date_to']   = gmdate( 'Y-m-d' );
+					break;
+				case '30d':
+					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+					$filters['date_to']   = gmdate( 'Y-m-d' );
+					break;
+			}
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$orderby = isset( $_GET['orderby'] ) ? sanitize_text_field( wp_unslash( $_GET['orderby'] ) ) : 'expiration';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$order = isset( $_GET['order'] ) ? sanitize_text_field( wp_unslash( $_GET['order'] ) ) : 'DESC';
+
+		$active_filters = 0;
+		if ( ! empty( $filters['status'] ) && 'all' !== $filters['status'] ) {
+			$active_filters++;
+		}
+		if ( ! empty( $filters['size_min'] ) || ! empty( $filters['size_max'] ) ) {
+			$active_filters++;
+		}
+		if ( ! empty( $filters['date_from'] ) || ! empty( $filters['date_to'] ) ) {
+			$active_filters++;
+		}
+
+		$cache_entries = $cache_manager->get_cache_entries( $per_page, $offset, $search, $filters, $orderby, $order );
+		$total_entries = $cache_manager->get_cache_entries_count( $search, $filters );
+		$expired_count = count( $cache_manager->get_expired_entries() );
+		$cache_health  = $cache_manager->get_health();
+
+		include TA_PLUGIN_DIR . 'admin/views/cache-browser-page.php';
 	}
 
 	/**
-	 * AJAX handler for session analytics drill-down.
+	 * Render Citation Alerts page.
 	 *
-	 * Returns detailed bot fingerprint data for the session analytics modal.
-	 *
-	 * @since 3.2.2
+	 * @since 2.8.0
 	 * @return void
 	 */
-	public function ajax_get_session_details() {
-		check_ajax_referer( 'ta_bot_analytics', 'nonce' );
+	public function render_citation_alerts_page() {
 		$this->security->verify_admin_capability();
 
-		$sort_by = isset( $_POST['sort_by'] ) ? sanitize_text_field( wp_unslash( $_POST['sort_by'] ) ) : 'last_seen';
-		$order   = isset( $_POST['order'] ) ? sanitize_text_field( wp_unslash( $_POST['order'] ) ) : 'DESC';
-
-		$analytics    = TA_Bot_Analytics::get_instance();
-		$fingerprints = $analytics->get_bot_fingerprints_list( $sort_by, $order, 50 );
-
-		// Get summary stats too.
-		$session_stats = $analytics->get_session_analytics();
-
-		wp_send_json_success(
-			array(
-				'fingerprints' => $fingerprints,
-				'summary'      => $session_stats,
-			)
-		);
-	}
-
-	/**
-	 * AJAX handler for hero metrics drill-down.
-	 *
-	 * @since 3.2.3
-	 * @return void
-	 */
-	public function ajax_get_hero_metric_details() {
-		check_ajax_referer( 'ta_bot_analytics', 'nonce' );
-		$this->security->verify_admin_capability();
-
-		$metric = isset( $_POST['metric'] ) ? sanitize_text_field( wp_unslash( $_POST['metric'] ) ) : '';
-
-		$analytics = TA_Bot_Analytics::get_instance();
-		$summary   = $analytics->get_summary( array() );
-		$bot_stats = $analytics->get_visits_by_bot( array() );
-		$top_pages = $analytics->get_top_pages( array(), 20 );
-
-		$response = array();
-
-		switch ( $metric ) {
-			case 'total_visits':
-				$response = $this->get_total_visits_details( $summary, $bot_stats );
-				break;
-			case 'pages_crawled':
-				$response = $this->get_pages_crawled_details( $summary, $top_pages );
-				break;
-			case 'cache_hit_rate':
-				$response = $this->get_cache_details( $summary, $analytics );
-				break;
-			case 'avg_response':
-				$response = $this->get_response_time_details( $summary, $analytics );
-				break;
-			case 'verified_bots':
-				$response = $this->get_verification_details( $summary, $bot_stats );
-				break;
-			default:
-				wp_send_json_error( array( 'message' => 'Invalid metric' ) );
+		if ( ! class_exists( 'TA_Citation_Alerts' ) ) {
+			echo '<div class="wrap"><h1>' . esc_html__( 'Citation Alerts', 'third-audience' ) . '</h1>';
+			echo '<p>' . esc_html__( 'Citation alerts system is not available.', 'third-audience' ) . '</p></div>';
+			return;
 		}
 
-		wp_send_json_success( $response );
-	}
+		$citation_alerts = TA_Citation_Alerts::get_instance();
 
-	/**
-	 * AJAX handler for bot diagnostic drill-down modal.
-	 *
-	 * Returns comprehensive bot details for the bot management diagnostic modal.
-	 *
-	 * @since 3.3.0
-	 * @return void
-	 */
-	public function ajax_get_bot_details() {
-		check_ajax_referer( 'ta_bot_management', 'nonce' );
-		$this->security->verify_admin_capability();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$per_page     = 50;
+		$offset       = ( $current_page - 1 ) * $per_page;
 
-		$bot_type = isset( $_POST['bot_type'] ) ? sanitize_text_field( wp_unslash( $_POST['bot_type'] ) ) : '';
-		$bot_name = isset( $_POST['bot_name'] ) ? sanitize_text_field( wp_unslash( $_POST['bot_name'] ) ) : '';
-
-		if ( empty( $bot_type ) ) {
-			wp_send_json_error( array( 'message' => __( 'Bot type is required.', 'third-audience' ) ) );
-		}
-
-		$analytics = TA_Bot_Analytics::get_instance();
-		$details   = $analytics->get_bot_details( $bot_type, $bot_name );
-
-		wp_send_json_success( $details );
-	}
-
-	/**
-	 * Get total visits breakdown data.
-	 *
-	 * @param array $summary Bot analytics summary.
-	 * @param array $bot_stats Bot visit statistics.
-	 * @return array Response data.
-	 */
-	private function get_total_visits_details( $summary, $bot_stats ) {
-		$total  = $summary['total_visits'];
-		$labels = array();
-		$values = array();
-		$pcts   = array();
-		$rows   = array();
-
-		foreach ( $bot_stats as $bot ) {
-			$labels[] = $bot['bot_type'];
-			$values[] = (int) $bot['visit_count'];
-			$pct      = $total > 0 ? round( ( $bot['visit_count'] / $total ) * 100, 1 ) . '%' : '0%';
-			$pcts[]   = $pct;
-			$rows[]   = array(
-				'<span class="ta-bot-name">' . esc_html( $bot['bot_type'] ) . '</span>',
-				'<strong>' . number_format( $bot['visit_count'] ) . '</strong>',
-				$pct,
-				esc_html( $bot['last_visit_human'] ?? '-' ),
-			);
-		}
-
-		return array(
-			'stats'         => array(
-				array( 'label' => __( 'Total Visits', 'third-audience' ), 'value' => number_format( $total ) ),
-				array( 'label' => __( 'Today', 'third-audience' ), 'value' => number_format( $summary['visits_today'] ) ),
-				array( 'label' => __( 'Unique Bots', 'third-audience' ), 'value' => number_format( $summary['unique_bots'] ) ),
-			),
-			'chart_title'   => __( 'Visits by Bot Type', 'third-audience' ),
-			'chart_type'    => 'doughnut',
-			'chart_data'    => array(
-				'labels'      => $labels,
-				'values'      => $values,
-				'percentages' => $pcts,
-			),
-			'table_title'   => __( 'Bot Visit Details', 'third-audience' ),
-			'table_headers' => array(
-				array( 'label' => __( 'Bot', 'third-audience' ), 'align' => 'left' ),
-				array( 'label' => __( 'Visits', 'third-audience' ), 'align' => 'right' ),
-				array( 'label' => __( 'Share', 'third-audience' ), 'align' => 'right' ),
-				array( 'label' => __( 'Last Visit', 'third-audience' ), 'align' => 'left' ),
-			),
-			'table_rows'    => $rows,
-		);
-	}
-
-	/**
-	 * Get pages crawled breakdown data.
-	 *
-	 * @param array $summary Bot analytics summary.
-	 * @param array $top_pages Top crawled pages.
-	 * @return array Response data.
-	 */
-	private function get_pages_crawled_details( $summary, $top_pages ) {
-		$labels = array();
-		$values = array();
-		$rows   = array();
-
-		foreach ( array_slice( $top_pages, 0, 10 ) as $page ) {
-			$title    = $page['page_title'] ?: $page['page_url'];
-			$labels[] = strlen( $title ) > 25 ? substr( $title, 0, 25 ) . '...' : $title;
-			$values[] = (int) $page['visit_count'];
-		}
-
-		foreach ( $top_pages as $page ) {
-			$title  = $page['page_title'] ?: $page['page_url'];
-			$rows[] = array(
-				'<a href="' . esc_url( $page['page_url'] ) . '" target="_blank">' . esc_html( $title ) . '</a>',
-				'<strong>' . number_format( $page['visit_count'] ) . '</strong>',
-				number_format( $page['unique_bots'] ),
-			);
-		}
-
-		return array(
-			'stats'         => array(
-				array( 'label' => __( 'Total Pages', 'third-audience' ), 'value' => number_format( $summary['unique_pages'] ) ),
-				array( 'label' => __( 'Total Visits', 'third-audience' ), 'value' => number_format( $summary['total_visits'] ) ),
-				array( 'label' => __( 'Avg Visits/Page', 'third-audience' ), 'value' => $summary['unique_pages'] > 0 ? number_format( $summary['total_visits'] / $summary['unique_pages'], 1 ) : '0' ),
-			),
-			'chart_title'   => __( 'Top 10 Pages by Visits', 'third-audience' ),
-			'chart_type'    => 'bar',
-			'chart_data'    => array(
-				'labels' => $labels,
-				'values' => $values,
-			),
-			'table_title'   => __( 'All Crawled Pages', 'third-audience' ),
-			'table_headers' => array(
-				array( 'label' => __( 'Page', 'third-audience' ), 'align' => 'left' ),
-				array( 'label' => __( 'Visits', 'third-audience' ), 'align' => 'right' ),
-				array( 'label' => __( 'Unique Bots', 'third-audience' ), 'align' => 'right' ),
-			),
-			'table_rows'    => $rows,
-		);
-	}
-
-	/**
-	 * Get cache performance breakdown data.
-	 *
-	 * @param array           $summary Bot analytics summary.
-	 * @param TA_Bot_Analytics $analytics Analytics instance.
-	 * @return array Response data.
-	 */
-	private function get_cache_details( $summary, $analytics ) {
-		$cache_stats = $analytics->get_cache_performance_stats();
-
-		$hits   = $cache_stats['hits'] ?? 0;
-		$misses = $cache_stats['misses'] ?? 0;
-		$pregen = $cache_stats['pre_generated'] ?? 0;
-		$na     = $cache_stats['not_applicable'] ?? 0;
-		$total  = $hits + $misses + $pregen + $na;
-
-		$labels = array( 'Cache Hit', 'Cache Miss', 'Pre-generated', 'N/A' );
-		$values = array( $hits, $misses, $pregen, $na );
-		$pcts   = array();
-		foreach ( $values as $v ) {
-			$pcts[] = $total > 0 ? round( ( $v / $total ) * 100, 1 ) . '%' : '0%';
-		}
-
-		$rows = array();
-		for ( $i = 0; $i < count( $labels ); $i++ ) {
-			$rows[] = array(
-				esc_html( $labels[ $i ] ),
-				'<strong>' . number_format( $values[ $i ] ) . '</strong>',
-				$pcts[ $i ],
-			);
-		}
-
-		return array(
-			'stats'         => array(
-				array( 'label' => __( 'Hit Rate', 'third-audience' ), 'value' => $summary['cache_hit_rate'] . '%' ),
-				array( 'label' => __( 'Cache Hits', 'third-audience' ), 'value' => number_format( $hits ) ),
-				array( 'label' => __( 'Cache Misses', 'third-audience' ), 'value' => number_format( $misses ) ),
-			),
-			'chart_title'   => __( 'Cache Status Distribution', 'third-audience' ),
-			'chart_type'    => 'doughnut',
-			'chart_data'    => array(
-				'labels'      => $labels,
-				'values'      => $values,
-				'percentages' => $pcts,
-			),
-			'table_title'   => __( 'Cache Breakdown', 'third-audience' ),
-			'table_headers' => array(
-				array( 'label' => __( 'Status', 'third-audience' ), 'align' => 'left' ),
-				array( 'label' => __( 'Count', 'third-audience' ), 'align' => 'right' ),
-				array( 'label' => __( 'Percentage', 'third-audience' ), 'align' => 'right' ),
-			),
-			'table_rows'    => $rows,
-		);
-	}
-
-	/**
-	 * Get response time breakdown data.
-	 *
-	 * @param array           $summary Bot analytics summary.
-	 * @param TA_Bot_Analytics $analytics Analytics instance.
-	 * @return array Response data.
-	 */
-	private function get_response_time_details( $summary, $analytics ) {
-		$time_stats = $analytics->get_response_time_distribution();
-
-		$labels = array();
-		$values = array();
-		$rows   = array();
-
-		foreach ( $time_stats as $range => $count ) {
-			$labels[] = $range;
-			$values[] = (int) $count;
-			$rows[]   = array(
-				esc_html( $range ),
-				'<strong>' . number_format( $count ) . '</strong>',
-			);
-		}
-
-		// Calculate percentiles if available.
-		$p50 = $analytics->get_response_time_percentile( 50 );
-		$p95 = $analytics->get_response_time_percentile( 95 );
-
-		return array(
-			'stats'         => array(
-				array( 'label' => __( 'Average', 'third-audience' ), 'value' => $summary['avg_response_time'] . 'ms' ),
-				array( 'label' => __( 'Median (P50)', 'third-audience' ), 'value' => $p50 . 'ms' ),
-				array( 'label' => __( '95th Percentile', 'third-audience' ), 'value' => $p95 . 'ms' ),
-			),
-			'chart_title'   => __( 'Response Time Distribution', 'third-audience' ),
-			'chart_type'    => 'bar',
-			'chart_data'    => array(
-				'labels' => $labels,
-				'values' => $values,
-			),
-			'table_title'   => __( 'Response Time Ranges', 'third-audience' ),
-			'table_headers' => array(
-				array( 'label' => __( 'Range', 'third-audience' ), 'align' => 'left' ),
-				array( 'label' => __( 'Requests', 'third-audience' ), 'align' => 'right' ),
-			),
-			'table_rows'    => $rows,
-		);
-	}
-
-	/**
-	 * Get bot verification breakdown data.
-	 *
-	 * @param array $summary Bot analytics summary.
-	 * @param array $bot_stats Bot visit statistics.
-	 * @return array Response data.
-	 */
-	private function get_verification_details( $summary, $bot_stats ) {
-		$verified   = $summary['ip_verified_count'];
-		$total      = $summary['total_visits'];
-		$unverified = $total - $verified;
-
-		$labels = array( __( 'Verified', 'third-audience' ), __( 'Unverified', 'third-audience' ) );
-		$values = array( $verified, $unverified );
-		$pcts   = array(
-			$total > 0 ? round( ( $verified / $total ) * 100, 1 ) . '%' : '0%',
-			$total > 0 ? round( ( $unverified / $total ) * 100, 1 ) . '%' : '0%',
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$filters = array(
+			'alert_type' => isset( $_GET['alert_type'] ) ? sanitize_text_field( wp_unslash( $_GET['alert_type'] ) ) : '',
+			'severity'   => isset( $_GET['severity'] ) ? sanitize_text_field( wp_unslash( $_GET['severity'] ) ) : '',
+			'dismissed'  => isset( $_GET['dismissed'] ) ? absint( $_GET['dismissed'] ) : null,
 		);
 
-		$rows = array();
-		foreach ( $bot_stats as $bot ) {
-			$rows[] = array(
-				'<span class="ta-bot-name">' . esc_html( $bot['bot_type'] ) . '</span>',
-				'<strong>' . number_format( $bot['visit_count'] ) . '</strong>',
-				isset( $bot['verified_count'] ) ? number_format( $bot['verified_count'] ) : '0',
-				isset( $bot['verified_count'] ) && $bot['visit_count'] > 0
-					? round( ( $bot['verified_count'] / $bot['visit_count'] ) * 100, 1 ) . '%'
-					: '0%',
-			);
-		}
+		$alert_history = $citation_alerts->get_alert_history( array(
+			'limit'      => $per_page,
+			'offset'     => $offset,
+			'alert_type' => $filters['alert_type'],
+			'severity'   => $filters['severity'],
+			'dismissed'  => $filters['dismissed'],
+		) );
 
-		return array(
-			'stats'         => array(
-				array( 'label' => __( 'Verification Rate', 'third-audience' ), 'value' => $summary['ip_verified_percentage'] . '%' ),
-				array( 'label' => __( 'Verified Visits', 'third-audience' ), 'value' => number_format( $verified ) ),
-				array( 'label' => __( 'Unverified Visits', 'third-audience' ), 'value' => number_format( $unverified ) ),
-			),
-			'chart_title'   => __( 'Verification Status', 'third-audience' ),
-			'chart_type'    => 'doughnut',
-			'chart_data'    => array(
-				'labels'      => $labels,
-				'values'      => $values,
-				'percentages' => $pcts,
-			),
-			'table_title'   => __( 'Verification by Bot', 'third-audience' ),
-			'table_headers' => array(
-				array( 'label' => __( 'Bot', 'third-audience' ), 'align' => 'left' ),
-				array( 'label' => __( 'Total Visits', 'third-audience' ), 'align' => 'right' ),
-				array( 'label' => __( 'Verified', 'third-audience' ), 'align' => 'right' ),
-				array( 'label' => __( 'Rate', 'third-audience' ), 'align' => 'right' ),
-			),
-			'table_rows'    => $rows,
-		);
+		$statistics = $citation_alerts->get_statistics();
+
+		include TA_PLUGIN_DIR . 'admin/views/citation-alerts-page.php';
 	}
+
+	// =========================================================================
+	// POST HANDLERS
+	// =========================================================================
 
 	/**
 	 * Handle clear cache action.
@@ -1488,23 +796,10 @@ class TA_Admin {
 
 		$this->logger->info( 'Cache cleared.', array( 'items' => $cleared ) );
 
-		add_settings_error(
-			'ta_messages',
-			'ta_cache_cleared',
-			/* translators: %d: Number of cached items cleared */
-			sprintf( __( 'Cleared %d cached items.', 'third-audience' ), $cleared ),
-			'success'
-		);
-
+		add_settings_error( 'ta_messages', 'ta_cache_cleared', sprintf( __( 'Cleared %d cached items.', 'third-audience' ), $cleared ), 'success' );
 		set_transient( 'settings_errors', get_settings_errors(), 30 );
 
-		wp_safe_redirect( add_query_arg(
-			array(
-				'page'             => 'third-audience',
-				'settings-updated' => 'true',
-			),
-			admin_url( 'options-general.php' )
-		) );
+		wp_safe_redirect( add_query_arg( array( 'page' => 'third-audience', 'settings-updated' => 'true' ), admin_url( 'options-general.php' ) ) );
 		exit;
 	}
 
@@ -1522,20 +817,10 @@ class TA_Admin {
 
 		if ( is_wp_error( $result ) ) {
 			$this->logger->error( 'SMTP test failed.', array( 'error' => $result->get_error_message() ) );
-			add_settings_error(
-				'ta_messages',
-				'ta_smtp_test_failed',
-				__( 'SMTP test failed: ', 'third-audience' ) . $result->get_error_message(),
-				'error'
-			);
+			add_settings_error( 'ta_messages', 'ta_smtp_test_failed', __( 'SMTP test failed: ', 'third-audience' ) . $result->get_error_message(), 'error' );
 		} else {
 			$this->logger->info( 'SMTP test successful.' );
-			add_settings_error(
-				'ta_messages',
-				'ta_smtp_test_success',
-				__( 'SMTP test email sent successfully!', 'third-audience' ),
-				'success'
-			);
+			add_settings_error( 'ta_messages', 'ta_smtp_test_success', __( 'SMTP test email sent successfully!', 'third-audience' ), 'success' );
 		}
 
 		$this->redirect_to_settings( 'notifications' );
@@ -1555,247 +840,33 @@ class TA_Admin {
 		$this->logger->reset_stats();
 		$this->logger->info( 'Error logs cleared by admin.' );
 
-		add_settings_error(
-			'ta_messages',
-			'ta_errors_cleared',
-			__( 'Error logs cleared.', 'third-audience' ),
-			'success'
-		);
+		add_settings_error( 'ta_messages', 'ta_errors_cleared', __( 'Error logs cleared.', 'third-audience' ), 'success' );
 
 		$this->redirect_to_settings( 'logs' );
 	}
 
 	/**
-	 * Handle save SMTP settings action.
+	 * Redirect to settings page with optional tab.
 	 *
 	 * @since 1.1.0
+	 * @param string $tab Optional tab to redirect to.
 	 * @return void
 	 */
-	public function handle_save_smtp_settings() {
-		$this->security->verify_admin_capability();
-		$this->security->verify_nonce_or_die( 'save_smtp_settings' );
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$settings = isset( $_POST['ta_smtp'] ) && is_array( $_POST['ta_smtp'] ) ? $_POST['ta_smtp'] : array();
-
-		// Sanitize settings.
-		$sanitized = array(
-			'enabled'    => isset( $settings['enabled'] ),
-			'host'       => $this->security->sanitize_text( $settings['host'] ?? '' ),
-			'port'       => absint( $settings['port'] ?? 587 ),
-			'encryption' => in_array( $settings['encryption'] ?? 'tls', array( '', 'ssl', 'tls' ), true )
-				? $settings['encryption']
-				: 'tls',
-			'username'   => $this->security->sanitize_text( $settings['username'] ?? '' ),
-			'password'   => $settings['password'] ?? '', // Will be encrypted in save_smtp_settings.
-			'from_email' => $this->security->sanitize_email( $settings['from_email'] ?? '' ),
-			'from_name'  => $this->security->sanitize_text( $settings['from_name'] ?? '' ),
-		);
-
-		// Only update password if a new one was provided.
-		if ( empty( $sanitized['password'] ) ) {
-			$existing              = $this->notifications->get_smtp_settings();
-			$sanitized['password'] = $existing['password'] ?? '';
-		}
-
-		$this->notifications->save_smtp_settings( $sanitized );
-		$this->logger->info( 'SMTP settings updated.' );
-
-		add_settings_error(
-			'ta_messages',
-			'ta_smtp_saved',
-			__( 'SMTP settings saved.', 'third-audience' ),
-			'success'
-		);
-
-		$this->redirect_to_settings( 'notifications' );
-	}
-
-	/**
-	 * Handle save notification settings action.
-	 *
-	 * @since 1.1.0
-	 * @return void
-	 */
-	public function handle_save_notification_settings() {
-		$this->security->verify_admin_capability();
-		$this->security->verify_nonce_or_die( 'save_notification_settings' );
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$settings = isset( $_POST['ta_notifications'] ) && is_array( $_POST['ta_notifications'] ) ? $_POST['ta_notifications'] : array();
-
-		// Sanitize settings.
-		$sanitized = array(
-			'alert_emails'         => $this->security->sanitize_text( $settings['alert_emails'] ?? '' ),
-			'on_worker_failure'    => isset( $settings['on_worker_failure'] ),
-			'on_high_error_rate'   => isset( $settings['on_high_error_rate'] ),
-			'on_cache_issues'      => isset( $settings['on_cache_issues'] ),
-			'daily_digest'         => isset( $settings['daily_digest'] ),
-			'error_rate_threshold' => absint( $settings['error_rate_threshold'] ?? 10 ),
-		);
-
-		$this->notifications->save_notification_settings( $sanitized );
-		$this->logger->info( 'Notification settings updated.' );
-
-		add_settings_error(
-			'ta_messages',
-			'ta_notifications_saved',
-			__( 'Notification settings saved.', 'third-audience' ),
-			'success'
-		);
-
-		$this->redirect_to_settings( 'notifications' );
-	}
-
-	/**
-	 * Handle save bot configuration action.
-	 *
-	 * @since 1.5.0
-	 * @return void
-	 */
-	public function handle_save_bot_config() {
-		$this->security->verify_admin_capability();
-		$this->security->verify_nonce_or_die( 'ta_save_bot_config', 'ta_bot_config_nonce', 'POST' );
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$track_unknown = isset( $_POST['track_unknown'] ) && '1' === $_POST['track_unknown'];
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$blocked_bots = isset( $_POST['blocked_bots'] ) && is_array( $_POST['blocked_bots'] ) ? array_map( 'sanitize_text_field', $_POST['blocked_bots'] ) : array();
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$custom_bots = isset( $_POST['custom_bots'] ) && is_array( $_POST['custom_bots'] ) ? $_POST['custom_bots'] : array();
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$bot_priorities = isset( $_POST['bot_priorities'] ) && is_array( $_POST['bot_priorities'] ) ? $_POST['bot_priorities'] : array();
-
-		// Validate and sanitize custom bots.
-		$sanitized_custom_bots = array();
-		foreach ( $custom_bots as $custom_bot ) {
-			if ( ! empty( $custom_bot['pattern'] ) && ! empty( $custom_bot['name'] ) ) {
-				$sanitized_custom_bots[] = array(
-					'pattern' => $this->security->sanitize_text( $custom_bot['pattern'] ),
-					'name'    => $this->security->sanitize_text( $custom_bot['name'] ),
-				);
-			}
-		}
-
-		// Validate and sanitize bot priorities.
-		$sanitized_bot_priorities = array();
-		$valid_priorities = array( 'high', 'medium', 'low', 'blocked' );
-		foreach ( $bot_priorities as $bot_type => $priority ) {
-			if ( in_array( $priority, $valid_priorities, true ) ) {
-				$sanitized_bot_priorities[ sanitize_text_field( $bot_type ) ] = sanitize_text_field( $priority );
-			}
-		}
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$rate_limits = isset( $_POST['rate_limits'] ) && is_array( $_POST['rate_limits'] ) ? $_POST['rate_limits'] : array();
-
-		// Validate and sanitize rate limits.
-		$sanitized_rate_limits = array();
-		$valid_rate_priorities = array( 'high', 'medium', 'low' );
-		foreach ( $rate_limits as $priority => $limits ) {
-			if ( in_array( $priority, $valid_rate_priorities, true ) ) {
-				$sanitized_rate_limits[ $priority ] = array(
-					'per_minute' => isset( $limits['per_minute'] ) ? absint( $limits['per_minute'] ) : 0,
-					'per_hour'   => isset( $limits['per_hour'] ) ? absint( $limits['per_hour'] ) : 0,
-				);
-			}
-		}
-
-		// Save bot configuration.
-		$bot_config = array(
-			'track_unknown'  => $track_unknown,
-			'blocked_bots'   => $blocked_bots,
-			'custom_bots'    => $sanitized_custom_bots,
-			'bot_priorities' => $sanitized_bot_priorities,
-		);
-
-		update_option( 'ta_bot_config', $bot_config );
-
-		// Save rate limits separately.
-		if ( ! empty( $sanitized_rate_limits ) ) {
-			update_option( 'ta_bot_rate_limits', $sanitized_rate_limits );
-		}
-
-		// Log the change.
-		$this->logger->info( 'Bot configuration updated.', array(
-			'track_unknown'    => $track_unknown,
-			'blocked_count'    => count( $blocked_bots ),
-			'custom_count'     => count( $sanitized_custom_bots ),
-			'priorities_count' => count( $sanitized_bot_priorities ),
-			'rate_limits'      => $sanitized_rate_limits,
-		) );
-
-		add_settings_error(
-			'ta_messages',
-			'ta_bot_config_saved',
-			__( 'Bot configuration saved successfully.', 'third-audience' ),
-			'success'
-		);
-
+	private function redirect_to_settings( $tab = '' ) {
 		set_transient( 'settings_errors', get_settings_errors(), 30 );
 
-		// Redirect back to bot management page.
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'page'    => 'third-audience-bot-management',
-					'updated' => 'true',
-				),
-				admin_url( 'admin.php' )
-			)
-		);
+		$args = array( 'page' => 'third-audience', 'settings-updated' => 'true' );
+		if ( ! empty( $tab ) ) {
+			$args['tab'] = $tab;
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'options-general.php' ) ) );
 		exit;
 	}
 
-	/**
-	 * Handle save headless settings action.
-	 *
-	 * @since 1.1.0
-	 * @return void
-	 */
-	public function handle_save_headless_settings() {
-		$this->security->verify_admin_capability();
-		$this->security->verify_nonce_or_die( 'save_headless_settings' );
-
-		// Get wizard instance.
-		$wizard = new TA_Headless_Wizard();
-
-		// Sanitize and prepare settings.
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$settings = array(
-			'enabled'      => ! empty( $_POST['ta_headless_enabled'] ),
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing
-			'frontend_url' => isset( $_POST['ta_headless_frontend_url'] ) ? esc_url_raw( wp_unslash( $_POST['ta_headless_frontend_url'] ) ) : '',
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing
-			'framework'    => isset( $_POST['ta_headless_framework'] ) ? $this->security->sanitize_text( wp_unslash( $_POST['ta_headless_framework'] ) ) : 'nextjs',
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing
-			'server_type'  => isset( $_POST['ta_headless_server_type'] ) ? $this->security->sanitize_text( wp_unslash( $_POST['ta_headless_server_type'] ) ) : 'nginx',
-		);
-
-		// Validate frontend URL if enabled.
-		if ( $settings['enabled'] && empty( $settings['frontend_url'] ) ) {
-			add_settings_error(
-				'ta_messages',
-				'ta_headless_url_required',
-				__( 'Frontend URL is required when headless mode is enabled.', 'third-audience' ),
-				'error'
-			);
-			$this->redirect_to_settings( 'headless' );
-			return;
-		}
-
-		// Save settings.
-		$wizard->save_settings( $settings );
-
-		add_settings_error(
-			'ta_messages',
-			'ta_headless_saved',
-			__( 'Headless settings saved successfully.', 'third-audience' ),
-			'success'
-		);
-
-		$this->redirect_to_settings( 'headless' );
-	}
+	// =========================================================================
+	// AJAX HANDLERS (Core - not delegated)
+	// =========================================================================
 
 	/**
 	 * AJAX handler for testing SMTP.
@@ -1809,36 +880,11 @@ class TA_Admin {
 		$result = $this->notifications->test_smtp();
 
 		if ( is_wp_error( $result ) ) {
-			$this->logger->error( 'SMTP test failed (AJAX).', array(
-				'error' => $result->get_error_message(),
-			) );
+			$this->logger->error( 'SMTP test failed (AJAX).', array( 'error' => $result->get_error_message() ) );
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
-		wp_send_json_success( array(
-			'message' => __( 'Test email sent successfully!', 'third-audience' ),
-		) );
-	}
-
-	/**
-	 * AJAX handler for clearing cache.
-	 *
-	 * @since 1.1.0
-	 * @return void
-	 */
-	public function ajax_clear_cache() {
-		$this->security->verify_ajax_request( 'admin_ajax' );
-
-		$cache_manager = new TA_Cache_Manager();
-		$cleared       = $cache_manager->clear_all();
-
-		$this->logger->info( 'Cache cleared (AJAX).', array( 'items' => $cleared ) );
-
-		wp_send_json_success( array(
-			/* translators: %d: Number of cached items cleared */
-			'message' => sprintf( __( 'Cleared %d cached items.', 'third-audience' ), $cleared ),
-			'count'   => $cleared,
-		) );
+		wp_send_json_success( array( 'message' => __( 'Test email sent successfully!', 'third-audience' ) ) );
 	}
 
 	/**
@@ -1856,7 +902,6 @@ class TA_Admin {
 		$this->logger->info( 'All bot visits cleared (AJAX).', array( 'count' => $deleted ) );
 
 		wp_send_json_success( array(
-			/* translators: %d: Number of bot visits cleared */
 			'message' => sprintf( __( 'Cleared %d bot visit records.', 'third-audience' ), $deleted ),
 			'count'   => $deleted,
 		) );
@@ -1875,10 +920,7 @@ class TA_Admin {
 		$limit  = isset( $_REQUEST['limit'] ) ? absint( $_REQUEST['limit'] ) : 20;
 		$errors = $this->logger->get_recent_errors( $limit );
 
-		wp_send_json_success( array(
-			'errors' => $errors,
-			'stats'  => $this->logger->get_stats(),
-		) );
+		wp_send_json_success( array( 'errors' => $errors, 'stats' => $this->logger->get_stats() ) );
 	}
 
 	/**
@@ -1888,495 +930,45 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function ajax_update_robots_txt() {
-		// Verify nonce.
 		check_ajax_referer( 'ta_update_robots_txt', 'nonce' );
 
-		// Check user permissions.
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'You do not have permission to update robots.txt.', 'third-audience' ),
-			) );
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to update robots.txt.', 'third-audience' ) ) );
 		}
 
-		// Get the rule to add.
 		$rule = isset( $_POST['rule'] ) ? sanitize_text_field( wp_unslash( $_POST['rule'] ) ) : '';
 
 		if ( empty( $rule ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'No rule specified.', 'third-audience' ),
-			) );
+			wp_send_json_error( array( 'message' => __( 'No rule specified.', 'third-audience' ) ) );
 		}
 
-		// Get current robots.txt content.
-		$robots_file = ABSPATH . 'robots.txt';
-		$robots_content = '';
+		$robots_file    = ABSPATH . 'robots.txt';
+		$robots_content = file_exists( $robots_file ) ? file_get_contents( $robots_file ) : '';
 
-		if ( file_exists( $robots_file ) ) {
-			$robots_content = file_get_contents( $robots_file );
-		}
-
-		// Check if rule already exists.
 		if ( strpos( $robots_content, $rule ) !== false ) {
-			wp_send_json_success( array(
-				'message' => __( 'Rule already exists in robots.txt.', 'third-audience' ),
-			) );
+			wp_send_json_success( array( 'message' => __( 'Rule already exists in robots.txt.', 'third-audience' ) ) );
 			return;
 		}
 
-		// Add the rule (append to User-agent: * section or create new one).
 		if ( strpos( $robots_content, 'User-agent: *' ) !== false ) {
-			// Add after User-agent: * line.
-			$robots_content = str_replace(
-				'User-agent: *',
-				"User-agent: *\n" . $rule,
-				$robots_content
-			);
+			$robots_content = str_replace( 'User-agent: *', "User-agent: *\n" . $rule, $robots_content );
 		} else {
-			// Create new User-agent: * section.
 			$robots_content .= "\n\nUser-agent: *\n" . $rule . "\n";
 		}
 
-		// Write to robots.txt.
 		$result = file_put_contents( $robots_file, $robots_content );
 
-		if ( $result === false ) {
-			wp_send_json_error( array(
-				'message' => __( 'Failed to write to robots.txt. Check file permissions.', 'third-audience' ),
-			) );
+		if ( false === $result ) {
+			wp_send_json_error( array( 'message' => __( 'Failed to write to robots.txt. Check file permissions.', 'third-audience' ) ) );
 		}
 
 		$this->logger->info( 'Robots.txt updated via AJAX.', array( 'rule' => $rule ) );
 
-		wp_send_json_success( array(
-			'message' => __( 'Robots.txt updated successfully!', 'third-audience' ),
-		) );
+		wp_send_json_success( array( 'message' => __( 'Robots.txt updated successfully!', 'third-audience' ) ) );
 	}
 
 	/**
-	 * Redirect to settings page with optional tab.
-	 *
-	 * @since 1.1.0
-	 * @param string $tab Optional tab to redirect to.
-	 * @return void
-	 */
-	private function redirect_to_settings( $tab = '' ) {
-		set_transient( 'settings_errors', get_settings_errors(), 30 );
-
-		$args = array(
-			'page'             => 'third-audience',
-			'settings-updated' => 'true',
-		);
-
-		if ( ! empty( $tab ) ) {
-			$args['tab'] = $tab;
-		}
-
-		wp_safe_redirect( add_query_arg( $args, admin_url( 'options-general.php' ) ) );
-		exit;
-	}
-
-	/**
-	 * Render Cache Browser page.
-	 *
-	 * @since 1.6.0
-	 * @return void
-	 */
-	public function render_cache_browser_page() {
-		$this->security->verify_admin_capability();
-
-		$cache_manager = new TA_Cache_Manager();
-		$cache_stats = $cache_manager->get_stats();
-
-		// Pagination.
-		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
-		$per_page = 50;
-		$offset = ( $current_page - 1 ) * $per_page;
-
-		// Search.
-		$search = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
-
-		// Filters.
-		$filters = array(
-			'status'    => isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : 'all',
-			'size_min'  => isset( $_GET['size_min'] ) ? absint( $_GET['size_min'] ) : 0,
-			'size_max'  => isset( $_GET['size_max'] ) ? absint( $_GET['size_max'] ) : 0,
-			'date_from' => isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GET['date_from'] ) ) : '',
-			'date_to'   => isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '',
-		);
-
-		// Size presets.
-		if ( isset( $_GET['size_preset'] ) && ! empty( $_GET['size_preset'] ) ) {
-			$preset = sanitize_text_field( wp_unslash( $_GET['size_preset'] ) );
-			switch ( $preset ) {
-				case 'small':
-					$filters['size_min'] = 0;
-					$filters['size_max'] = 10240; // 10KB.
-					break;
-				case 'medium':
-					$filters['size_min'] = 10240;
-					$filters['size_max'] = 51200; // 50KB.
-					break;
-				case 'large':
-					$filters['size_min'] = 51200;
-					$filters['size_max'] = 102400; // 100KB.
-					break;
-			}
-		}
-
-		// Date presets.
-		if ( isset( $_GET['date_preset'] ) && ! empty( $_GET['date_preset'] ) ) {
-			$preset = sanitize_text_field( wp_unslash( $_GET['date_preset'] ) );
-			switch ( $preset ) {
-				case '24h':
-					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-1 day' ) );
-					$filters['date_to']   = gmdate( 'Y-m-d' );
-					break;
-				case '7d':
-					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-7 days' ) );
-					$filters['date_to']   = gmdate( 'Y-m-d' );
-					break;
-				case '30d':
-					$filters['date_from'] = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
-					$filters['date_to']   = gmdate( 'Y-m-d' );
-					break;
-			}
-		}
-
-		// Sorting.
-		$orderby = isset( $_GET['orderby'] ) ? sanitize_text_field( wp_unslash( $_GET['orderby'] ) ) : 'expiration';
-		$order   = isset( $_GET['order'] ) ? sanitize_text_field( wp_unslash( $_GET['order'] ) ) : 'DESC';
-
-		// Count active filters.
-		$active_filters = 0;
-		if ( ! empty( $filters['status'] ) && 'all' !== $filters['status'] ) {
-			$active_filters++;
-		}
-		if ( ! empty( $filters['size_min'] ) || ! empty( $filters['size_max'] ) ) {
-			$active_filters++;
-		}
-		if ( ! empty( $filters['date_from'] ) || ! empty( $filters['date_to'] ) ) {
-			$active_filters++;
-		}
-
-		$cache_entries = $cache_manager->get_cache_entries( $per_page, $offset, $search, $filters, $orderby, $order );
-		$total_entries = $cache_manager->get_cache_entries_count( $search, $filters );
-		$expired_count = count( $cache_manager->get_expired_entries() );
-		$cache_health = $cache_manager->get_health();
-
-		include TA_PLUGIN_DIR . 'admin/views/cache-browser-page.php';
-	}
-
-	/**
-	 * AJAX handler: Delete single cache entry.
-	 *
-	 * @since 2.0.6
-	 * @return void
-	 */
-	public function ajax_delete_cache_entry() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
-
-		if ( empty( $cache_key ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$result = $cache_manager->delete( $cache_key );
-
-		if ( $result ) {
-			wp_send_json_success( array( 'message' => __( 'Cache entry deleted.', 'third-audience' ) ) );
-		} else {
-			wp_send_json_error( array( 'message' => __( 'Failed to delete cache entry.', 'third-audience' ) ) );
-		}
-	}
-
-	/**
-	 * AJAX handler: Bulk delete cache entries.
-	 *
-	 * @since 2.0.6
-	 * @return void
-	 */
-	public function ajax_bulk_delete_cache() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_keys = isset( $_POST['cache_keys'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cache_keys'] ) ) : array();
-
-		if ( empty( $cache_keys ) ) {
-			wp_send_json_error( array( 'message' => __( 'No cache keys provided.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$result = $cache_manager->delete_many( $cache_keys );
-
-		wp_send_json_success( array(
-			'message' => sprintf(
-				/* translators: %d: number of entries deleted */
-				__( '%d cache entries deleted.', 'third-audience' ),
-				count( $cache_keys )
-			),
-		) );
-	}
-
-	/**
-	 * AJAX handler: Clear expired cache entries.
-	 *
-	 * @since 2.0.6
-	 * @return void
-	 */
-	public function ajax_clear_expired_cache() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_manager = new TA_Cache_Manager();
-		$count = $cache_manager->cleanup_expired();
-
-		wp_send_json_success( array(
-			'message' => sprintf(
-				/* translators: %d: number of expired entries */
-				__( '%d expired entries cleared.', 'third-audience' ),
-				$count
-			),
-		) );
-	}
-
-	/**
-	 * AJAX handler: Regenerate cache for a post.
-	 *
-	 * @since 2.0.6
-	 * @return void
-	 */
-	public function ajax_regenerate_cache() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
-
-		if ( empty( $post_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid post ID.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$result = $cache_manager->regenerate_markdown( $post_id );
-
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
-		}
-
-		wp_send_json_success( array( 'message' => __( 'Cache regenerated successfully.', 'third-audience' ) ) );
-	}
-
-	/**
-	 * AJAX handler: View cache content.
-	 *
-	 * @since 2.0.6
-	 * @return void
-	 */
-	public function ajax_view_cache_content() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_key = isset( $_POST['cache_key'] ) ? sanitize_text_field( wp_unslash( $_POST['cache_key'] ) ) : '';
-
-		if ( empty( $cache_key ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid cache key.', 'third-audience' ) ) );
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$content = $cache_manager->get( $cache_key );
-
-		if ( false === $content ) {
-			wp_send_json_error( array( 'message' => __( 'Cache entry not found.', 'third-audience' ) ) );
-		}
-
-		wp_send_json_success( array(
-			'content' => $content,
-			'size'    => size_format( strlen( $content ) ),
-		) );
-	}
-
-	/**
-	 * AJAX handler: Get cache warmup statistics.
-	 *
-	 * @since 2.0.6
-	 * @return void
-	 */
-	public function ajax_get_warmup_stats() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$cache_manager = new TA_Cache_Manager();
-		$stats = $cache_manager->get_warmup_stats();
-
-		wp_send_json_success( $stats );
-	}
-
-	/**
-	 * AJAX handler: Warm cache batch.
-	 *
-	 * @since 2.0.6
-	 * @return void
-	 */
-	public function ajax_warm_cache_batch() {
-		$this->security->verify_ajax_request( 'cache_browser' );
-
-		$batch_size = isset( $_POST['batch_size'] ) ? absint( $_POST['batch_size'] ) : 5;
-		$offset = isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0;
-
-		$cache_manager = new TA_Cache_Manager();
-		$result = $cache_manager->warm_cache_batch( array(
-			'limit'  => $batch_size,
-			'offset' => $offset,
-		) );
-
-		wp_send_json_success( $result );
-	}
-
-	/**
-	 * Get recent .md access attempts for live feed.
-	 *
-	 * @since 2.1.0
-	 * @return void
-	 */
-	public function ajax_get_recent_accesses() {
-		// Verify nonce.
-		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
-		if ( ! wp_verify_nonce( $nonce, 'ta_bot_analytics_feed' ) ) {
-			wp_send_json_error( array( 'message' => 'Nonce verification failed' ), 403 );
-		}
-
-		// Check capabilities.
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => 'Insufficient permissions' ), 403 );
-		}
-
-		$analytics = TA_Bot_Analytics::get_instance();
-		$accesses = $analytics->get_recent_visits( array(), 20, 0 );
-
-		if ( empty( $accesses ) ) {
-			wp_send_json_success( array( 'accesses' => array() ) );
-		}
-
-		// Format data for frontend.
-		$formatted = array();
-		foreach ( $accesses as $access ) {
-			$formatted[] = array(
-				'id'              => intval( $access['id'] ),
-				'timestamp'       => $access['visit_timestamp'],
-				'url'             => $access['url'],
-				'bot_name'        => $access['bot_name'],
-				'bot_type'        => $access['bot_type'],
-				'cache_status'    => $access['cache_status'],
-				'response_time'   => intval( $access['response_time'] ?? 0 ),
-				'post_title'      => $access['post_title'] ?? 'Untitled',
-			);
-		}
-
-		wp_send_json_success( array( 'accesses' => $formatted ) );
-	}
-
-	/**
-	 * Handle metadata settings changes - clear pre-generated markdown.
-	 *
-	 * When any AI-optimized metadata setting changes, we need to clear
-	 * all pre-generated markdown so it regenerates with new settings.
-	 *
-	 * @since 2.1.0
-	 * @param mixed $old_value The old option value.
-	 * @param mixed $new_value The new option value.
-	 * @return void
-	 */
-	public function on_metadata_settings_change( $old_value, $new_value ) {
-		// Only clear if value actually changed.
-		if ( $old_value === $new_value ) {
-			return;
-		}
-
-		$cache_manager = new TA_Cache_Manager();
-		$cleared       = $cache_manager->clear_pregenerated_markdown();
-
-		$this->logger->info( 'Pre-generated markdown cleared due to metadata settings change.', array(
-			'posts_cleared' => $cleared,
-		) );
-	}
-
-	/**
-	 * AJAX handler for regenerating all markdown.
-	 *
-	 * Clears all pre-generated markdown, forcing regeneration on next access.
-	 *
-	 * @since 2.1.0
-	 * @return void
-	 */
-	public function ajax_regenerate_all_markdown() {
-		$this->security->verify_ajax_request( 'admin_ajax' );
-
-		$cache_manager = new TA_Cache_Manager();
-		$cleared       = $cache_manager->clear_pregenerated_markdown();
-
-		$this->logger->info( 'All markdown regenerated (AJAX).', array( 'count' => $cleared ) );
-
-		wp_send_json_success( array(
-			/* translators: %d: Number of posts cleared */
-			'message' => sprintf( __( 'Cleared pre-generated markdown for %d posts. New markdown will be generated with current settings on next access.', 'third-audience' ), $cleared ),
-			'count'   => $cleared,
-		) );
-	}
-
-	/**
-	 * Display citation alerts as admin notices.
-	 *
-	 * @since 2.8.0
-	 * @return void
-	 */
-	public function display_citation_alerts() {
-		// Only show on Third Audience pages.
-		$screen = get_current_screen();
-		if ( ! $screen || false === strpos( $screen->id, 'third-audience' ) ) {
-			return;
-		}
-
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-
-		if ( ! class_exists( 'TA_Citation_Alerts' ) ) {
-			return;
-		}
-
-		$citation_alerts = TA_Citation_Alerts::get_instance();
-		$alerts          = $citation_alerts->check_alerts();
-
-		if ( empty( $alerts ) ) {
-			return;
-		}
-
-		foreach ( $alerts as $alert ) {
-			$notice_class = 'notice';
-
-			switch ( $alert['severity'] ) {
-				case 'warning':
-					$notice_class .= ' notice-warning';
-					break;
-				case 'success':
-					$notice_class .= ' notice-success';
-					break;
-				default:
-					$notice_class .= ' notice-info';
-					break;
-			}
-
-			$alert_id = isset( $alert['id'] ) ? intval( $alert['id'] ) : 0;
-			?>
-			<div class="<?php echo esc_attr( $notice_class ); ?> is-dismissible ta-citation-alert" data-alert-id="<?php echo esc_attr( $alert_id ); ?>">
-				<p>
-					<strong><?php esc_html_e( 'Third Audience:', 'third-audience' ); ?></strong>
-					<?php echo esc_html( $alert['title'] ); ?> –
-					<?php echo esc_html( $alert['message'] ); ?>
-				</p>
-			</div>
-			<?php
-		}
-	}
-
-	/**
-	 * AJAX handler: Dismiss citation alert.
+	 * AJAX handler for dismissing citation alerts.
 	 *
 	 * @since 2.8.0
 	 * @return void
@@ -2412,46 +1004,59 @@ class TA_Admin {
 	}
 
 	/**
-	 * Render Citation Alerts page.
+	 * AJAX handler for sending test digest email.
 	 *
-	 * @since 2.8.0
+	 * @since 3.2.0
 	 * @return void
 	 */
-	public function render_citation_alerts_page() {
+	public function ajax_send_test_digest() {
+		check_ajax_referer( 'ta_test_digest', 'nonce' );
 		$this->security->verify_admin_capability();
 
-		if ( ! class_exists( 'TA_Citation_Alerts' ) ) {
-			echo '<div class="wrap"><h1>' . esc_html__( 'Citation Alerts', 'third-audience' ) . '</h1>';
-			echo '<p>' . esc_html__( 'Citation alerts system is not available.', 'third-audience' ) . '</p></div>';
-			return;
+		$digest = TA_Email_Digest::get_instance();
+		$result = $digest->send_test_digest();
+
+		if ( $result ) {
+			wp_send_json_success( array( 'message' => __( 'Test email sent successfully.', 'third-audience' ) ) );
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Failed to send test email. Check your SMTP settings.', 'third-audience' ) ) );
+		}
+	}
+
+	/**
+	 * AJAX handler: Test GA4 connection.
+	 *
+	 * @since 3.0.0
+	 * @return void
+	 */
+	public function ajax_test_ga4_connection() {
+		$this->security->verify_ajax_request( 'admin_ajax' );
+
+		$measurement_id = isset( $_POST['measurement_id'] ) ? $this->security->sanitize_text( $_POST['measurement_id'] ) : '';
+		$api_secret     = isset( $_POST['api_secret'] ) ? $this->security->sanitize_text( $_POST['api_secret'] ) : '';
+
+		if ( empty( $measurement_id ) || empty( $api_secret ) ) {
+			wp_send_json_error( array( 'message' => __( 'Measurement ID and API Secret are required.', 'third-audience' ) ) );
 		}
 
-		$citation_alerts = TA_Citation_Alerts::get_instance();
+		if ( ! class_exists( 'TA_GA4_Integration' ) ) {
+			wp_send_json_error( array( 'message' => __( 'GA4 Integration class not found.', 'third-audience' ) ) );
+		}
 
-		// Pagination.
-		$current_page = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
-		$per_page     = 50;
-		$offset       = ( $current_page - 1 ) * $per_page;
+		$ga4    = TA_GA4_Integration::get_instance();
+		$result = $ga4->test_connection( $measurement_id, $api_secret );
 
-		// Filters.
-		$filters = array(
-			'alert_type' => isset( $_GET['alert_type'] ) ? sanitize_text_field( wp_unslash( $_GET['alert_type'] ) ) : '',
-			'severity'   => isset( $_GET['severity'] ) ? sanitize_text_field( wp_unslash( $_GET['severity'] ) ) : '',
-			'dismissed'  => isset( $_GET['dismissed'] ) ? absint( $_GET['dismissed'] ) : null,
-		);
+		if ( is_wp_error( $result ) ) {
+			$this->logger->error( 'GA4 connection test failed (AJAX).', array( 'error' => $result->get_error_message() ) );
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
 
-		$alert_history = $citation_alerts->get_alert_history( array(
-			'limit'      => $per_page,
-			'offset'     => $offset,
-			'alert_type' => $filters['alert_type'],
-			'severity'   => $filters['severity'],
-			'dismissed'  => $filters['dismissed'],
-		) );
-
-		$statistics = $citation_alerts->get_statistics();
-
-		include TA_PLUGIN_DIR . 'admin/views/citation-alerts-page.php';
+		wp_send_json_success( array( 'message' => $result['message'] ) );
 	}
+
+	// =========================================================================
+	// AI SCORE META BOX
+	// =========================================================================
 
 	/**
 	 * Add AI-Friendliness Score meta box.
@@ -2463,14 +1068,7 @@ class TA_Admin {
 		$enabled_post_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
 
 		foreach ( $enabled_post_types as $post_type ) {
-			add_meta_box(
-				'ta_ai_score_metabox',
-				__( 'AI-Friendliness Score', 'third-audience' ),
-				array( $this, 'render_ai_score_metabox' ),
-				$post_type,
-				'side',
-				'high'
-			);
+			add_meta_box( 'ta_ai_score_metabox', __( 'AI-Friendliness Score', 'third-audience' ), array( $this, 'render_ai_score_metabox' ), $post_type, 'side', 'high' );
 		}
 	}
 
@@ -2482,14 +1080,10 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function render_ai_score_metabox( $post ) {
-		$post_id = $post->ID;
-
-		// Get cached score.
-		$analyzer = TA_Content_Analyzer::get_instance();
-		$score = $analyzer->get_cached_score( $post_id );
-
-		// Get detailed score if exists.
-		$score_details = get_post_meta( $post_id, '_ta_ai_score_details', true );
+		$post_id         = $post->ID;
+		$analyzer        = TA_Content_Analyzer::get_instance();
+		$score           = $analyzer->get_cached_score( $post_id );
+		$score_details   = get_post_meta( $post_id, '_ta_ai_score_details', true );
 		$recommendations = array();
 
 		if ( $score && $score_details ) {
@@ -2508,23 +1102,19 @@ class TA_Admin {
 	 * @return void
 	 */
 	public function calculate_ai_score_on_save( $post_id, $post ) {
-		// Skip autosaves and revisions.
 		if ( wp_is_post_autosave( $post_id ) || wp_is_post_revision( $post_id ) ) {
 			return;
 		}
 
-		// Only for enabled post types.
 		$enabled_post_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
 		if ( ! in_array( $post->post_type, $enabled_post_types, true ) ) {
 			return;
 		}
 
-		// Only for published posts.
 		if ( 'publish' !== $post->post_status ) {
 			return;
 		}
 
-		// Calculate score.
 		$this->recalculate_ai_score( $post_id );
 	}
 
@@ -2536,14 +1126,13 @@ class TA_Admin {
 	 * @return array|null Score data or null on failure.
 	 */
 	private function recalculate_ai_score( $post_id ) {
-		$analyzer = TA_Content_Analyzer::get_instance();
+		$analyzer   = TA_Content_Analyzer::get_instance();
 		$score_data = $analyzer->calculate_ai_friendliness_score( $post_id );
 
 		if ( null === $score_data ) {
 			return null;
 		}
 
-		// Cache the score.
 		update_post_meta( $post_id, '_ta_ai_score', $score_data['score'] );
 		update_post_meta( $post_id, '_ta_ai_score_details', $score_data );
 
@@ -2575,266 +1164,5 @@ class TA_Admin {
 			'message' => __( 'Score recalculated successfully.', 'third-audience' ),
 			'score'   => $score_data['score'],
 		) );
-	}
-
-	/**
-	 * Handle save GA4 settings action.
-	 *
-	 * @since 3.0.0
-	 * @return void
-	 */
-	public function handle_save_ga4_settings() {
-		$this->security->verify_admin_capability();
-		$this->security->verify_nonce_or_die( 'save_ga4_settings' );
-
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$settings = isset( $_POST['ta_ga4'] ) && is_array( $_POST['ta_ga4'] ) ? $_POST['ta_ga4'] : array();
-
-		// Sanitize settings.
-		$sanitized = array(
-			'enabled'        => isset( $settings['enabled'] ),
-			'measurement_id' => $this->security->sanitize_text( $settings['measurement_id'] ?? '' ),
-			'api_secret'     => $this->security->sanitize_text( $settings['api_secret'] ?? '' ),
-		);
-
-		// Validate Measurement ID format (should be G-XXXXXXXXXX).
-		if ( ! empty( $sanitized['measurement_id'] ) && ! preg_match( '/^G-[A-Z0-9]+$/', $sanitized['measurement_id'] ) ) {
-			add_settings_error(
-				'ta_messages',
-				'ta_ga4_invalid_id',
-				__( 'Invalid GA4 Measurement ID format. Should be G-XXXXXXXXXX.', 'third-audience' ),
-				'error'
-			);
-			$this->redirect_to_settings( 'ga4' );
-			return;
-		}
-
-		if ( class_exists( 'TA_GA4_Integration' ) ) {
-			$ga4 = TA_GA4_Integration::get_instance();
-			$ga4->save_settings( $sanitized );
-		}
-
-		add_settings_error(
-			'ta_messages',
-			'ta_ga4_saved',
-			__( 'GA4 settings saved successfully.', 'third-audience' ),
-			'success'
-		);
-
-		$this->redirect_to_settings( 'ga4' );
-	}
-
-	/**
-	 * AJAX handler: Test GA4 connection.
-	 *
-	 * @since 3.0.0
-	 * @return void
-	 */
-	public function ajax_test_ga4_connection() {
-		$this->security->verify_ajax_request( 'admin_ajax' );
-
-		$measurement_id = isset( $_POST['measurement_id'] ) ? $this->security->sanitize_text( $_POST['measurement_id'] ) : '';
-		$api_secret     = isset( $_POST['api_secret'] ) ? $this->security->sanitize_text( $_POST['api_secret'] ) : '';
-
-		if ( empty( $measurement_id ) || empty( $api_secret ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'Measurement ID and API Secret are required.', 'third-audience' ),
-			) );
-		}
-
-		if ( ! class_exists( 'TA_GA4_Integration' ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'GA4 Integration class not found.', 'third-audience' ),
-			) );
-		}
-
-		$ga4    = TA_GA4_Integration::get_instance();
-		$result = $ga4->test_connection( $measurement_id, $api_secret );
-
-		if ( is_wp_error( $result ) ) {
-			$this->logger->error( 'GA4 connection test failed (AJAX).', array(
-				'error' => $result->get_error_message(),
-			) );
-			wp_send_json_error( array(
-				'message' => $result->get_error_message(),
-			) );
-		}
-
-		wp_send_json_success( array(
-			'message' => $result['message'],
-		) );
-	}
-
-	/**
-	 * AJAX handler: Add competitor.
-	 *
-	 * @since 3.1.0
-	 * @return void
-	 */
-	public function ajax_add_competitor() {
-		$this->security->verify_ajax_request( 'competitor_benchmarking' );
-
-		$url  = isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '';
-		$name = isset( $_POST['competitor_name'] ) ? sanitize_text_field( wp_unslash( $_POST['competitor_name'] ) ) : '';
-
-		if ( empty( $url ) || empty( $name ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'Competitor URL and name are required.', 'third-audience' ),
-			) );
-		}
-
-		$benchmarking = TA_Competitor_Benchmarking::get_instance();
-		$result       = $benchmarking->add_competitor( $url, $name );
-
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array(
-				'message' => $result->get_error_message(),
-			) );
-		}
-
-		wp_send_json_success( array(
-			'message' => __( 'Competitor added successfully.', 'third-audience' ),
-		) );
-	}
-
-	/**
-	 * AJAX handler: Delete competitor.
-	 *
-	 * @since 3.1.0
-	 * @return void
-	 */
-	public function ajax_delete_competitor() {
-		$this->security->verify_ajax_request( 'competitor_benchmarking' );
-
-		$url = isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '';
-
-		if ( empty( $url ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'Invalid competitor URL.', 'third-audience' ),
-			) );
-		}
-
-		$benchmarking = TA_Competitor_Benchmarking::get_instance();
-		$result       = $benchmarking->delete_competitor( $url );
-
-		if ( $result ) {
-			wp_send_json_success( array(
-				'message' => __( 'Competitor deleted successfully.', 'third-audience' ),
-			) );
-		} else {
-			wp_send_json_error( array(
-				'message' => __( 'Failed to delete competitor.', 'third-audience' ),
-			) );
-		}
-	}
-
-	/**
-	 * AJAX handler: Generate prompts for competitor.
-	 *
-	 * @since 3.1.0
-	 * @return void
-	 */
-	public function ajax_generate_prompts() {
-		$this->security->verify_ajax_request( 'competitor_benchmarking' );
-
-		$url  = isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '';
-		$name = isset( $_POST['competitor_name'] ) ? sanitize_text_field( wp_unslash( $_POST['competitor_name'] ) ) : '';
-
-		if ( empty( $url ) || empty( $name ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'Competitor URL and name are required.', 'third-audience' ),
-			) );
-		}
-
-		$benchmarking = TA_Competitor_Benchmarking::get_instance();
-		$prompts      = $benchmarking->generate_prompts( $url, $name );
-
-		wp_send_json_success( array(
-			'prompts' => $prompts,
-			'message' => __( 'Prompts generated successfully.', 'third-audience' ),
-		) );
-	}
-
-	/**
-	 * AJAX handler: Record test result.
-	 *
-	 * @since 3.1.0
-	 * @return void
-	 */
-	public function ajax_record_test() {
-		// Verify nonce.
-		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'ta_record_test' ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'Security verification failed.', 'third-audience' ),
-			) );
-		}
-
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'Permission denied.', 'third-audience' ),
-			) );
-		}
-
-		$data = array(
-			'competitor_url'  => isset( $_POST['competitor_url'] ) ? esc_url_raw( wp_unslash( $_POST['competitor_url'] ) ) : '',
-			'competitor_name' => isset( $_POST['competitor_name'] ) ? sanitize_text_field( wp_unslash( $_POST['competitor_name'] ) ) : '',
-			'test_prompt'     => isset( $_POST['test_prompt'] ) ? sanitize_textarea_field( wp_unslash( $_POST['test_prompt'] ) ) : '',
-			'ai_platform'     => isset( $_POST['ai_platform'] ) ? sanitize_text_field( wp_unslash( $_POST['ai_platform'] ) ) : '',
-			'cited_rank'      => isset( $_POST['cited_rank'] ) && $_POST['cited_rank'] !== '' ? absint( $_POST['cited_rank'] ) : null,
-			'test_date'       => isset( $_POST['test_date'] ) ? sanitize_text_field( wp_unslash( $_POST['test_date'] ) ) : current_time( 'mysql' ),
-			'test_notes'      => isset( $_POST['test_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['test_notes'] ) ) : '',
-		);
-
-		// Validate required fields.
-		if ( empty( $data['competitor_url'] ) || empty( $data['competitor_name'] ) || empty( $data['test_prompt'] ) || empty( $data['ai_platform'] ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'All required fields must be filled.', 'third-audience' ),
-			) );
-		}
-
-		$benchmarking = TA_Competitor_Benchmarking::get_instance();
-		$result       = $benchmarking->record_test( $data );
-
-		if ( $result ) {
-			wp_send_json_success( array(
-				'message' => __( 'Test result recorded successfully.', 'third-audience' ),
-				'test_id' => $result,
-			) );
-		} else {
-			wp_send_json_error( array(
-				'message' => __( 'Failed to record test result.', 'third-audience' ),
-			) );
-		}
-	}
-
-	/**
-	 * AJAX handler: Delete test result.
-	 *
-	 * @since 3.1.0
-	 * @return void
-	 */
-	public function ajax_delete_test() {
-		$this->security->verify_ajax_request( 'competitor_benchmarking' );
-
-		$test_id = isset( $_POST['test_id'] ) ? absint( $_POST['test_id'] ) : 0;
-
-		if ( empty( $test_id ) ) {
-			wp_send_json_error( array(
-				'message' => __( 'Invalid test ID.', 'third-audience' ),
-			) );
-		}
-
-		$benchmarking = TA_Competitor_Benchmarking::get_instance();
-		$result       = $benchmarking->delete_test( $test_id );
-
-		if ( $result ) {
-			wp_send_json_success( array(
-				'message' => __( 'Test result deleted successfully.', 'third-audience' ),
-			) );
-		} else {
-			wp_send_json_error( array(
-				'message' => __( 'Failed to delete test result.', 'third-audience' ),
-			) );
-		}
 	}
 }

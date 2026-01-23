@@ -153,6 +153,12 @@ class TA_Autoloader {
 			// Admin classes
 			'TA_Admin'               => 'admin/class-ta-admin.php',
 
+			// Admin AJAX handlers (extracted from TA_Admin v3.3.1)
+			'TA_Admin_AJAX_Cache'     => 'admin/AJAX/class-ta-admin-ajax-cache.php',
+			'TA_Admin_AJAX_Analytics' => 'admin/AJAX/class-ta-admin-ajax-analytics.php',
+			'TA_Admin_AJAX_Benchmark' => 'admin/AJAX/class-ta-admin-ajax-benchmark.php',
+			'TA_Admin_Settings'       => 'admin/AJAX/class-ta-admin-settings.php',
+
 			// Interfaces
 			'TA_Cacheable'           => 'includes/interfaces/interface-ta-cacheable.php',
 			'TA_Loggable'            => 'includes/interfaces/interface-ta-loggable.php',
@@ -173,11 +179,12 @@ class TA_Autoloader {
 	 */
 	private function setup_directory_map() {
 		$this->directory_map = array(
-			'TA_Admin_'     => 'admin/',
-			'TA_Interface_' => 'includes/interfaces/',
-			'TA_Trait_'     => 'includes/traits/',
-			'TA_Analytics_' => 'includes/Analytics/',
-			'TA_'           => 'includes/',
+			'TA_Admin_AJAX_' => 'admin/AJAX/',
+			'TA_Admin_'      => 'admin/',
+			'TA_Interface_'  => 'includes/interfaces/',
+			'TA_Trait_'      => 'includes/traits/',
+			'TA_Analytics_'  => 'includes/Analytics/',
+			'TA_'            => 'includes/',
 		);
 	}
 
