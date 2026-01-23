@@ -128,6 +128,14 @@ class TA_Autoloader {
 
 			// Bot Analytics and Webhooks
 			'TA_Bot_Analytics'              => 'includes/class-ta-bot-analytics.php',
+
+			// Analytics Module (extracted from TA_Bot_Analytics v3.3.1)
+			'TA_Geolocation'                => 'includes/Analytics/class-ta-geolocation.php',
+			'TA_Bot_Detector'               => 'includes/Analytics/class-ta-bot-detector.php',
+			'TA_Performance_Stats'          => 'includes/Analytics/class-ta-performance-stats.php',
+			'TA_Data_Exporter'              => 'includes/Analytics/class-ta-data-exporter.php',
+			'TA_Analytics_Query'            => 'includes/Analytics/class-ta-analytics-query.php',
+			'TA_Visit_Tracker'              => 'includes/Analytics/class-ta-visit-tracker.php',
 			'TA_Crawl_Budget_Analyzer'      => 'includes/class-ta-crawl-budget-analyzer.php',
 			'TA_Webhooks'                   => 'includes/class-ta-webhooks.php',
 			'TA_GA4_Integration'            => 'includes/class-ta-ga4-integration.php',
@@ -168,6 +176,7 @@ class TA_Autoloader {
 			'TA_Admin_'     => 'admin/',
 			'TA_Interface_' => 'includes/interfaces/',
 			'TA_Trait_'     => 'includes/traits/',
+			'TA_Analytics_' => 'includes/Analytics/',
 			'TA_'           => 'includes/',
 		);
 	}
