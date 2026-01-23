@@ -856,7 +856,7 @@ class TA_Admin {
 
 		// Get errors and stats.
 		$errors = $this->logger->get_recent_errors( 100 ); // Get up to 100 errors.
-		$stats  = $this->logger->get_error_stats();
+		$stats  = $this->logger->get_stats();
 
 		// Build export data.
 		$export_data = array(
