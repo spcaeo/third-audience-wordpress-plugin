@@ -1158,6 +1158,50 @@
 	right: 8px;
 }
 
+/* Card arrow indicator */
+.ta-card-arrow {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #007aff;
+	font-size: 16px;
+	opacity: 0.7;
+	transition: all 0.2s ease;
+}
+
+.ta-hero-card-clickable:hover .ta-card-arrow {
+	opacity: 1;
+	right: 8px;
+}
+
+/* Hero modal overlay (same style as session modal) */
+.ta-hero-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 100000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ta-hero-modal-close {
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	font-size: 20px;
+	color: #646970;
+	padding: 5px;
+}
+
+.ta-hero-modal-close:hover {
+	color: #1d2327;
+}
+
 /* === Session Analytics Modal === */
 .ta-session-modal-overlay {
 	position: fixed;

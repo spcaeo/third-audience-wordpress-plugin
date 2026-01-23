@@ -71,7 +71,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 
 	<!-- Real-time Metrics Hero -->
 	<div class="ta-hero-metrics">
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="total_visits" title="<?php esc_attr_e( 'Click to see visit breakdown by bot type', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-chart-line"></span>
 			</div>
@@ -82,9 +82,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 					<?php echo number_format( $summary['visits_today'] ); ?> today
 				</div>
 			</div>
+			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="pages_crawled" title="<?php esc_attr_e( 'Click to see all crawled pages', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-admin-page"></span>
 			</div>
@@ -93,9 +94,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-value"><?php echo number_format( $summary['unique_pages'] ); ?></div>
 				<div class="ta-hero-meta"><?php echo number_format( $summary['unique_bots'] ); ?> unique bots</div>
 			</div>
+			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="cache_hit_rate" title="<?php esc_attr_e( 'Click to see cache performance details', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-performance"></span>
 			</div>
@@ -104,9 +106,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-value"><?php echo $summary['cache_hit_rate']; ?>%</div>
 				<div class="ta-hero-meta">Performance metric</div>
 			</div>
+			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="avg_response" title="<?php esc_attr_e( 'Click to see response time breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-dashboard"></span>
 			</div>
@@ -115,9 +118,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-value"><?php echo $summary['avg_response_time']; ?><span style="font-size: 14px;">ms</span></div>
 				<div class="ta-hero-meta">Average response time</div>
 			</div>
+			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="verified_bots" title="<?php esc_attr_e( 'Click to see verification breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-yes-alt"></span>
 			</div>
@@ -126,6 +130,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-value"><?php echo $summary['ip_verified_percentage']; ?>%</div>
 				<div class="ta-hero-meta"><?php echo number_format( $summary['ip_verified_count'] ); ?> verified visits</div>
 			</div>
+			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 	</div>
 
@@ -137,10 +142,6 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		</h2>
 		<p class="description">
 			<?php esc_html_e( 'Bot crawl sessions grouped by 30-minute windows', 'third-audience' ); ?>
-			<span style="color: #007aff; margin-left: 8px;">
-				<span class="dashicons dashicons-info" style="font-size: 14px; vertical-align: middle;"></span>
-				<?php esc_html_e( 'Click any card for details', 'third-audience' ); ?>
-			</span>
 		</p>
 	</div>
 
@@ -1111,23 +1112,258 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 	</div>
 </div>
 
+<!-- Hero Metrics Drill-Down Modal -->
+<div class="ta-hero-modal-overlay" style="display: none;">
+	<div class="ta-session-modal" style="max-width: 900px;">
+		<div class="ta-session-modal-header">
+			<h2 id="ta-hero-modal-title"><?php esc_html_e( 'Metric Details', 'third-audience' ); ?></h2>
+			<button type="button" class="ta-hero-modal-close">
+				<span class="dashicons dashicons-no-alt"></span>
+			</button>
+		</div>
+		<div class="ta-session-modal-body">
+			<div class="ta-hero-loading" style="text-align: center; padding: 40px;">
+				<span class="spinner is-active" style="float: none;"></span>
+				<p><?php esc_html_e( 'Loading data...', 'third-audience' ); ?></p>
+			</div>
+			<div class="ta-hero-content" style="display: none;">
+				<!-- Summary Row -->
+				<div class="ta-hero-summary" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+					<div class="ta-session-stat">
+						<span class="ta-stat-value" id="ta-hero-stat1">-</span>
+						<span class="ta-stat-label" id="ta-hero-label1">-</span>
+					</div>
+					<div class="ta-session-stat">
+						<span class="ta-stat-value" id="ta-hero-stat2">-</span>
+						<span class="ta-stat-label" id="ta-hero-label2">-</span>
+					</div>
+					<div class="ta-session-stat">
+						<span class="ta-stat-value" id="ta-hero-stat3">-</span>
+						<span class="ta-stat-label" id="ta-hero-label3">-</span>
+					</div>
+				</div>
+
+				<!-- Chart Section -->
+				<div class="ta-hero-chart-section" style="margin-bottom: 20px;">
+					<h4 style="margin: 0 0 12px 0;">
+						<span class="dashicons dashicons-chart-pie"></span>
+						<span id="ta-hero-chart-title"><?php esc_html_e( 'Distribution', 'third-audience' ); ?></span>
+					</h4>
+					<div style="display: flex; gap: 20px; align-items: flex-start;">
+						<div style="flex: 1; max-height: 250px;">
+							<canvas id="ta-hero-chart"></canvas>
+						</div>
+						<div id="ta-hero-chart-legend" style="flex: 0 0 200px; font-size: 13px;"></div>
+					</div>
+				</div>
+
+				<!-- Detailed Table -->
+				<div class="ta-hero-table-section">
+					<h4 style="margin: 0 0 12px 0;">
+						<span class="dashicons dashicons-list-view"></span>
+						<span id="ta-hero-table-title"><?php esc_html_e( 'Detailed Breakdown', 'third-audience' ); ?></span>
+					</h4>
+					<div style="max-height: 300px; overflow-y: auto;">
+						<table class="ta-table ta-table-compact" id="ta-hero-table">
+							<thead id="ta-hero-thead">
+								<!-- Dynamic headers -->
+							</thead>
+							<tbody id="ta-hero-tbody">
+								<!-- Populated by JavaScript -->
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
 <script type="text/javascript">
 // Session Analytics Drill-Down
 jQuery(document).ready(function($) {
 	var sessionChart = null;
+	var heroChart = null;
 
-	// Click handler for session cards
+	// Hero metrics (top 5 cards)
+	var heroMetrics = ['total_visits', 'pages_crawled', 'cache_hit_rate', 'avg_response', 'verified_bots'];
+
+	// Click handler for all clickable cards
 	$('.ta-hero-card-clickable').on('click', function() {
 		var metric = $(this).data('metric');
-		openSessionModal(metric);
+		if (heroMetrics.indexOf(metric) !== -1) {
+			openHeroModal(metric);
+		} else {
+			openSessionModal(metric);
+		}
 	});
 
-	// Close modal
+	// Close session modal
 	$('.ta-session-modal-close, .ta-session-modal-overlay').on('click', function(e) {
 		if (e.target === this || $(this).hasClass('ta-session-modal-close')) {
 			$('.ta-session-modal-overlay').fadeOut(200);
 		}
 	});
+
+	// Close hero modal
+	$('.ta-hero-modal-close, .ta-hero-modal-overlay').on('click', function(e) {
+		if (e.target === this || $(this).hasClass('ta-hero-modal-close')) {
+			$('.ta-hero-modal-overlay').fadeOut(200);
+		}
+	});
+
+	// Hero Modal Functions
+	function openHeroModal(metric) {
+		$('.ta-hero-modal-overlay').fadeIn(200);
+		$('.ta-hero-loading').show();
+		$('.ta-hero-content').hide();
+
+		// Set titles based on metric
+		var titles = {
+			'total_visits': '<?php echo esc_js( __( 'Total Bot Visits - Activity Breakdown', 'third-audience' ) ); ?>',
+			'pages_crawled': '<?php echo esc_js( __( 'Pages Crawled - Content Analysis', 'third-audience' ) ); ?>',
+			'cache_hit_rate': '<?php echo esc_js( __( 'Cache Performance - Hit/Miss Analysis', 'third-audience' ) ); ?>',
+			'avg_response': '<?php echo esc_js( __( 'Response Time - Performance Analysis', 'third-audience' ) ); ?>',
+			'verified_bots': '<?php echo esc_js( __( 'Bot Verification - Status Breakdown', 'third-audience' ) ); ?>'
+		};
+		$('#ta-hero-modal-title').text(titles[metric] || '<?php echo esc_js( __( 'Metric Details', 'third-audience' ) ); ?>');
+
+		loadHeroData(metric);
+	}
+
+	function loadHeroData(metric) {
+		$.ajax({
+			url: ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'ta_get_hero_metric_details',
+				nonce: taAnalyticsData.nonce,
+				metric: metric
+			},
+			success: function(response) {
+				if (response.success) {
+					renderHeroData(metric, response.data);
+				} else {
+					alert('<?php echo esc_js( __( 'Failed to load metric data', 'third-audience' ) ); ?>');
+					$('.ta-hero-modal-overlay').fadeOut(200);
+				}
+			},
+			error: function() {
+				alert('<?php echo esc_js( __( 'Error loading metric data', 'third-audience' ) ); ?>');
+				$('.ta-hero-modal-overlay').fadeOut(200);
+			}
+		});
+	}
+
+	function renderHeroData(metric, data) {
+		// Update summary stats
+		$('#ta-hero-stat1').text(data.stats[0].value);
+		$('#ta-hero-label1').text(data.stats[0].label);
+		$('#ta-hero-stat2').text(data.stats[1].value);
+		$('#ta-hero-label2').text(data.stats[1].label);
+		$('#ta-hero-stat3').text(data.stats[2].value);
+		$('#ta-hero-label3').text(data.stats[2].label);
+
+		// Update chart title
+		$('#ta-hero-chart-title').text(data.chart_title);
+		$('#ta-hero-table-title').text(data.table_title);
+
+		// Render chart
+		renderHeroChart(data.chart_data, data.chart_type);
+
+		// Render table
+		renderHeroTable(data.table_headers, data.table_rows);
+
+		$('.ta-hero-loading').hide();
+		$('.ta-hero-content').show();
+	}
+
+	function renderHeroChart(chartData, chartType) {
+		var ctx = document.getElementById('ta-hero-chart').getContext('2d');
+		var colors = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#5856d6', '#00c7be', '#ff2d55', '#a2845e', '#8e8e93'];
+
+		if (heroChart) {
+			heroChart.destroy();
+		}
+
+		var config = {
+			type: chartType || 'doughnut',
+			data: {
+				labels: chartData.labels,
+				datasets: [{
+					data: chartData.values,
+					backgroundColor: colors.slice(0, chartData.labels.length),
+					borderWidth: 0
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: true,
+				plugins: {
+					legend: {
+						display: false
+					},
+					tooltip: {
+						backgroundColor: 'rgba(0, 0, 0, 0.8)',
+						padding: 10,
+						cornerRadius: 6
+					}
+				}
+			}
+		};
+
+		// For bar charts, adjust options
+		if (chartType === 'bar') {
+			config.options.plugins.legend.display = false;
+			config.options.scales = {
+				y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+				x: { grid: { display: false } }
+			};
+			config.data.datasets[0].borderRadius = 4;
+		}
+
+		heroChart = new Chart(ctx, config);
+
+		// Render legend
+		var legendHtml = '';
+		chartData.labels.forEach(function(label, i) {
+			var value = chartData.values[i];
+			var percent = chartData.percentages ? chartData.percentages[i] : '';
+			legendHtml += '<div style="display: flex; align-items: center; margin-bottom: 8px;">' +
+				'<span style="width: 12px; height: 12px; border-radius: 3px; background: ' + colors[i] + '; margin-right: 8px;"></span>' +
+				'<span style="flex: 1;">' + escapeHtml(label) + '</span>' +
+				'<span style="font-weight: 600;">' + value + (percent ? ' (' + percent + ')' : '') + '</span>' +
+			'</div>';
+		});
+		$('#ta-hero-chart-legend').html(legendHtml);
+	}
+
+	function renderHeroTable(headers, rows) {
+		// Build header row
+		var thead = '<tr>';
+		headers.forEach(function(h) {
+			var align = h.align ? ' style="text-align: ' + h.align + ';"' : '';
+			thead += '<th' + align + '>' + escapeHtml(h.label) + '</th>';
+		});
+		thead += '</tr>';
+		$('#ta-hero-thead').html(thead);
+
+		// Build body rows
+		var tbody = '';
+		if (rows.length === 0) {
+			tbody = '<tr><td colspan="' + headers.length + '" style="text-align: center; color: #646970; padding: 20px;"><?php echo esc_js( __( 'No data available', 'third-audience' ) ); ?></td></tr>';
+		} else {
+			rows.forEach(function(row) {
+				tbody += '<tr>';
+				row.forEach(function(cell, i) {
+					var align = headers[i] && headers[i].align ? ' style="text-align: ' + headers[i].align + ';"' : '';
+					tbody += '<td' + align + '>' + cell + '</td>';
+				});
+				tbody += '</tr>';
+			});
+		}
+		$('#ta-hero-tbody').html(tbody);
+	}
 
 	// Sort change
 	$('#ta-session-sort').on('change', function() {
@@ -1277,4 +1513,130 @@ jQuery(document).ready(function($) {
 		return div.innerHTML;
 	}
 });
+
+// Activity Timeline Chart
+(function() {
+	function initTimelineChart() {
+		var timelineData = <?php echo wp_json_encode( array_reverse( $visits_time ) ); ?>;
+
+		if (timelineData && timelineData.length > 0) {
+			var ctx = document.getElementById('ta-visits-chart');
+			if (ctx) {
+			var labels = timelineData.map(function(d) {
+				// Format label based on period type
+				var period = d.period;
+				if (period.length === 10) { // Daily: 2026-01-23
+					var parts = period.split('-');
+					return parts[1] + '/' + parts[2];
+				} else if (period.length === 7) { // Monthly: 2026-01
+					var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+					var parts = period.split('-');
+					return months[parseInt(parts[1], 10) - 1] + ' ' + parts[0];
+				} else if (period.includes(':')) { // Hourly: 2026-01-23 14:00:00
+					var parts = period.split(' ');
+					var timePart = parts[1].split(':');
+					return timePart[0] + ':00';
+				}
+				return period;
+			});
+
+			var visits = timelineData.map(function(d) { return parseInt(d.visits, 10); });
+			var uniqueBots = timelineData.map(function(d) { return parseInt(d.unique_bots, 10); });
+
+			new Chart(ctx, {
+				type: 'line',
+				data: {
+					labels: labels,
+					datasets: [
+						{
+							label: '<?php echo esc_js( __( 'Bot Visits', 'third-audience' ) ); ?>',
+							data: visits,
+							borderColor: '#007aff',
+							backgroundColor: 'rgba(0, 122, 255, 0.1)',
+							fill: true,
+							tension: 0.3,
+							borderWidth: 2,
+							pointRadius: 4,
+							pointHoverRadius: 6
+						},
+						{
+							label: '<?php echo esc_js( __( 'Unique Bots', 'third-audience' ) ); ?>',
+							data: uniqueBots,
+							borderColor: '#34c759',
+							backgroundColor: 'rgba(52, 199, 89, 0.1)',
+							fill: true,
+							tension: 0.3,
+							borderWidth: 2,
+							pointRadius: 4,
+							pointHoverRadius: 6
+						}
+					]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					interaction: {
+						intersect: false,
+						mode: 'index'
+					},
+					plugins: {
+						legend: {
+							position: 'top',
+							labels: {
+								usePointStyle: true,
+								padding: 15
+							}
+						},
+						tooltip: {
+							backgroundColor: 'rgba(0, 0, 0, 0.8)',
+							padding: 12,
+							titleFont: { size: 14 },
+							bodyFont: { size: 13 },
+							cornerRadius: 8
+						}
+					},
+					scales: {
+						y: {
+							beginAtZero: true,
+							ticks: {
+								stepSize: 1,
+								callback: function(value) {
+									if (Number.isInteger(value)) return value;
+								}
+							},
+							grid: {
+								color: 'rgba(0, 0, 0, 0.05)'
+							}
+						},
+						x: {
+							grid: {
+								display: false
+							}
+						}
+					}
+				}
+			});
+			}
+		} else {
+			// Show "no data" message if empty
+			var chartContainer = document.getElementById('ta-visits-chart');
+			if (chartContainer) {
+				chartContainer.parentNode.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: #646970;">' +
+					'<span class="dashicons dashicons-chart-area" style="font-size: 48px; width: 48px; height: 48px; margin-bottom: 15px; opacity: 0.3;"></span>' +
+					'<p style="margin: 0; font-size: 14px;"><?php echo esc_js( __( 'No activity data yet. Chart will appear when bots start visiting your site.', 'third-audience' ) ); ?></p>' +
+				'</div>';
+			}
+		}
+	}
+
+	// Wait for Chart.js to load
+	function waitForChart() {
+		if (typeof Chart !== 'undefined') {
+			initTimelineChart();
+		} else {
+			setTimeout(waitForChart, 100);
+		}
+	}
+	waitForChart();
+})();
 </script>
