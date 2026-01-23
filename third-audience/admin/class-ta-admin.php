@@ -687,19 +687,9 @@ class TA_Admin {
 			array( $this, 'render_system_health_page' )
 		);
 
-		// About submenu.
+		// Competitor Benchmarking submenu (hidden from menu, accessible via direct link).
 		add_submenu_page(
-			'third-audience-bot-analytics',
-			__( 'About', 'third-audience' ),
-			__( 'About', 'third-audience' ),
-			'manage_options',
-			'third-audience-about',
-			array( $this, 'render_about_page' )
-		);
-
-		// Competitor Benchmarking submenu.
-		add_submenu_page(
-			'third-audience-bot-analytics',
+			null, // Hidden from menu.
 			__( 'Competitor Benchmarking', 'third-audience' ),
 			__( 'Competitor Benchmarking', 'third-audience' ),
 			'manage_options',
@@ -715,6 +705,16 @@ class TA_Admin {
 			'manage_options',
 			'third-audience-email-digest',
 			array( $this, 'render_email_digest_page' )
+		);
+
+		// About submenu (at the end).
+		add_submenu_page(
+			'third-audience-bot-analytics',
+			__( 'About', 'third-audience' ),
+			__( 'About', 'third-audience' ),
+			'manage_options',
+			'third-audience-about',
+			array( $this, 'render_about_page' )
 		);
 
 		// Citation Alerts submenu (hidden from menu, accessible via direct link).
