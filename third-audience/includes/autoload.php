@@ -132,6 +132,7 @@ class TA_Autoloader {
 			'TA_Webhooks'                   => 'includes/class-ta-webhooks.php',
 			'TA_GA4_Integration'            => 'includes/class-ta-ga4-integration.php',
 			'TA_Competitor_Benchmarking'    => 'includes/class-ta-competitor-benchmarking.php',
+			'TA_Email_Digest'               => 'includes/class-ta-email-digest.php',
 
 			// Rate limiting and queue
 			'TA_Rate_Limiter'        => 'includes/class-ta-rate-limiter.php',

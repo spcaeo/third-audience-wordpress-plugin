@@ -386,7 +386,11 @@ class TA_URL_Router {
 			'response_time'  => $response_time,
 			'response_size'  => $size,
 			'referer'        => $referer,
+			'content_type'   => 'markdown', // Mark as markdown request.
 		) );
+
+		// Fire action to prevent duplicate tracking from maybe_track_bot_crawl().
+		do_action( 'ta_bot_visit_tracked' );
 
 		// Fire webhook for markdown.accessed event.
 		$this->webhooks->fire_markdown_accessed( array(

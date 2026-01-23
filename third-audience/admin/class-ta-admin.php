@@ -78,6 +78,7 @@ class TA_Admin {
 	 */
 	public function init() {
 		add_action( 'admin_init', array( $this, 'handle_export_request' ), 5 ); // Priority 5 to run early.
+		add_action( 'admin_init', array( $this, 'handle_digest_download' ), 5 ); // Handle .md report download early.
 		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -129,6 +130,9 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_generate_prompts', array( $this, 'ajax_generate_prompts' ) );
 		add_action( 'wp_ajax_ta_record_test', array( $this, 'ajax_record_test' ) );
 		add_action( 'wp_ajax_ta_delete_test', array( $this, 'ajax_delete_test' ) );
+
+		// Email Digest AJAX handlers.
+		add_action( 'wp_ajax_ta_send_test_digest', array( $this, 'ajax_send_test_digest' ) );
 
 		// Metadata settings hooks - clear pre-generated markdown when settings change.
 		add_action( 'update_option_ta_enable_enhanced_metadata', array( $this, 'on_metadata_settings_change' ), 10, 2 );
@@ -703,6 +707,16 @@ class TA_Admin {
 			array( $this, 'render_competitor_benchmarking_page' )
 		);
 
+		// Email Digest submenu.
+		add_submenu_page(
+			'third-audience-bot-analytics',
+			__( 'Email Digest', 'third-audience' ),
+			__( 'Email Digest', 'third-audience' ),
+			'manage_options',
+			'third-audience-email-digest',
+			array( $this, 'render_email_digest_page' )
+		);
+
 		// Citation Alerts submenu (hidden from menu, accessible via direct link).
 		add_submenu_page(
 			null, // Hidden from menu.
@@ -1017,6 +1031,82 @@ class TA_Admin {
 		}
 
 		include TA_PLUGIN_DIR . 'admin/views/competitor-benchmarking-page.php';
+	}
+
+	/**
+	 * Handle digest report download (runs early on admin_init).
+	 *
+	 * @since 3.2.0
+	 * @return void
+	 */
+	public function handle_digest_download() {
+		// Check if this is a digest download request.
+		if ( ! isset( $_GET['page'] ) || 'third-audience-email-digest' !== $_GET['page'] ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['action'] ) || 'download_md' !== $_GET['action'] ) {
+			return;
+		}
+
+		// Verify nonce and capability.
+		check_admin_referer( 'ta_download_report' );
+		$this->security->verify_admin_capability();
+
+		$period = isset( $_GET['period'] ) ? absint( $_GET['period'] ) : 24;
+		$digest = TA_Email_Digest::get_instance();
+		$data   = $digest->gather_digest_data( $period );
+		$report = $digest->generate_md_report( $data );
+
+		if ( $report && file_exists( $report ) ) {
+			$content = file_get_contents( $report ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			wp_delete_file( $report ); // Clean up temp file.
+
+			// Send download headers.
+			nocache_headers();
+			header( 'Content-Type: text/markdown; charset=utf-8' );
+			header( 'Content-Disposition: attachment; filename="third-audience-report-' . gmdate( 'Y-m-d-H-i' ) . '.md"' );
+			header( 'Content-Length: ' . strlen( $content ) );
+
+			echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markdown content.
+			exit;
+		}
+
+		// If no report generated, redirect back with error.
+		wp_safe_redirect( admin_url( 'admin.php?page=third-audience-email-digest&error=no_data' ) );
+		exit;
+	}
+
+	/**
+	 * Render Email Digest settings page.
+	 *
+	 * @since 3.2.0
+	 * @return void
+	 */
+	public function render_email_digest_page() {
+		$this->security->verify_admin_capability();
+
+		include TA_PLUGIN_DIR . 'admin/views/email-digest-settings.php';
+	}
+
+	/**
+	 * AJAX handler for sending test digest email.
+	 *
+	 * @since 3.2.0
+	 * @return void
+	 */
+	public function ajax_send_test_digest() {
+		check_ajax_referer( 'ta_test_digest', 'nonce' );
+		$this->security->verify_admin_capability();
+
+		$digest = TA_Email_Digest::get_instance();
+		$result = $digest->send_test_digest();
+
+		if ( $result ) {
+			wp_send_json_success( array( 'message' => __( 'Test email sent successfully.', 'third-audience' ) ) );
+		} else {
+			wp_send_json_error( array( 'message' => __( 'Failed to send test email. Check your SMTP settings.', 'third-audience' ) ) );
+		}
 	}
 
 	/**

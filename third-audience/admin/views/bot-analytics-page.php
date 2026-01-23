@@ -26,6 +26,9 @@ if ( ! empty( $_GET['date_to'] ) ) {
 if ( ! empty( $_GET['search'] ) ) {
 	$filters['search'] = sanitize_text_field( wp_unslash( $_GET['search'] ) );
 }
+if ( ! empty( $_GET['content_type'] ) ) {
+	$filters['content_type'] = sanitize_text_field( wp_unslash( $_GET['content_type'] ) );
+}
 
 $time_period = isset( $_GET['period'] ) ? sanitize_text_field( wp_unslash( $_GET['period'] ) ) : 'day';
 
@@ -215,6 +218,14 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 									<?php echo esc_html( $bot_info['name'] ); ?>
 								</option>
 							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="ta-filter-item">
+						<label><?php esc_html_e( 'Content Type', 'third-audience' ); ?></label>
+						<select name="content_type">
+							<option value=""><?php esc_html_e( 'All Content', 'third-audience' ); ?></option>
+							<option value="html" <?php selected( $filters['content_type'] ?? '', 'html' ); ?>><?php esc_html_e( 'HTML Pages', 'third-audience' ); ?></option>
+							<option value="markdown" <?php selected( $filters['content_type'] ?? '', 'markdown' ); ?>><?php esc_html_e( 'Markdown (.md)', 'third-audience' ); ?></option>
 						</select>
 					</div>
 					<div class="ta-filter-item">
@@ -789,6 +800,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 						<th><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Bot', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Location', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'IP Status', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Cache', 'third-audience' ); ?></th>
@@ -798,7 +810,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<tbody id="ta-activity-tbody">
 					<?php if ( empty( $recent_visits ) ) : ?>
 						<tr>
-							<td colspan="7" class="ta-no-data"><?php esc_html_e( 'No activity yet', 'third-audience' ); ?></td>
+							<td colspan="8" class="ta-no-data"><?php esc_html_e( 'No activity yet', 'third-audience' ); ?></td>
 						</tr>
 					<?php else : ?>
 						<?php
@@ -825,6 +837,16 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 									<a href="<?php echo esc_url( $visit['url'] ); ?>" target="_blank" class="ta-page-link">
 										<?php echo esc_html( wp_trim_words( $visit['post_title'] ?? $visit['url'], 6 ) ); ?>
 									</a>
+								</td>
+								<td>
+									<?php
+									$content_type = $visit['content_type'] ?? 'html';
+									$type_class   = 'markdown' === $content_type ? 'ta-content-type-md' : 'ta-content-type-html';
+									$type_label   = 'markdown' === $content_type ? 'MD' : 'HTML';
+									?>
+									<span class="ta-content-type-badge <?php echo esc_attr( $type_class ); ?>">
+										<?php echo esc_html( $type_label ); ?>
+									</span>
 								</td>
 								<td>
 									<?php if ( ! empty( $visit['country_code'] ) ) : ?>

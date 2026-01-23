@@ -427,6 +427,27 @@
 	color: #ff3b30;
 }
 
+/* === Content Type Badges (v3.2.0) === */
+.ta-content-type-badge {
+	display: inline-block;
+	padding: 3px 8px;
+	border-radius: 4px;
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+}
+
+.ta-content-type-html {
+	background: rgba(100, 105, 112, 0.12);
+	color: #646970;
+}
+
+.ta-content-type-md {
+	background: rgba(0, 122, 255, 0.15);
+	color: #007aff;
+}
+
 /* === IP Verification Badges === */
 .ta-ip-verify-badge {
 	display: inline-flex;

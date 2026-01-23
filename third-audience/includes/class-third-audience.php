@@ -52,6 +52,9 @@ class Third_Audience {
         $this->content_negotiation = new TA_Content_Negotiation();
         $this->discovery = new TA_Discovery();
 
+        // Initialize Email Digest (schedules cron).
+        TA_Email_Digest::get_instance();
+
         // Register hooks
         $this->register_hooks();
 

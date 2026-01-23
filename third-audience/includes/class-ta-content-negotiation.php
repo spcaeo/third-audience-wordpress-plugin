@@ -130,6 +130,10 @@ class TA_Content_Negotiation {
             'response_time'  => null,
             'response_size'  => null,
             'referer'        => $referer,
+            'content_type'   => 'markdown', // Mark as markdown request (Accept header).
         ));
+
+        // Fire action to prevent duplicate tracking from maybe_track_bot_crawl().
+        do_action('ta_bot_visit_tracked');
     }
 }

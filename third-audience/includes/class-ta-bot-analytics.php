@@ -34,7 +34,7 @@ class TA_Bot_Analytics {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '2.7.0';
+	const DB_VERSION = '3.2.0';
 
 	/**
 	 * Option name for database version.
@@ -189,6 +189,9 @@ class TA_Bot_Analytics {
 
 		// Hook into template_redirect to track AI citation clicks.
 		add_action( 'template_redirect', array( $this, 'maybe_track_citation_click' ), 5 );
+
+		// Hook to track ALL bot crawls on every page (like FieldCamp's middleware).
+		add_action( 'template_redirect', array( $this, 'maybe_track_bot_crawl' ), 1 );
 	}
 
 	/**
@@ -212,6 +215,121 @@ class TA_Bot_Analytics {
 
 		// Track citation click if detected.
 		$this->track_citation_click();
+	}
+
+	/**
+	 * Track bot crawl on any page visit (HTML or .md).
+	 *
+	 * Runs on EVERY page request and checks if the visitor is a known AI bot.
+	 * Similar to FieldCamp's Next.js middleware approach.
+	 *
+	 * @since 3.2.0
+	 * @return void
+	 */
+	public function maybe_track_bot_crawl() {
+		// Skip admin pages.
+		if ( is_admin() ) {
+			return;
+		}
+
+		// Skip AJAX requests.
+		if ( wp_doing_ajax() ) {
+			return;
+		}
+
+		// Skip cron requests.
+		if ( wp_doing_cron() ) {
+			return;
+		}
+
+		// Skip REST API requests.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+
+		// Skip if already tracked via .md request (avoid duplicates).
+		if ( did_action( 'ta_bot_visit_tracked' ) ) {
+			return;
+		}
+
+		// Get user agent.
+		$user_agent = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+
+		if ( empty( $user_agent ) ) {
+			return;
+		}
+
+		// Detect if this is a known bot.
+		$bot_info = $this->detect_bot( $user_agent );
+
+		if ( ! $bot_info ) {
+			return; // Not a bot, skip tracking.
+		}
+
+		// Get current URL and determine content type (HTML vs .md).
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$is_markdown = ( substr( $request_uri, -3 ) === '.md' );
+		$content_type = $is_markdown ? 'markdown' : 'html';
+
+		// Get post info if available.
+		$post_id    = get_the_ID();
+		$post_title = $post_id ? get_the_title( $post_id ) : '';
+
+		// Get client IP (handles proxies like FieldCamp).
+		$ip_address = $this->get_bot_client_ip();
+
+		// Prepare tracking data.
+		$tracking_data = array(
+			'bot_type'         => $bot_info['bot_type'],
+			'bot_name'         => $bot_info['name'],
+			'user_agent'       => $user_agent,
+			'url'              => home_url( $request_uri ),
+			'post_id'          => $post_id ?: null,
+			'post_title'       => $post_title,
+			'ip_address'       => $ip_address,
+			'cache_status'     => strtoupper( $content_type ), // 'HTML' or 'MARKDOWN'
+			'response_time'    => 0,
+			'traffic_type'     => 'bot_crawl',
+			'content_type'     => $content_type, // Track HTML vs markdown
+			'detection_method' => $bot_info['detection_method'] ?? 'pattern',
+			'confidence_score' => $bot_info['confidence'] ?? 1.0,
+		);
+
+		// Track the visit.
+		$result = $this->track_visit( $tracking_data );
+
+		if ( $result ) {
+			// Fire action to prevent duplicate tracking.
+			do_action( 'ta_bot_visit_tracked' );
+
+			$this->logger->debug( 'Bot crawl tracked.', array(
+				'bot'          => $bot_info['name'],
+				'url'          => $request_uri,
+				'content_type' => $content_type,
+			) );
+		}
+	}
+
+	/**
+	 * Get client IP address, handling proxies (like FieldCamp).
+	 *
+	 * @since 3.2.0
+	 * @return string IP address.
+	 */
+	private function get_bot_client_ip() {
+		$ip = '';
+
+		// Check for proxy headers.
+		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+			$ip  = trim( $ips[0] );
+		} elseif ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) );
+		} elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+		}
+
+		return $ip ?: 'unknown';
 	}
 
 	/**
@@ -375,6 +493,33 @@ class TA_Bot_Analytics {
 				$this->logger->info( 'Migration to v2.7.0 completed successfully (IP verification).' );
 			} else {
 				$this->logger->error( 'Migration to v2.7.0 failed for IP verification columns.' );
+			}
+		}
+
+		// Migration for v3.2.0: Add content_type column for HTML vs Markdown tracking.
+		if ( version_compare( $installed_version, '3.2.0', '<' ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$column_exists = $wpdb->get_results(
+				"SHOW COLUMNS FROM {$table_name} LIKE 'content_type'"
+			);
+
+			if ( empty( $column_exists ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+				$result = $wpdb->query(
+					"ALTER TABLE {$table_name} ADD COLUMN content_type varchar(20) DEFAULT 'html' AFTER traffic_type"
+				);
+
+				if ( false === $result ) {
+					$this->logger->error( 'Migration to v3.2.0 failed: could not add content_type column.', array(
+						'error' => $wpdb->last_error,
+					) );
+				} else {
+					// Add index for content_type filtering.
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+					$wpdb->query( "ALTER TABLE {$table_name} ADD INDEX content_type (content_type)" );
+
+					$this->logger->info( 'Migration to v3.2.0 completed: content_type column added.' );
+				}
 			}
 		}
 
@@ -952,6 +1097,7 @@ class TA_Bot_Analytics {
 			'referer'                => isset( $data['referer'] ) ? esc_url_raw( $data['referer'] ) : null,
 			'country_code'           => $country_code,
 			'traffic_type'           => sanitize_text_field( $data['traffic_type'] ?? 'bot_crawl' ),
+			'content_type'           => sanitize_text_field( $data['content_type'] ?? 'html' ), // v3.2.0: HTML vs markdown.
 			'ai_platform'            => isset( $data['ai_platform'] ) ? sanitize_text_field( $data['ai_platform'] ) : null,
 			'search_query'           => isset( $data['search_query'] ) ? sanitize_text_field( $data['search_query'] ) : null,
 			'referer_source'         => isset( $data['referer_source'] ) ? sanitize_text_field( $data['referer_source'] ) : null,
@@ -979,6 +1125,7 @@ class TA_Bot_Analytics {
 			'%s', // referer
 			'%s', // country_code
 			'%s', // traffic_type
+			'%s', // content_type (v3.2.0)
 			'%s', // ai_platform
 			'%s', // search_query
 			'%s', // referer_source
@@ -1986,6 +2133,10 @@ class TA_Bot_Analytics {
 
 		if ( ! empty( $filters['cache_status'] ) ) {
 			$where_conditions[] = $wpdb->prepare( 'cache_status = %s', $filters['cache_status'] );
+		}
+
+		if ( ! empty( $filters['content_type'] ) ) {
+			$where_conditions[] = $wpdb->prepare( 'content_type = %s', $filters['content_type'] );
 		}
 
 		if ( ! empty( $filters['date_from'] ) ) {
