@@ -1,0 +1,504 @@
+.tab-submenu-li {
+  .tab-title > a {
+    @apply pointer-events-none;
+  }
+  &:hover {
+    .peer {
+      @apply xl:bg-[#F5F5F5] border-[#E3E3E3];
+    }
+    .tab-submenu-grand-ul {
+      @apply block;
+      
+    }
+  }
+  .tab-see-all {
+        @apply mb-0 min-[1024px]:mb-5 min-[1024px]:mb-0 min-[1024px]:mt-9 min-[1024px]:absolute min-[1024px]:right-0 min-[1024px]:bottom-0 min-[1024px]:bg-transparent;
+        a {
+          @apply min-[1024px]:flex min-[1024px]:mr-2 min-[1024px]:bg-[#fafafa]  min-[1024px]:ml-auto min-[1024px]:px-4 min-[1024px]:py-[7px] min-[1024px]:rounded-lg min-[1024px]:text-[#232529] justify-center items-center;
+        }
+      }
+}
+
+
+
+@media (min-width: 1023px) {
+  .main-menu .tab-submenu:has(.tab-submenu-li.column-box) {
+    min-width: 700px !important;
+  }
+//   .desktop-menu{
+//     margin-left: 130px;
+// }
+}
+
+@media (min-width: 1280px) {
+.main-menu .tab-submenu:has(.tab-submenu-li.column-box) {
+  min-width: 750px !important;
+}
+}
+
+@media (max-width: 1023px) {
+  .main-menu .tab-submenu:has(.tab-submenu-li.column-box:hover) {
+    min-width: auto !important;
+  }
+  .main-menu.not-active {
+    .first-child-menu {
+      display: none;
+    }
+  }
+  .tab-submenu-li {
+    .tab-submenu-grand-ul {
+      display: none !important;
+    }
+  }
+  .tab-submenu-li.active {
+    .tab-submenu-grand-ul {
+      display: block !important;
+    }
+  }
+  .main-menu.active > a {
+    span {
+      svg {
+        transform: rotate(180deg);
+      }
+    }
+  }
+  .tab-submenu-li.active > div {
+    span {
+      svg {
+        transform: rotate(180deg);
+      }
+    }
+  }
+}
+
+.main-menu {
+  a {
+    border-bottom: 0px;
+  }
+}
+.navbar_logo-link {
+  border-bottom: 0px;
+}
+
+
+.SolutionMenuBoxContainer a {
+  border-bottom: 1px solid;
+    border-color: rgb(229 231 235 / var(--tw-border-opacity));
+}
+
+.SolutionMenuBoxContainer ul.SolutionBoxList li a{
+  border-bottom: unset;
+}
+
+.header-new-ppc {
+  background: transparent;
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+
+.login-btn-new:first-child a {
+    border: 1px solid #645B65A8;
+}
+.login-btn-new:first-child .sub-menu a{
+  border: unset;
+}
+.login-btn-new:last-child a {
+    border: 1px solid #9b32df;
+}
+
+@media (max-width: 767px) {
+  .ppc-header-nav-container.flex.items-center.gap-6 {
+    display: none;
+    // margin-top: 15px;
+    // margin-bottom: 10px;
+}
+
+.PlatformCardImage {
+  width: 300px;
+  justify-content: center;
+  margin: auto !important;
+  img{
+    width: 300px;
+  }
+}
+
+}
+
+/* Global Menu Sidebar Styles - Reusable across all menus */
+.MenuSidebar {
+  border-left: 1px solid #e3e3e373;
+  padding: 1.5rem;
+  flex-direction: column;
+
+  @media (min-width: 1023px) {
+    display: flex;
+  }
+}
+
+.PlatformMenuHeader{
+    font-family: Inter, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #7C3AED;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+    padding-bottom: 0px;
+}
+
+.PlatformCard {
+    background: linear-gradient(180deg, #F8F0FE 0%, #FFFFFF 100%);
+    padding-right: 0px !important;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+
+    .PlatformCardTitle {
+      font-family: Inter;
+      font-weight: 500;
+      font-style: Italic;
+      font-size: 17px;
+      line-height: 100%;
+      text-align: center;
+      vertical-align: middle;
+      padding-bottom: 25px;
+      padding-top: 25px;
+      position: relative;
+      z-index: 1;
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .PlatformCardImage {
+      position: relative;
+      z-index: 1;
+      transition: transform 0.4s ease-in-out;
+      margin-left: 15px;
+    }
+
+    /* Hover Overlay - Top portion with solid background */
+    .PlatformCardOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100%;
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 15px;
+      border-radius: 12px 12px 0 0;
+      opacity: 0;
+      transform: translateY(-100%);
+      transition: all 0.4s ease-in-out;
+      z-index: 10;
+
+      /* Purple glow at bottom */
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        height: 60px;
+        background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.6) 0%, transparent 70%);
+        pointer-events: none;
+      }
+    }
+
+    .PlatformCardOverlayTitle {
+      font-family: Inter, sans-serif;
+      font-weight: 500;
+      font-style: italic;
+      font-size: 18px;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .PlatformCardOverlaySubhead {
+      font-family: Inter, sans-serif;
+      font-weight: 400;
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 10px;
+    }
+
+    .PlatformCardOverlayArrow {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    /* Show overlay and slide image on hover */
+    &:hover {
+      .PlatformCardTitle {
+        opacity: 0;
+      }
+
+      .PlatformCardOverlay {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .PlatformCardImage {
+        transform: translateY(50%);
+      }
+    }
+}
+.PlatformBottomLinks{
+  background: linear-gradient(90deg, #E1F8FF 0%, #FFF 49.67%, #E1F8FF 99.33%);
+  border-bottom-left-radius: 17px;
+  border-bottom-right-radius: 17px;
+}
+
+.PlatformBottomLink {
+  font-family: Inter, sans-serif;
+  font-size: 13px;
+  color: #4b5563;
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 10px;
+  transition: all 0.3s ease-in-out;
+
+  &:hover {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+}
+.MenuSidebarHeader,
+.PlatformMenuHeader {
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7C3AED;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
+  padding-bottom: 0px;
+}
+
+.MenuSidebarList {
+  flex: 1;
+}
+
+.MenuSidebarItem {
+  display: block;
+  padding: 10px 0;
+  font-family: Inter, sans-serif;
+  font-size: 15px;
+  color: #232529;
+  border-bottom: 1px solid #e5e7eb !important;
+  transition: color 0.2s ease-in-out;
+
+  &:last-child{
+    border-bottom: unset !important;
+  }
+
+  &:hover {
+    color: #7C3AED;
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.MenuSidebarFooter {
+  margin-top: 24px;
+}
+
+.MenuSidebarBtn {
+  display: block;
+  width: 100%;
+  padding: 12px 60px;
+  border-radius: 8px;
+  text-align: center;
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #232529;
+  background: #fff;
+  box-shadow: 0px 0px 5.6px 0px #00000017;
+
+  &:hover{
+    background: linear-gradient(90deg, rgb(160 49 213) 0%, rgb(213 40 128) 100%);
+    color: #fff;
+  }
+}
+
+/* NewSolutionMenu Styles */
+.NewSolutionSubMenu {
+  width: 100%;
+
+  @media (min-width: 1023px) {
+    width: min(calc(100vw - 40px), 1200px);
+  }
+
+  @media (min-width: 1320px) {
+    width: min(calc(100vw - 60px), 1200px);
+  }
+
+  @media (min-width: 1440px) {
+    width: min(calc(100vw - 80px), 1200px);
+  }
+}
+
+.NewSolutionSectionHeader {
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #7C3AED;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e3e3e373;
+}
+
+.NewSolutionSectionList {
+  display: flex;
+  flex-direction: column;
+}
+.NewSolutionItem:hover {
+    background-color: #0000000D;
+    border-radius: 10px;
+}
+.NewSolutionItem {
+  display: flex;
+  align-items: center;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.2s ease-in-out;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+}
+
+.NewSolutionItemWithDesc {
+  align-items: center;
+
+}
+
+.NewSolutionItemSimple {
+  padding: 10px 8px;
+}
+
+.NewSolutionItemIcon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+}
+
+.NewSolutionItemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.NewSolutionItemTitle {
+  font-family: Inter, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: #000000;
+  transition: color 0.2s ease-in-out;
+  padding-bottom: 0px;
+}
+
+.NewSolutionItemDesc {
+  font-family: Inter, sans-serif;
+  font-size: 13px;
+  color: #000000B2;
+  margin-top: 2px;
+  line-height: 1.3;
+  padding-bottom: 0px;
+}
+
+.NewSolutionItemArrow {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 12px;
+  color: #9ca3af;
+  opacity: 0.5;
+  transform: translateX(-5px);
+  transition: all 0.2s ease-in-out;
+}
+
+.NewSolutionExploreMore {
+  margin-top: 12px;
+  text-align: right;
+  padding-top: 8px;
+}
+
+.NewSolutionExploreMoreLink {
+  font-family: Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0061FF;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    color: #6d28d9;
+  }
+}
+
+/* NewResourceMenu Styles */
+.NewResourceSubMenu {
+  width: 100%;
+  background: linear-gradient(0deg, #E1F8FF 0%, #FFF 20.97%), #FFF;
+  box-shadow: 0 11.426px 34.279px 0 rgba(0, 0, 0, 0.10);
+  backdrop-filter: blur(15.449999809265137px);
+
+  @media (min-width: 1023px) {
+    width: min(calc(100vw - 80px), 1200px);
+  }
+
+  @media (min-width: 1320px) {
+    width: min(calc(100vw - 80px), 1200px);
+  }
+
+  @media (min-width: 1440px) {
+    width: min(calc(100vw - 80px), 1200px);
+  }
+}
+
+.NewResourceColumn {
+  @media (min-width: 1023px) {
+    padding-right: 24px;
+
+    &:last-child {
+      border-right: none;
+      padding-right: 0;
+    }
+  }
+}
+
+.NewResourceBottomBorder {
+  height: 8px;
+  background: linear-gradient(90deg, #FBCFE8 0%, #E9D5FF 50%, #BFDBFE 100%);
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+

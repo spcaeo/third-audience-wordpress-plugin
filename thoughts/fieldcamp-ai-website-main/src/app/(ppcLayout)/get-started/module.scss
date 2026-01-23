@@ -1,0 +1,1184 @@
+.get-started-page {
+  font-family: 'Inter', sans-serif;
+
+  /* Hero Section Styles */
+  .hero-section {
+    // background: linear-gradient(135deg, #f8f9fa 0%, #f0e6f5 30%, #e8f4f8 60%, #fce8ec 100%);
+    display: flex;
+    align-items: center;
+    background-image: url(https://cms.fieldcamp.ai/wp-content/uploads/2025/12/automation-platform-hero-bg.png);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: bottom;
+  }
+
+  
+
+  .hero-content {
+    grid-template-columns: 1fr 1fr;
+    display: grid;
+    gap: 120px;
+    align-items: center;
+  }
+
+ .hero-heading {
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1a1a2e;
+    margin-bottom: 24px;
+  }
+
+  .hero-heading-highlight {
+    color: #d63384;
+  }
+
+  .hero-description {
+    font-size: 18px;
+    line-height: 1.7;
+    color: #000000;
+    margin-bottom: 32px;
+  }
+
+  .hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    padding: 10px 20px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 50px;
+    box-shadow: 0px 4px 6.7px 0px #00000017;
+  }
+
+  .hero-form-wrapper {
+    flex-shrink: 0;
+  }
+
+  .hero-form-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.08);
+    border: 1px solid;
+    border-color: #d63384;
+}
+
+  .hero-form-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+  }
+
+  .hero-form-subtitle {
+    font-size: 16px;
+    color: #000000;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .hero-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-label {
+    font-size: 16px;
+    font-weight: 500;
+    color: #000000;
+  }
+
+  .form-input,
+  .form-select {
+    padding: 14px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    color: #000000;
+    background: #ffffff;
+    outline: none;
+    transition: border-color 0.2s;
+
+    &::placeholder {
+      color: #9a9aaa;
+    }
+
+    &:focus {
+      border-color: #d63384;
+    }
+  }
+
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6b7b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 16px center;
+    cursor: pointer;
+
+    option[disabled] {
+      color: #9a9aaa;
+    }
+  }
+
+  .form-submit-btn {
+    padding: 16px;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 8px;
+
+    &:hover {
+      background: #2d2d44;
+    }
+  }
+
+  /* Autopilot Section Styles */
+  .autopilot-section {
+    background: #ffffff;
+    padding: 0px 15px 120px;
+  }
+
+  .autopilot-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .autopilot-heading {
+    font-size: 40px;
+    font-weight: 700;
+    color: #1a1a2e;
+    text-align: center;
+    margin-bottom: 60px;
+    line-height: 1.3;
+  }
+
+  .autopilot-steps {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .autopilot-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(180deg, #fdf2f8 0%, #ffffff 100%);
+    border: 1px solid #f5d5e8;
+    border-radius: 16px;
+    padding: 24px 15px 28px;
+    min-height: 280px;
+  }
+
+  .autopilot-step-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin-bottom: 24px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.3;
+  }
+
+  .autopilot-step-icon {
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 90px;
+    width: 90px;
+
+    svg {
+      width: 48px;
+      height: 48px;
+    }
+  }
+
+  .autopilot-step-description {
+    margin-top: auto;
+  }
+
+  .autopilot-arrow {
+    position: absolute;
+    right: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+    }
+  }
+
+  /* Features Section Styles */
+  .features-section {
+    padding: 60px 15px 150px;
+    background-image: url(https://cms.fieldcamp.ai/wp-content/uploads/2025/12/field-operation-bg.jpg);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: hsla(0, 0%, 100%, .5);
+    background-blend-mode: overlay;
+  }
+
+  .features-container {
+    max-width: 1245px;
+    margin: 0 auto;
+    padding: 0 15px;
+  }
+
+  .features-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 60px;
+  }
+
+  .features-text {
+    text-align: left;
+  }
+
+  .features-heading {
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #1a1a2e;
+    margin-bottom: 20px;
+  }
+
+  .features-description {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #4a4a5a;
+  }
+
+  .features-tags-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .features-tags-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  .features-tags-row {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .features-tag {
+    display: inline-block;
+    padding: 12px 20px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1a1a2e;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.02);
+    transition: all 0.3s ease;
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.04);
+      transform: translateY(-2px);
+    }
+  }
+
+  /* Thumbnail Slider Section Styles */
+  .thumbnail-slider-section {
+    background: #ffffff;
+    padding: 80px 20px 120px;
+    position: relative;
+  }
+
+  .thumbnail-slider-container {
+    max-width: 1245px;
+    margin: 0 auto;
+  }
+
+  .main-content-slider {
+    position: relative;
+    margin-bottom: 40px;
+    overflow: hidden;
+    border-radius: 20px;
+    width: 100%;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    background-image: url(https://cms.fieldcamp.ai/wp-content/uploads/2025/11/fms-image-bg.webp);
+    background-size: cover;
+    background-position: center;
+  }
+
+  .slider-slide {
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    width: 100%;
+
+    &.active {
+      display: block;
+      opacity: 1;
+    }
+  }
+
+  .main-content {
+    padding: 40px;
+
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 16px;
+    }
+  }
+
+  .nav-arrows {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 0, 0, 0.55);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    svg {
+      width: 20px;
+      height: 20px;
+      color: #ffffff;
+    }
+  }
+
+  .nav-arrow-prev {
+    left: 15px;
+  }
+
+  .nav-arrow-next {
+    right: 15px;
+  }
+
+  .thumbnail-navigation {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .thumbnail-slide {
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 2px solid #d6d3cdb0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+    position: relative;
+
+    &:hover {
+      border: 2px solid #D6D3CD;
+
+      &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 3px;
+        border-radius: inherit;
+        background: conic-gradient(from 197deg at 86.12% 54.16%, #FF8308 75.30697703361511deg, #FF5043 172.71645069122314deg, #392BD5 233.22322368621826deg);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+      }
+    }
+
+    &.active {
+      &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        padding: 3px;
+        border-radius: inherit;
+        background: conic-gradient(from 197deg at 86.12% 54.16%, #FF8308 75.30697703361511deg, #FF5043 172.71645069122314deg, #392BD5 233.22322368621826deg);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+      }
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #666;
+      margin: 0;
+    }
+  }
+
+
+  .heading-section {
+    text-align: center;
+    h2{
+      padding-bottom: 25px;
+      margin-bottom: 0px;
+    }
+  }
+
+  /* Evolves You Section Styles */
+  .evolves-you-section {
+  
+
+    .max-w-1245 {
+      max-width: 1245px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+  }
+
+  .evolves-columns {
+    display: flex;
+    flex-direction: row;
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .evolves-left-column {
+    flex-basis: 65%;
+    width: 65%;
+  }
+
+  .evolves-right-column {
+    flex-basis: 35%;
+    width: 35%;
+  }
+
+  .evolves-you-section .ctaboxfiulldesc {
+    padding: 80px 40px;
+    border-radius: 20px;
+    background-color: #1B1B1B;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    height: 100%;
+
+    h2 {
+      color: #fff;
+      font-weight: 700;
+      font-size: 56px;
+      line-height: 1.2;
+      margin: 0;
+
+      .text-white {
+        color: #fff;
+      }
+    }
+
+    p {
+      color: rgba(255, 255, 255, 0.6);
+      padding-top: 30px;
+      font-size: 18px;
+      line-height: 1.6;
+      max-width: 600px;
+      margin: 0;
+    }
+  }
+
+  .evolves-text-wrapper {
+    max-width: 100%;
+  }
+
+  .evolves-image-wrapper {
+    figure {
+      margin: 0;
+
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+    }
+  }
+
+  .evolves-you-section .boxctafullhome {
+    background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/11/boxctafullimg.png");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    border-radius: 20px;
+    border: 4px solid #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+
+    .black-cta-fieldcamp {
+      background: rgba(0, 0, 0, 0.34);
+      padding: 10px 5px;
+      border-radius: 20px;
+
+      .btn-book-demo {
+        border: 1px solid #F3FFDB;
+        margin-left: 0.5rem;
+        background: #000;
+        color: #fff;
+        padding: 12px 24px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 500;
+        display: inline-block;
+        transition: background 0.3s ease;
+
+        &:hover {
+          background: #333;
+        }
+      }
+    }
+  }
+
+  /* Integration Section Styles */
+  .integration-section {
+    background: #fff;
+
+    .max-w-1245 {
+      max-width: 1245px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+
+    .heading-column {
+      display: flex;
+
+      .heading-left {
+        flex-basis: 70%;
+
+        h2 {
+          font-size: 40px;
+          font-weight: 700;
+          line-height: 1.2;
+          color: #1a1a2e;
+        }
+      }
+    }
+  }
+
+  .py150 {
+    padding: 150px 15px;
+  }
+
+  /* FAQ Section Styles */
+  .common-faq-section.faq-feartire {
+    padding: 150px 15px 60px;
+    
+    .max-w-1245 {
+      max-width: 1245px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+
+    h2 {
+      font-size: 56px;
+      font-weight: 700;
+      line-height: 1.2;
+      padding-bottom: 20px;
+      color: #1a1a2e;
+    }
+
+    .heading-column {
+      p {
+        font-size: 18px;
+        line-height: 1.6;
+        color: #4a4a5a;
+      }
+    }
+
+    .faq-flex {
+      display: flex;
+      flex-direction: row;
+      gap: 50px;
+    }
+
+    .faq-left-column {
+      flex-basis: 40%;
+      width: 40%;
+    }
+
+    .faq-right-column {
+      flex-basis: 60%;
+      width: 60%;
+    }
+
+    .common-faq-wrapper {
+      margin-top: 0;
+
+      .wp-block-details {
+        background-color: #F5F5F5;
+        padding: 25px;
+        margin-bottom: 15px;
+        border-radius: 10px;
+        border-bottom: none;
+
+        summary {
+          position: relative;
+          list-style-type: none;
+          padding-right: 2.5rem;
+          font-size: 18px;
+          font-weight: 600;
+          color: #000;
+          cursor: pointer;
+          line-height: 1.4;
+
+          &::-webkit-details-marker {
+            display: none;
+          }
+
+          &::after {
+            content: '+';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            font-weight: 400;
+            color: #1a1a2e;
+            transition: transform 0.3s ease;
+          }
+        }
+
+        &[open] {
+          summary::after {
+            content: '−';
+          }
+        }
+
+        p {
+          margin-top: 15px;
+          font-size: 16px;
+          line-height: 1.7;
+          color: #000;
+
+          a {
+            color: #d63384;
+            text-decoration: underline;
+
+            &:hover {
+              text-decoration: none;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /* Tablet Responsive - 1100px and below */
+  @media (max-width: 1100px) {
+    .autopilot-steps {
+      gap: 16px;
+    }
+
+    .autopilot-step {
+      padding: 20px 14px 24px;
+      min-height: 260px;
+    }
+
+    .autopilot-step-title {
+      font-size: 16px;
+    }
+
+   
+
+    .autopilot-arrow {
+      right: -14px;
+
+      img {
+        width: 28px;
+        height: 28px;
+      }
+    }
+
+    /* Thumbnail Slider Tablet */
+    .thumbnail-navigation {
+      gap: 16px;
+    }
+
+    .thumbnail-slide {
+      padding: 20px;
+
+      h3 {
+        font-size: 18px;
+      }
+
+      p {
+        font-size: 14px;
+      }
+    }
+  }
+
+  /* Mobile Responsive - 767px and below */
+  @media (max-width: 767px) {
+    .hero-section {
+      padding: 100px 15px;
+    }
+
+    .hero-content {
+      grid-template-columns: 1fr;
+      gap: 50px;
+    }
+
+    .hero-text {
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .hero-heading {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+
+    .hero-description {
+      font-size: 15px;
+      margin-bottom: 24px;
+    }
+
+    .hero-tags {
+      justify-content: center;
+    }
+
+    .hero-tag {
+      padding: 8px 16px;
+    }
+
+    .hero-form-wrapper {
+      width: 100%;
+    }
+
+    .hero-form-card {
+      width: 100%;
+      padding: 24px;
+    }
+
+    .hero-form-title {
+      font-size: 20px;
+    }
+
+    .hero-form-subtitle {
+      font-size: 13px;
+    }
+
+    /* Autopilot Section Mobile */
+    .autopilot-section {
+      padding: 0px 15px;
+    }
+.feature-secton{
+  padding: 80px 15px 0px;
+}
+    .autopilot-heading {
+      font-size: 28px;
+      margin-bottom: 40px;
+    }
+
+    .autopilot-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .autopilot-step {
+      min-height: auto;
+      padding: 24px 20px;
+    }
+
+    .autopilot-step-title {
+      min-height: auto;
+      margin-bottom: 16px;
+    }
+
+    .autopilot-arrow {
+      position: absolute;
+      right: 50%;
+      top: auto;
+      bottom: -20px;
+      transform: translateX(50%);
+
+      img {
+        width: 28px;
+        height: 28px;
+        transform: rotate(90deg);
+      }
+    }
+
+    /* Features Section Mobile */
+    .features-section {
+      padding: 80px 15px;
+    }
+
+    .features-content {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+
+    .features-text {
+      max-width: 100%;
+      text-align: center;
+    }
+
+    .features-heading {
+      font-size: 28px;
+      margin-bottom: 16px;
+    }
+
+    .features-description {
+      font-size: 15px;
+    }
+
+    .features-tags-wrapper {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .features-tags-grid {
+      align-items: center;
+    }
+
+    .features-tags-row {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .features-tag {
+      padding: 10px 16px;
+      font-size: 13px;
+      border-radius: 50px;
+    }
+
+    /* Evolves You Section Mobile */
+    .evolves-you-section {
+      padding: 0px 16px 0px;
+    }
+
+    .evolves-columns {
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .evolves-left-column,
+    .evolves-right-column {
+      flex-basis: 100%;
+      width: 100%;
+    }
+
+    .evolves-you-section .ctaboxfiulldesc {
+      padding: 40px 20px;
+      text-align: center;
+
+      h2 {
+        font-size: 26px;
+      }
+
+      p {
+        font-size: 15px;
+        padding-top: 20px;
+        max-width: 100%;
+      }
+    }
+
+    .evolves-image-wrapper {
+      figure {
+        img {
+          margin: auto;
+          text-align: center;
+        }
+      }
+    }
+
+    .evolves-you-section .boxctafullhome {
+      min-height: 300px;
+    }
+
+    /* Integration Section Mobile */
+    .integration-section {
+      .heading-column {
+        .heading-left {
+          flex-basis: 100%;
+
+          h2 {
+            font-size: 28px;
+            text-align: center;
+          }
+        }
+      }
+    }
+
+    .py150 {
+      padding: 60px 16px;
+    }
+
+    /* FAQ Section Mobile */
+    .common-faq-section.faq-feartire {
+      padding: 80px 15px 40px;
+      
+      h2 {
+        font-size: 28px;
+      }
+
+      .heading-column {
+        text-align: center;
+
+        p {
+          font-size: 15px;
+        }
+      }
+
+      .faq-flex {
+        flex-direction: column;
+        gap: 30px;
+      }
+
+      .faq-left-column,
+      .faq-right-column {
+        flex-basis: 100%;
+        width: 100%;
+      }
+
+      .common-faq-wrapper {
+        .wp-block-details {
+          padding: 20px;
+
+          summary {
+            font-size: 16px;
+            padding-right: 2rem;
+
+            &::after {
+              font-size: 20px;
+            }
+          }
+
+          p {
+            font-size: 14px;
+          }
+        }
+      }
+    }
+
+    /* Thumbnail Slider Mobile */
+    .thumbnail-slider-section {
+      padding: 0px 16px;
+    }
+    .heading-section{
+      margin-bottom: 25px;
+    }
+
+    .main-content-slider {
+      margin-bottom: 25px;
+      min-height: 300px;
+    }
+
+    .main-content {
+      padding: 15px;
+
+      img {
+        border-radius: 12px;
+      }
+    }
+
+    .nav-arrows {
+      position: absolute;
+      top: auto;
+      bottom: 8px;
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      position: static;
+      transform: none;
+      width: 36px;
+      height: 36px;
+      pointer-events: auto;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    .nav-arrow-prev,
+    .nav-arrow-next {
+      left: auto;
+      right: auto;
+    }
+
+    .thumbnail-navigation {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+
+    .thumbnail-slide {
+      padding: 20px;
+      display: none;
+
+      &.active {
+        display: block;
+
+        &::before {
+          display: none;
+        }
+      }
+
+      h3 {
+        font-size: 18px;
+      }
+
+      p {
+        font-size: 13px;
+      }
+    }
+  }
+}
+
+/* Mobile override for thumbnail slider */
+@media (max-width: 767px) {
+  .get-started-page .main-content {
+    padding: 15px;
+  }
+
+  .get-started-page .nav-arrows {
+    position: absolute;
+    top: auto;
+    bottom: 15px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+  }
+
+  .get-started-page .nav-arrow {
+    position: static;
+    transform: none;
+    width: 36px;
+    height: 36px;
+  }
+
+  .get-started-page .nav-arrow-prev,
+  .get-started-page .nav-arrow-next {
+    left: auto;
+    right: auto;
+  }
+
+  .get-started-page .thumbnail-navigation {
+    grid-template-columns: 1fr;
+  }
+
+  .get-started-page .thumbnail-slide {
+    display: none;
+  }
+
+  .get-started-page .thumbnail-slide.active {
+    display: block;
+  }
+}
+
+// Hide unnecessary elements for clean PPC layout
+li.main-menu.py-1\.5.min-\[1023px\]\:py-0.group.relative.has-children {
+  display: none;
+}
+
+.footer-columns-grid.grid.grid-cols-1.sm\:grid-cols-2.md\:grid-cols-3.lg\:grid-cols-6.gap-4.sm\:gap-6.md\:gap-8.lg\:gap-6.xl\:gap-8 {
+  display: none;
+}
+
+.footer-features-section.bg-gray-50.border-t.border-b.border-gray-200 {
+  display: none;
+}
+
+a.footer-google-play-link {
+  display: none;
+}
+
+a.footer-app-store-link {
+  display: none;
+}
+
+.footer-main-container.max-w-\[1246px\].mx-auto.px-3.sm\:px-4.md\:px-6.lg\:px-8.xl\:px-6.py-6.sm\:py-8.md\:py-10.lg\:py-12.xl\:py-16 {
+  padding: 0px;
+  padding-bottom: 20px;
+}
+
+.footer-bottom-links.flex.gap-4.sm\:gap-6 {
+  margin-left: auto;
+}
+
+.flex.flex-col.sm\:flex-row.items-start.sm\:items-center.gap-3.sm\:gap-4.lg\:gap-8.text-sm.text-gray-600 {
+  width: 100%;
+  padding: 0px 15px;
+  flex-direction: unset;
+}
+
+nav.hidden.p-\[5px\].xl\:mt-\[15px\].min-\[1023px\]\:p-0.fixed.z-\[1\].bg-white.min-\[1023px\]\:bg-transparent.top-\[51px\].xl\:top-20.shadow-lg.min-\[1023px\]\:shadow-none.min-\[1023px\]\:rounded-2xl.rounded-none.h-\[calc\(100vh_-_50px\)\].overflow-y-auto.left-0.right-0.min-\[1023px\]\:static.min-\[1023px\]\:overflow-visible.min-\[1023px\]\:h-auto.min-\[1023px\]\:flex.justify-between {
+  display: none;
+}

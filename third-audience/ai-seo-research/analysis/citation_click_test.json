@@ -1,0 +1,50 @@
+[
+  {
+    "timestamp": "2026-01-21T21:23:55.012511",
+    "platform": "ChatGPT",
+    "referer": "https://chat.openai.com/",
+    "status": 200,
+    "content_type": "text/html; charset=UTF-8",
+    "is_html": true
+  },
+  {
+    "timestamp": "2026-01-21T21:23:55.053557",
+    "platform": "ChatGPT_Search",
+    "referer": "https://chatgpt.com/search?q=wordpress+cache",
+    "status": 200,
+    "content_type": "text/html; charset=UTF-8",
+    "is_html": true
+  },
+  {
+    "timestamp": "2026-01-21T21:23:55.095540",
+    "platform": "Perplexity",
+    "referer": "https://www.perplexity.ai/",
+    "status": 200,
+    "content_type": "text/html; charset=UTF-8",
+    "is_html": true
+  },
+  {
+    "timestamp": "2026-01-21T21:23:55.135538",
+    "platform": "Perplexity_Search",
+    "referer": "https://www.perplexity.ai/search?q=wordpress+optimization",
+    "status": 200,
+    "content_type": "text/html; charset=UTF-8",
+    "is_html": true
+  },
+  {
+    "timestamp": "2026-01-21T21:23:55.174851",
+    "platform": "Claude",
+    "referer": "https://claude.ai/chat/",
+    "status": 200,
+    "content_type": "text/html; charset=UTF-8",
+    "is_html": true
+  },
+  {
+    "timestamp": "2026-01-21T21:23:55.207005",
+    "platform": "Gemini",
+    "referer": "https://gemini.google.com/",
+    "status": 200,
+    "content_type": "text/html; charset=UTF-8",
+    "is_html": true
+  }
+]

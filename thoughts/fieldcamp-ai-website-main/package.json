@@ -1,0 +1,52 @@
+{
+  "name": "fieldcampai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3012",
+    "build": "next build",
+    "start": "next start -p 3012",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.11.8",
+    "@next/font": "^14.2.15",
+    "@radix-ui/react-collapsible": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.1.2",
+    "@types/axios": "^0.14.4",
+    "@types/html2canvas": "^1.0.0",
+    "@wordpress/base-styles": "^4.39.0",
+    "@wordpress/block-library": "^8.25.0",
+    "axios": "^1.7.7",
+    "class-variance-authority": "^0.7.1",
+    "graphql": "^16.9.0",
+    "gsap": "^3.12.7",
+    "html-react-parser": "^5.1.1",
+    "html2canvas": "^1.4.1",
+    "html2pdf.js": "^0.10.3",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
+    "keen-slider": "^6.8.6",
+    "lucide-react": "^0.446.0",
+    "next": "^14.2.16",
+    "react": "^18",
+    "react-dom": "^18",
+    "recharts": "^2.15.3",
+    "sharp": "^0.34.2",
+    "tailwind-merge": "^2.5.2",
+    "xml": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/gsap": "^3.0.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/xml": "^1.0.11",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.8",
+    "postcss": "^8",
+    "sass": "^1.78.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

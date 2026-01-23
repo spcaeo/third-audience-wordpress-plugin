@@ -1,0 +1,429 @@
+// Use Cases Styles
+// This file contains all styles for use-cases pages
+
+@media (min-width: 1023px) {
+  .use-case-banner {
+      padding-top: 150px;
+  }
+  .max-w-1140 {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+  .max-w-900 {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+}
+.max-w-1140 {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1150px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.max-w-900 {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 900px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.cta-btn a {
+  margin-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: 0.5rem;
+  --tw-bg-opacity: 1;
+  background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+  padding: .7rem 1.25rem;
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity));
+}
+.py80{
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+.pt80{
+  padding-top: 80px;
+}
+.pb80{
+  padding-bottom: 80px;
+}
+.mb80{
+  margin-bottom: 80px;
+}
+.use-case-banner{
+  
+  @media (max-width: 991px) {
+    padding-top: 80px;
+  }
+  .use-case-banner-row{
+    gap: 20px;
+
+  }
+  .banner-tag-bx {
+    background-color: #7239EA1A;
+    color: #000;
+    padding: 10px;
+    border: 1px solid #D5C4F9;
+    border-radius: 10px;
+    width: fit-content;
+    margin-bottom: 20px;
+    p{
+      padding-bottom: 0px;
+      font-size: 14px;
+    }
+  }
+  .banner-tag-desc {
+    gap: 5px;
+    display: ruby;
+  }
+}
+
+.title-head-bx{
+  margin-bottom: 50px;
+  h2{
+    padding-bottom: 20px;
+  }
+}
+.common-faq-section h2{
+  font-size: 40px;
+}
+.border-bottom {
+  border-bottom: 1px solid #e3e3e3;
+}
+
+.scaling-bussiness-section {
+  background-color: #FDFBFF;
+
+  .scaling-bx-row {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    .scaling-bx {
+      display: flex;
+      align-items: center;
+      background-color: #fff;
+      gap: 15px;
+      border-radius: 10px;
+      border: 1px solid #E4E4E4;
+      width: calc(33.33% - 20px);
+      padding: 20px;
+      figure{
+        display: contents;
+      }
+      p{
+        padding-bottom: 0;
+      }
+
+  }
+
+  }
+
+}
+
+.helps-field{
+  padding-top: 80px;
+  padding-bottom: 80px;
+
+  .helps-field-grid {
+    gap: 50px;
+    align-items: center !important;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 70px;
+   }
+   ul{
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 5px;
+    list-style: disc;
+    li{
+      line-height: 1.75;
+      font-weight: 400;
+      --tw-text-opacity: 1;
+      color: rgb(35 37 41 / var(--tw-text-opacity));
+      font-size: 18px;
+      margin-inline-start: 20px;
+    }
+  }
+}
+.helps-field-grid:last-child{
+  margin-bottom: 0px;
+}
+
+.team-resuilt-table{
+  padding-bottom: 60px;
+  thead{
+    tr{
+      th{
+        background: #232529;
+        color: #fff;
+        padding-top: 20px;
+        padding-bottom: 20px;
+        border: 1px solid #232529;
+        font-size: 18px;
+      }
+    }
+  }
+  tbody{
+    tr{
+      td{
+        padding-top: 20px;
+        padding-bottom: 20px;
+        text-align: center;
+        background-color: #F8F8FC;
+        font-size: 16px;
+      }
+    }
+  }
+}
+
+.easy-style-section {
+  .scaling-bx-row {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    .scaling-bx {
+      background-color: #F8F8FC;
+      border-radius: 10px;
+      border: 1px solid #E4E4E4;
+      width: calc(50% - 20px);
+      padding: 20px;
+
+      .scaling-bx-head{
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+      }
+
+      figure{
+        display: contents;
+      }
+      p{
+        padding-bottom: 0;
+      }
+    }
+  }
+}
+.testimonials-section {
+  padding: 20px 15px;
+  background-color: #ffffff;
+}
+.team-pricing-section {
+  background-color: #FBFBFC;
+  .scaling-bx-row {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    .price-bx {
+      border: 2px solid #232529;
+      border-radius: 10px;
+      padding: 30px;
+      width: calc(50% - 20px);
+
+      .toc_heading{
+        text-align: center;
+      }
+
+      .plan-price{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+        .price-number{
+          font-size: 45px;
+          font-weight: 600;
+          padding-bottom: 30px;
+          padding-top: 30px;
+        }
+        p{
+          padding-bottom: 0;
+        }
+      }
+      .plan-subhead{
+        text-align: center;
+      }
+
+      .saparater{
+        border-color: #BCBCBC;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        border-width: 2px;
+      }
+
+      .plan-list ul {
+        list-style: none;
+        padding-left: 0;
+      }
+      
+      .plan-list ul li {
+        position: relative;
+        padding-left: 28px;
+        margin-bottom: 12px;
+      }
+      
+      .plan-list ul li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 18px;
+        height: 18px;
+        background: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/09/checked-ic.png") no-repeat center center;
+        background-size: contain;
+      }
+
+      .wp-block-button{
+        width: 100%;
+        a{
+          width: 100%;
+        }
+      }
+      p.popular-star {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background-color: #232529;
+        color: #fff;
+        padding: 5px 10px;
+        border-bottom-left-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    }
+
+    
+  }
+}
+
+.usecase-cta-section {
+  background-color: #F5F6F8;
+  padding: 60px 50px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border-radius: 10px;
+  ul{
+    padding: 5px;
+    list-style: disc;
+    li{
+      line-height: 1.75;
+      font-weight: 400;
+      --tw-text-opacity: 1;
+      color: rgb(35 37 41 / var(--tw-text-opacity));
+      font-size: 18px;
+      margin-inline-start: 20px;
+    }
+  }
+}
+
+.usecase-cta-section .usecase-cta {
+  margin-bottom: 0px;
+  gap: 50px
+}
+.usecase-cta-section .usecase-cta-btn a {
+  border: 4px solid #272729;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.8666666667);
+  background: linear-gradient(90deg, #2a0f33 0%, #000000 100%);
+  padding: 12px 30px;
+}
+
+.testimonial-card-dw p {
+  font-size: 16px;
+}
+
+@media (max-width: 1367px) {
+  .use-case-banner .use-case-banner-row .use-case-banner-img img{
+    margin-left: 0px;
+  }
+}
+
+@media (max-width: 991px) {
+ 
+}
+
+@media (max-width: 767px) {
+  .use-case-banner .banner-tag-desc{
+    display: block;
+    margin-bottom: 15px;
+  }
+  .use-case-banner .banner-tag-bx{
+    margin-bottom: 10px;
+  }
+  .row-rev-mb {
+    flex-direction: column-reverse !important;
+  }
+  .py80{
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+  .pt80{
+    padding-top: 60px;
+  }
+  .pb80{
+    padding-bottom: 60px;
+  }
+  .mb80{
+    margin-bottom: 60px;
+  }
+  .title-head-bx{
+    margin-bottom: 50px;
+    h2{
+      padding-bottom: 20px;
+    }
+  }
+  .scaling-bussiness-section {
+    .scaling-bx-row {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+    .scaling-bx {
+        width: calc(100% - 20px);
+      }
+    }
+  }
+
+  .easy-style-section {
+    .scaling-bx-row {
+      .scaling-bx {
+        width: calc(100% - 20px);
+      }
+    }
+  }
+
+  .testimonials-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100%, 1fr));
+    gap: 24px;
+  }
+
+  .helps-field {
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+  .helps-field .helps-field-grid{
+    gap: 10px;
+  }
+
+  .team-pricing-section {
+    .scaling-bx-row {
+      .price-bx {
+        width: calc(100% - 20px);
+      }
+    }
+  }
+
+  .usecase-cta-section {
+    padding: 60px 25px;
+  }
+ 
+}

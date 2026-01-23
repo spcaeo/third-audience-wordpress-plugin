@@ -1,0 +1,1125 @@
+import React from 'react';
+import "./module.scss"
+import { Metadata } from 'next';
+import Accordion from '@/app/_components/Accordion';
+import Script from 'next/script';
+import { AppendUTMToAnchor, CalendlyEmbed } from '@/app/_components/General/Custom';
+import DemoForm from '@/app/_components/Form/Demo/DemoForm';
+import LPForm from '@/app/_components/Form/LP/FormHTML';
+import LPFormModalClass from '@/app/_components/Form/LP/LPFormModalClass';
+
+
+export const metadata: Metadata = {
+    title: 'FieldCamp vs HouseCall Pro: Modern AI Tools vs Legacy Software',
+    description: 'HouseCall Pro charges $69+ for basic features with no AI, no inventory tracking. FieldCamp: real AI scheduling, smart inventory, advanced analytics. $39-59/user.',
+  robots: 'index, follow',
+  alternates: {
+    canonical: 'https://fieldcamp.ai/compare/fieldcamp-vs-housecall-pro'
+  }
+};
+
+const faqItems = [
+    { 
+      title: "Why is FieldCamp more affordable than HouseCall Pro?", 
+      content: [
+        "We built FieldCamp from scratch with modern technology, which is more efficient and less expensive to maintain than legacy systems. We pass those savings to you. Plus, we believe in transparent pricing—one price, all features included. No nickel-and-diming like HouseCall Pro's add-on model."
+      ]
+    },
+    { 
+      title: "How does FieldCamp's pricing compare?", 
+      content: [
+        "FieldCamp: $39-59 per user, everything included. HouseCall Pro: $69+ per user for basic features, plus setup fees, plus higher payment processing rates. For a 10-person team, you'll save $300-400 monthly while getting more features."
+      ]
+    },
+    { 
+      title: "Can I switch from HouseCall Pro easily?", 
+      content: [
+        "We handle the entire migration—customer data, job history, and open invoices transfer in about 24 hours. You can run both systems in parallel while your team gets comfortable. Most companies are fully switched within a week, with free onboarding support throughout."
+      ]
+    },
+    { 
+      title: "Does FieldCamp have a mobile app?", 
+      content: [
+        "Yes, our mobile app works on iOS and Android. It's built for field conditions—big buttons, fast loading, works great even with poor signal. Techs can view schedules, update job status, capture signatures, and process payments from their phones."
+      ]
+    },
+    { 
+      title: "What about QuickBooks integration?", 
+      content: [
+        "FieldCamp syncs bidirectionally with QuickBooks in real-time. But here's the difference—we handle complex scenarios like progress billing, job costing, and inventory sync. It's not just moving invoices; it's maintaining your complete financial workflow."
+      ]
+    },
+    { 
+      title: "Why doesn't HouseCall Pro have inventory management?", 
+      content: [
+        "They'd rather sell you another subscription for a separate inventory app. HouseCall Pro follows the old model of separate tools for everything. FieldCamp believes inventory tracking is essential to field service, so it's built in and included."
+      ]
+    },
+    { 
+      title: "What if I'm locked into a HouseCall Pro contract?", 
+      content: [
+        "Many companies switch anyway because the savings and efficiency gains outweigh any early termination fees. We can help you calculate the ROI. Often, you'll save more in 2-3 months than any cancellation penalty."
+      ]
+    },
+    { 
+      title: "Is FieldCamp really that much better?", 
+      content: [
+        "The main advantages are features HouseCall Pro simply doesn't have (AI scheduling, inventory tracking, route optimization) plus transparent pricing that doesn't punish growth. Whether that's 'better' depends on your needs. Try it free for 14 days and see the difference yourself."
+      ]
+    }
+  ];
+
+
+export const metadata: Metadata = {
+  title: 'HouseCall Pro Alternative at Half the Cost | FieldCamp',
+  description: 'Discover why 10,000+ contractors switched to FieldCamp. More features, less cost, and no more juggling 5 apps. Say goodbye to overpaying for outdated software.',
+  robots: 'index, follow',
+  alternates: {
+    canonical: 'https://fieldcamp.ai/compare/fieldcamp-vs-housecall-pro'
+  }
+};
+
+
+
+const faqItems = [
+   { 
+     title: "Is HouseCall Pro worth it?", 
+     content: [
+       "For $79-149/user per month? Not anymore. HouseCall Pro was decent in 2015, but they've barely innovated since. No AI features, no inventory management, no advanced routing. You're paying premium prices for basic software. FieldCamp gives you twice the features for half the cost – that's why 10,000+ contractors switched this year."
+     ]
+   },
+   { 
+     title: "Is HouseCall Pro a CRM system?", 
+     content: [
+       "Technically yes, but barely. HouseCall Pro has basic customer tracking, but it's missing key CRM features like automated follow-ups, customer portals, and predictive analytics. It's more of a scheduling tool with a contact list. FieldCamp includes full CRM capabilities plus AI that actually helps you grow customer relationships."
+     ]
+   },
+   { 
+     title: "How does HouseCall Pro help a home service business?", 
+     content: [
+       "It helps... if you like doing things the hard way. HouseCall Pro digitizes your paper processes – scheduling, invoicing, basic dispatching. But it doesn't optimize anything. No AI assistance. No route optimization. No inventory tracking. It's like upgrading from a flip phone to an iPhone 6 while everyone else has the iPhone 15."
+     ]
+   },
+   { 
+     title: "Does HouseCall Pro offer a chat feature?", 
+     content: [
+       "No built-in team chat. Another 'coming soon' feature they've promised for years. Your team still needs separate apps to communicate. FieldCamp has built-in team messaging, plus automated customer communication workflows."
+     ]
+   },
+   { 
+     title: "Who owns HouseCall Pro?", 
+     content: [
+       "Private equity. Permira funds acquired them in 2022, which explains the focus on raising prices instead of building features. They're optimizing for investor returns, not contractor success."
+     ]
+   },
+   { 
+     title: "What's the biggest complaint about HouseCall Pro?", 
+     content: [
+       "The price-to-value ratio. You pay $79+ per user for software that hasn't meaningfully improved in years. No AI. No inventory. Basic routing. Hidden fees. Annual contracts. Most contractors say they're paying for the brand name, not the functionality."
+     ]
+   },
+   { 
+     title: "Can I switch from HouseCall Pro to FieldCamp easily?", 
+     content: [
+       "Yes – we make it simple. Free data migration. Free training. Your team up and running in 24 hours. We've switched thousands of HouseCall Pro users – average time from signup to fully operational: 1 day."
+     ]
+   },
+   { 
+     title: "Why is FieldCamp so much cheaper than HouseCall Pro?", 
+     content: [
+       "We're not owned by Wall Street. No private equity investors demanding 40% margins. No bloated sales teams. No Super Bowl ads. We invest in product development and pass the savings to you. Better software, honest pricing."
+     ]
+   }
+   ,
+   { 
+     title: "Does FieldCamp really have AI features?", 
+     content: [
+       "Real AI, not marketing BS. AI-powered scheduling recommendations. Smart route optimization. Predictive insights. Automated workflows. It's not just a buzzword – our AI actually saves you 3+ hours daily."
+     ]
+   }
+   ,
+   { 
+     title: "What if I'm locked into a HouseCall Pro contract?", 
+     content: [
+       "We'll help you calculate the ROI of switching. Most contractors save enough in 2-3 months to cover any early termination fees. Plus, we offer contract buyout assistance for qualifying businesses. The math usually works out to switch immediately."
+     ]
+   }
+ ];
+
+const pageTitle = metadata.title?.toString() || 'FieldCamp';
+const pageDescription = metadata.description || '';
+const pageUrl = metadata.alternates?.canonical?.toString() || 'https://fieldcamp.ai/';
+
+const schemaData = [
+  {
+    "@context": "https://schema.org/",
+    "@type": "FAQPage",
+    "mainEntity": faqItems.map(item => ({
+      "@type": "Question",
+      "name": item.title,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": item.content[0]
+      }
+    }))
+  },
+  {
+    "@context": "https://schema.org/",
+    "@type": "WebPage",
+    "@id": `${pageUrl}#website`,
+    "url": pageUrl,
+    "name": pageTitle,
+    "description": pageDescription,
+    "about": {
+      "@type": "Product",
+      "name": pageTitle,
+      "url": pageUrl,
+      "description": pageDescription,
+      "image": "https://fieldcamp.ai/_next/static/media/logo.6811b83e.svg"
+    }
+  },
+  {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": "FieldCamp: AI Field Service Management Software",
+    "description": "Streamline your business with FieldCamp's AI-driven field management software. Intuitive, multilingual, and built for field service professionals to enhance efficiency and reduce complexity.",
+    "url": "https://fieldcamp.ai/",
+    "image": "https://fieldcamp.ai/_next/static/media/logo.6811b83e.svg",
+    "brand": {
+      "@type": "Brand",
+      "name": "FieldCamp"
+    },
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "USD",
+      "price": "35",
+      "url": "https://fieldcamp.ai/pricing/",
+      "availability": "https://schema.org/InStock"
+    },
+    "review": {
+      "@type": "Review",
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": "4.8",
+        "bestRating": "5"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Capterra"
+      }
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "reviewCount": "150"
+    }
+  }
+];
+
+export default function FieldCampVsJobber() {
+  return (
+    <div className="ppc-template">
+      <Script
+        id="structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+      />
+      <CalendlyEmbed/>
+      <AppendUTMToAnchor/>
+      
+      <LPFormModalClass />
+   <section className="relative bg-white overflow-hidden banner-section">
+      <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-bl from-purple-100/30 via-pink-50/20 to-transparent"></div>
+      <div className="container mx-auto max-w-[1245px] px-[15px] lg:px-0 pt-16 md:pt-24 pb-16 md:pb-20">
+   <div className="grid lg:grid-cols-5 gap-8 lg:gap-12 items-center">
+      <div className="lg:col-span-3 space-y-6 sm:space-y-8 text-center lg:text-left">
+         <div className="space-y-4 sm:space-y-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight">We built the features HouseCall Pro said were "impossible" <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">at half the cost</span></h1>
+            <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">While they charge $69+ for yesterday's tech, we deliver AI-powered scheduling, route optimization, and inventory management for just $35/user. Everything they don't have, plus everything they do.</p>
+         </div>
+         <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
+               <div className="text-2xl sm:text-3xl font-bold text-purple-600">50%</div>
+               <div className="text-sm sm:text-base text-gray-600">less expensive than HouseCall Pro</div>
+            </div>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
+               <div className="text-2xl sm:text-3xl font-bold text-pink-600">3 hours</div>
+               <div className="text-sm sm:text-base text-gray-600">saved daily per technician</div>
+            </div>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
+               <div className="text-2xl sm:text-3xl font-bold text-purple-600">20%</div>
+               <div className="text-sm sm:text-base text-gray-600">more jobs completed per day</div>
+            </div>
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
+               <div className="text-2xl sm:text-3xl font-bold text-pink-600">10,000+</div>
+               <div className="text-sm sm:text-base text-gray-600">contractors switched this year</div>
+            </div>
+         </div>
+         <DemoForm />
+          <a href='https://calendly.com/jeel-fieldcamp/30min' className="border md:hidden border-[#D3D8DF] p-[10px_13px] rounded-[10px] relative inline-flex cursor-pointer items-center justify-center text-nowrap transition-colors duration-400 ease-in-out hover:duration-150 active:duration-50 disabled:pointer-events-none disabled:cursor-default button-ghost gap-x-1.5 text-base has-[&gt;svg:last-child,&gt;img:last-child]:pr-2 has-[&gt;svg:first-child,&gt;img:first-child]:pl-2 max-lg:gap-x-2 max-lg:rounded-xl max-lg:px-3.5 max-lg:text-base max-lg:has-[&gt;svg:last-child,&gt;img:last-child]:pr-3 max-lg:has-[&gt;svg:first-child,&gt;img:first-child]:pl-3 group self-center"><span>Talk to sales</span><svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="relative transition-[translate] duration-400 ease-in-out group-hover:translate-x-0.25 group-hover:duration-150 group-active:translate-x-0.25 group-active:duration-50"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.1" d="M2.25 7h9.5m0 0L8.357 3.5M11.75 7l-3.393 3.5"></path></svg></a>
+          <div className="flex flex-col sm:flex-row gap-4 justify-start hidden md:flex">
+            <a href="https://calendly.com/jeel-fieldcamp/30min" className="calendly-open bg-gradient-to-r from-purple-600 to-pink-600 text-white px-2 sm:px-8 py-2 sm:py-4 rounded-xl text-base sm:text-lg font-semibold hover:shadow-xl transition-all duration-300 hover:scale-105 min-w-[220px] disabled:opacity-50 disabled:cursor-not-allowed utm-medium-signup inline-flex items-center justify-center px-8 py-3 rounded-full">
+            Book a Demo
+               </a>
+               {/* <a href="#" className="lp-form-trigger inline-flex items-center justify-center border-2 border-gray-300 text-gray-700 px-8 py-3 rounded-full font-medium hover:border-gray-400 transition-colors">
+               Request a Demo
+               </a> */}
+         </div>
+      </div>
+      <div className="lg:col-span-2 relative mt-8 lg:mt-0">
+         <div className="relative transform rotate-3 hover:rotate-1 transition-transform duration-700">
+            <div className="absolute -top-4 -left-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-semibold shadow-lg animate-bounce z-10">AI-Powered</div>
+            <div className="bg-white rounded-3xl shadow-2xl p-4 sm:p-6 border border-gray-200">
+               <div className="space-y-3 sm:space-y-4">
+                  <div className="flex items-center justify-between">
+                     <h3 className="font-bold text-gray-900 text-sm sm:text-base">Today's Schedule</h3>
+                     <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  </div>
+                  <div className="space-y-2 sm:space-y-3">
+                     <div className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-purple-50 rounded-xl">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                           <div className="font-medium text-xs sm:text-sm truncate">HVAC Repair - Johnson</div>
+                           <div className="text-xs text-gray-500">9:00 AM - Mike T.</div>
+                        </div>
+                     </div>
+                     <div className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-pink-50 rounded-xl">
+                        <div className="w-2 h-2 bg-pink-500 rounded-full flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                           <div className="font-medium text-xs sm:text-sm truncate">Plumbing - Williams</div>
+                           <div className="text-xs text-gray-500">11:30 AM - Sarah K.</div>
+                        </div>
+                     </div>
+                     <div className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-blue-50 rounded-xl">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                           <div className="font-medium text-xs sm:text-sm truncate">Electrical - Davis</div>
+                           <div className="text-xs text-gray-500">2:00 PM - Carlos R.</div>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-gray-50 rounded-xl">
+                     <div className="text-xs text-gray-600 mb-2">Route Efficiency</div>
+                     <div className="flex items-end space-x-1 h-6 sm:h-8">
+                        <div className="bg-gradient-to-t from-purple-600 to-purple-400 w-2 h-4 sm:h-6 rounded-t"></div>
+                        <div className="bg-gradient-to-t from-pink-600 to-pink-400 w-2 h-6 sm:h-8 rounded-t"></div>
+                        <div className="bg-gradient-to-t from-purple-600 to-purple-400 w-2 h-3 sm:h-4 rounded-t"></div>
+                        <div className="bg-gradient-to-t from-pink-600 to-pink-400 w-2 h-5 sm:h-7 rounded-t"></div>
+                        <div className="bg-gradient-to-t from-purple-600 to-purple-400 w-2 h-4 sm:h-5 rounded-t"></div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div className="absolute -bottom-3 sm:-bottom-4 -right-3 sm:-right-4 bg-white rounded-2xl shadow-xl p-3 sm:p-4 border border-gray-200 animate-pulse">
+               <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <div className="text-xs sm:text-sm font-medium">Route optimized!</div>
+               </div>
+               <div className="text-xs text-gray-500 mt-1">Saved 47 minutes</div>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+   </section>
+   <section id="testimonials" className="py-12 md:py-20 bg-gray-50">
+      <div className="container mx-auto max-w-[1245px] px-[15px] lg:px-0">
+         <div className="text-center mb-6 md:mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">What contractors are saying</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">Join thousands of field service professionals who made the switch.</p>
+         </div>
+         <div className="grid md:grid-cols-3 gap-8">
+            <div className="relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+               <div className="absolute top-4 right-6 text-6xl text-purple-600/10 font-serif">"</div>
+               <div className="relative z-10">
+                  <p className="text-gray-700 mb-6 leading-relaxed">"Switched from HouseCall Pro 6 months ago. We're saving $500/month AND the AI scheduling is like magic. Should've done this sooner."</p>
+                  <div className="flex items-center space-x-4">
+                     <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">MC</span></div>
+                     <div>
+                        <div className="font-semibold text-gray-900">Mike Chen</div>
+                        <div className="text-sm text-gray-600">ProHVAC Services (15 techs)</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div className="relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+               <div className="absolute top-4 right-6 text-6xl text-purple-600/10 font-serif">"</div>
+               <div className="relative z-10">
+                  <p className="text-gray-700 mb-6 leading-relaxed">"The route optimization alone pays for everything. Running 20% more calls with the same crew. HouseCall Pro feels ancient now."</p>
+                  <div className="flex items-center space-x-4">
+                     <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">SM</span></div>
+                     <div>
+                        <div className="font-semibold text-gray-900">Sarah Mitchell</div>
+                        <div className="text-sm text-gray-600">Mitchell Plumbing (12 techs)</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div className="relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 border border-gray-100">
+               <div className="absolute top-4 right-6 text-6xl text-purple-600/10 font-serif">"</div>
+               <div className="relative z-10">
+                  <p className="text-gray-700 mb-6 leading-relaxed">"Finally, an inventory system that actually works. No more emergency supply runs. This one feature alone saves us $1,200/month."</p>
+                  <div className="flex items-center space-x-4">
+                     <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center"><span className="text-white font-bold text-sm">CR</span></div>
+                     <div>
+                        <div className="font-semibold text-gray-900">Carlos Rodriguez</div>
+                        <div className="text-sm text-gray-600">Lightning Electric (8 techs)</div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </section>
+   <section className="py-12 md:py-20 bg-white text-black relative overflow-hidden">
+      <div className="absolute inset-0 opacity-5">
+         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-purple-600 to-pink-600"></div>
+      </div>
+      <div className="container mx-auto px-4 sm:px-6 relative z-10">
+         <div className="text-center mb-6 md:mb-16 lg:mb-20">
+            <div className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-none text-sm sm:text-base lg:text-lg font-black mb-4 sm:mb-6 transform -rotate-1">THE HOUSECALL PRO REALITY CHECK</div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-black mb-4 sm:mb-6 leading-tight">WHY 10,000+ <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent block">CONTRACTORS </span><span className="block">ARE JUMPING SHIP</span></h2>
+            <p className="text-lg sm:text-xl lg:text-2xl text-gray-700 max-w-4xl mx-auto font-bold px-4">The brutal truth about why your business is stuck in 2015</p>
+         </div>
+         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
+            <div className="bg-white border-2 sm:border-4 border-purple-600 p-4 sm:p-6 lg:p-8 transform hover:-translate-y-2 transition-all duration-300 hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-600/20 relative">
+               <div className="absolute -top-3 sm:-top-4 -left-3 sm:-left-4 w-12 sm:w-16 h-12 sm:h-16 bg-gradient-to-r from-purple-600 to-pink-600 text-white flex items-center justify-center text-lg sm:text-2xl font-black border-2 sm:border-4 border-white">#1</div>
+               <div className="text-4xl sm:text-5xl lg:text-6xl mb-4 sm:mb-6 text-center"></div>
+               <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-black mb-3 sm:mb-4 leading-tight">Your dispatcher is drowning (and quitting)</h3>
+               <p className="text-gray-700 text-base sm:text-lg mb-3 sm:mb-4 font-medium leading-relaxed">No AI. No smart scheduling. Just one dispatcher juggling endless calls while techs sit stuck in traffic.</p>
+               <div className="bg-purple-100 border-l-2 sm:border-l-4 border-purple-600 p-3 sm:p-4 mb-3 sm:mb-4">
+                  <p className="text-purple-700 font-bold text-base sm:text-lg leading-relaxed">Good dispatchers quit. Others burn out. You're left scrambling to hire replacements.</p>
+               </div>
+               <div className="bg-pink-100 border-l-2 sm:border-l-4 border-pink-600 p-3 sm:p-4">
+                  <p className="text-pink-700 font-bold text-lg sm:text-xl">Real cost: $15K+ per dispatcher turnover</p>
+               </div>
+            </div>
+            <div className="bg-white border-2 sm:border-4 border-purple-600 p-4 sm:p-6 lg:p-8 transform hover:-translate-y-2 transition-all duration-300 hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-600/20 relative">
+               <div className="absolute -top-3 sm:-top-4 -left-3 sm:-left-4 w-12 sm:w-16 h-12 sm:h-16 bg-gradient-to-r from-purple-600 to-pink-600 text-white flex items-center justify-center text-lg sm:text-2xl font-black border-2 sm:border-4 border-white">#2</div>
+               <div className="text-4xl sm:text-5xl lg:text-6xl mb-4 sm:mb-6 text-center"></div>
+               <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-black mb-3 sm:mb-4 leading-tight">Wrong parts on Jobs waste entire days</h3>
+               <p className="text-gray-700 text-base sm:text-lg mb-3 sm:mb-4 font-medium leading-relaxed">Tech drives to the job. Wrong part on the truck. Back to the warehouse. Customer frustrated. Job rescheduled.</p>
+               <div className="bg-purple-100 border-l-2 sm:border-l-4 border-purple-600 p-3 sm:p-4 mb-3 sm:mb-4">
+                  <p className="text-purple-700 font-bold text-base sm:text-lg leading-relaxed">This happens because HouseCall Pro doesn’t track inventory. Tech loses half a day.</p>
+               </div>
+               <div className="bg-pink-100 border-l-2 sm:border-l-4 border-pink-600 p-3 sm:p-4">
+                  <p className="text-pink-700 font-bold text-lg sm:text-xl">Wrong parts waste $50K+ yearly in lost time</p>
+               </div>
+            </div>
+            <div className="bg-white border-2 sm:border-4 border-purple-600 p-4 sm:p-6 lg:p-8 transform hover:-translate-y-2 transition-all duration-300 hover:border-purple-400 hover:shadow-2xl hover:shadow-purple-600/20 relative">
+               <div className="absolute -top-3 sm:-top-4 -left-3 sm:-left-4 w-12 sm:w-16 h-12 sm:h-16 bg-gradient-to-r from-purple-600 to-pink-600 text-white flex items-center justify-center text-lg sm:text-2xl font-black border-2 sm:border-4 border-white">#3</div>
+               <div className="text-4xl sm:text-5xl lg:text-6xl mb-4 sm:mb-6 text-center"></div>
+               <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-black mb-3 sm:mb-4 leading-tight">Basic mapping isn't real routing</h3>
+               <p className="text-gray-700 text-base sm:text-lg mb-3 sm:mb-4 font-medium leading-relaxed">Connecting dots on a map isn’t optimization. Your team zigzags across town, hitting traffic and wasting hours.</p>
+               <div className="bg-purple-100 border-l-2 sm:border-l-4 border-purple-600 p-3 sm:p-4 mb-3 sm:mb-4">
+                  <p className="text-purple-700 font-bold text-base sm:text-lg leading-relaxed">HouseCall Pro only shows a map. No AI routing. Techs lose productivity every day.</p>
+               </div>
+               <div className="bg-pink-100 border-l-2 sm:border-l-4 border-pink-600 p-3 sm:p-4">
+                  <p className="text-pink-700 font-bold text-lg sm:text-xl">Bad routing burns $75K+ annually per truck</p>
+               </div>
+            </div>
+         </div>
+         <div className="text-center mt-12 sm:mt-16">
+         <a href='https://calendly.com/jeel-fieldcamp/30min' className="calendly-open bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 sm:px-8 lg:px-12 py-4 sm:py-6 inline-block transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+                    <p className="text-lg sm:text-xl lg:text-2xl font-black uppercase text-white pb-0">STOP RUNNING A 2015 BUSINESS IN 2025 </p>
+                    <p className="text-sm sm:text-base lg:text-lg mt-2 text-white pb-0">Switch to FieldCamp and join the modern world</p>
+                </a>
+         </div>
+      </div>
+   </section>
+   <section id="features" className="py-12 md:py-20 bg-white">
+      <div className="container mx-auto px-6">
+         <div className="text-center mb-6 md:mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Everything HouseCall Pro has, plus…</h2>
+         </div>
+         <div className="max-w-7xl mx-auto md:space-y-32 space-y-16">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center ">
+               <div className="">
+                  <p className="text-purple-600 font-medium mb-4">Online Booking</p>
+                  <h3 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gray-900 mb-3 lg:mb-8">Your own Calendly for field service</h3>
+                  <p className="text-xl text-gray-600 leading-relaxed">Define your service areas on a map. Set availability by tech, skill, or territory. Customers see real openings and book instantly. No back-and-forth calls. No double-booking.</p>
+               </div>
+               <div className="relative ">
+                  <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-1">
+                     <div className="bg-white rounded-3xl p-8 md:h-96 flex items-center justify-center">
+                        <div className="text-center">
+                           <div className="bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                              <img src="https://cms.fieldcamp.ai/wp-content/uploads/2025/08/online-booking.svg" alt="" />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="absolute -bottom-4 -left-2 bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
+                     <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"><span className="text-purple-600 text-sm">📋</span></div>
+                        <div>
+                           <p className="text-sm font-medium text-gray-900">Smart Booking</p>
+                           <p className="text-xs text-gray-500">AI finds the perfect time slot</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center lg:grid-flow-col-dense">
+               <div className="lg:col-start-2">
+                  <p className="text-purple-600 font-medium mb-4">Complete CRM</p>
+                  <h3 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gray-900 mb-3 lg:mb-8">Customer history that writes itself</h3>
+                  <p className="text-xl text-gray-600 leading-relaxed">Jobs, notes, equipment, preferences - everything in one place. Fully customizable fields for your specific business. No more sticky notes or forgotten details.</p>
+               </div>
+               <div className="relative lg:col-start-1">
+                  <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-1">
+                     <div className="bg-white rounded-3xl p-8 md:h-96 flex items-center justify-center">
+                        <div className="text-center">
+                           <div className="bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                           <img src="https://cms.fieldcamp.ai/wp-content/uploads/2025/08/complete-crm.svg" alt="" />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="absolute -bottom-4 -left-2 bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
+                     <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"><span className="text-purple-600 text-sm">🤝🏻</span></div>
+                        <div>
+                           <p className="text-sm font-medium text-gray-900">Manage Your Customers</p>
+                           <p className="text-xs text-gray-500">From all-in-one CRM</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center ">
+               <div className="">
+                  <p className="text-purple-600 font-medium mb-4">Smart Routing</p>
+                  <h3 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gray-900 mb-3 lg:mb-8">Real route optimization, not just maps</h3>
+                  <p className="text-xl text-gray-600 leading-relaxed">Real-time traffic analysis. Skill matching. Multi-stop optimization. Save 2+ hours per tech daily.</p>
+               </div>
+               <div className="relative ">
+                  <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-1">
+                     <div className="bg-white rounded-3xl p-8 md:h-96 flex items-center justify-center">
+                        <div className="text-center">
+                           <div className="bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                              <img src="https://cms.fieldcamp.ai/wp-content/uploads/2025/08/smart-routing.svg" alt="" />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="absolute -bottom-4 -left-2 bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
+                     <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"><span className="text-purple-600 text-sm">📍</span></div>
+                        <div>
+                           <p className="text-sm font-medium text-gray-900">Route Optimized</p>
+                           <p className="text-xs text-gray-500">From smart scheduling</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+           
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center lg:grid-flow-col-dense">
+               <div className="lg:col-start-2">
+                  <p className="text-purple-600 font-medium mb-4">Inventory Tracking</p>
+                  <h3 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gray-900 mb-3 lg:mb-8">Track every part on every truck</h3>
+                  <p className="text-xl text-gray-600 leading-relaxed">One tap to update inventory. See what's on each truck in real-time. Set reorder alerts. Never send a tech without the right parts again.</p>
+               </div>
+               <div className="relative lg:col-start-1">
+                  <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-1">
+                     <div className="bg-white rounded-3xl p-8 md:h-96 flex items-center justify-center">
+                        <div className="text-center">
+                           <div className="bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                           <img src="https://cms.fieldcamp.ai/wp-content/uploads/2025/08/inventory-tracking.svg" alt="" />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="absolute -bottom-4 -left-2 bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
+                     <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"><span className="text-purple-600 text-sm">📦</span></div>
+                        <div>
+                           <p className="text-sm font-medium text-gray-900">Stock Updated</p>
+                           <p className="text-xs text-gray-500">From usage prediction</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center ">
+               <div className="">
+                  <p className="text-purple-600 font-medium mb-4">Workflow Automation</p>
+                  <h3 className="text-2xl md:text-3xl lg:text-5xl font-bold text-gray-900 mb-3 lg:mb-8">Build it once, runs forever</h3>
+                  <p className="text-xl text-gray-600 leading-relaxed">Appointment reminders, review requests, invoice follow-ups, permit notifications - anything you do repeatedly. Visual builder makes it simple. No coding needed.</p>
+               </div>
+               <div className="relative ">
+                  <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-3xl p-1">
+                     <div className="bg-white rounded-3xl p-8 md:h-96 flex items-center justify-center">
+                        <div className="text-center">
+                           <div className="bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                           <img src="https://cms.fieldcamp.ai/wp-content/uploads/2025/08/workflow-automation.svg" alt="" />
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="absolute -bottom-4 -left-2 bg-white rounded-2xl p-4 shadow-lg border border-gray-200">
+                     <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"><span className="text-purple-600 text-sm">⚙️</span></div>
+                        <div>
+                           <p className="text-sm font-medium text-gray-900">Workflow Triggered</p>
+                           <p className="text-xs text-gray-500">From automation rules</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            
+            
+         </div>
+      </div>
+   </section>
+   <section id="pricing" className="py-12 md:py-20 bg-gray-50">
+      <div className="container mx-auto px-4 sm:px-6">
+         <div className="text-center mb-8 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">The Complete Comparison</h2>
+            <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">See exactly what you get with FieldCamp vs HouseCall Pro</p>
+         </div>
+         <div className="max-w-4xl mx-auto">
+            <div className="hidden md:grid md:grid-cols-3 gap-4 mb-8">
+               <div className="text-center flex items-center">
+                  <h3 className="text-lg font-semibold text-gray-600">Features</h3>
+               </div>
+               <div className="relative">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-1 rounded-full text-sm font-semibold">RECOMMENDED</div>
+                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl p-6 shadow-xl">
+                     <h3 className="text-2xl font-bold text-center text-white">FieldCamp</h3>
+                  </div>
+               </div>
+               <div className="bg-white rounded-2xl p-6 border border-gray-200">
+                  <h3 className="text-2xl font-bold text-center text-gray-700">HouseCall Pro</h3>
+               </div>
+            </div>
+            <div className="md:hidden mb-6">
+               <div className="relative mb-4">
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-3 py-1 rounded-full text-xs font-semibold">RECOMMENDED</div>
+                  <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl p-4 shadow-xl">
+                     <h3 className="text-xl font-bold text-center">FieldCamp</h3>
+                  </div>
+               </div>
+               <div className="bg-white rounded-2xl p-4 border border-gray-200">
+                  <h3 className="text-xl font-bold text-center text-gray-700">vs HouseCall Pro</h3>
+               </div>
+            </div>
+            <div className="space-y-2">
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Pricing</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">$35/user/month</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">$69+/user/month</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Pricing</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">$35/user/month</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">$69+/user/month</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">AI Scheduling</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Fully automated</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Manual only</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">AI Scheduling</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Fully automated</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Manual only</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Smart Route Optimization</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Real-time traffic + skills</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Basic mapping</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Smart Route Optimization</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Real-time traffic + skills</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Basic mapping</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Inventory Management</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">AI-powered predictions</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Not available</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Inventory Management</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">AI-powered predictions</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Not available</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Custom Analytics</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Build any report</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Limited templates</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Custom Analytics</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Build any report</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Limited templates</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Workflow Automation</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Drag-drop builder</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Basic only</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Workflow Automation</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Drag-drop builder</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Basic only</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Customer Portal</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Online booking</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Available</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Customer Portal</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Online booking</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Available</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Mobile App</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">iOS/Android</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">iOS/Android</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Mobile App</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">iOS/Android</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">iOS/Android</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">QuickBooks Sync</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Real-time</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Available</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">QuickBooks Sync</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Real-time</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Available</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Payment Processing</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">2.6% rate</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">2.9% rate</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Payment Processing</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">2.6% rate</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">2.9% rate</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Support</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">24/7 + free onboarding</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Business hours</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Support</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">24/7 + free onboarding</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Business hours</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">◐</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Setup Fee</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Free</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">$299+</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Setup Fee</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Free</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">$299+</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Data Migration</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Free from HCP</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Extra cost</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Data Migration</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Free from HCP</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Extra cost</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+               <div className="bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-purple-200 overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-3 gap-4 p-4">
+                     <div className="font-medium text-gray-900 flex items-center text-sm lg:text-base">Contract Required</div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                        <span className="text-gray-900 font-medium text-sm lg:text-base">Month-to-month</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                     </div>
+                     <div className="flex items-center justify-between p-3 lg:p-4 bg-gray-50 rounded-xl">
+                        <span className="text-gray-700 text-sm lg:text-base">Annual lock-in</span>
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                     </div>
+                  </div>
+                  <div className="md:hidden p-4">
+                     <div className="font-medium text-gray-900 mb-3 text-sm">Contract Required</div>
+                     <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
+                           <div>
+                              <div className="text-xs text-purple-600 font-medium">FieldCamp</div>
+                              <div className="text-gray-900 font-medium text-sm">Month-to-month</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✓</span></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                           <div>
+                              <div className="text-xs text-gray-500 font-medium">HouseCall Pro</div>
+                              <div className="text-gray-700 text-sm">Annual lock-in</div>
+                           </div>
+                           <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-full flex items-center justify-center"><span className="text-white text-xs sm:text-sm font-bold">✗</span></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </section>
+   
+   <div className="py-12 sm:py-16 lg:py-20 bg-white ppc-faq">
+      <div className="container mx-auto max-w-[1245px] px-[15px] lg:px-0">
+         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-black mb-4 text-center mb-12 sm:mb-16">FREQUENTLY ASKED QUESTIONS</h2>
+         <div className='max-w-4xl mx-auto'>
+         <Accordion items={faqItems}/>
+         </div>
+      </div>
+   </div>
+
+
+
+
+
+   <section className="py-12 sm:py-16 lg:py-20 bg-gradient-to-r from-purple-600 to-pink-600 relative overflow-hidden">
+      <div className="absolute inset-0 opacity-10">
+         <div className="absolute top-0 left-0 w-full h-full">
+            <svg width="60" height="60" viewBox="0 0 60 60" className="absolute top-20 left-20">
+               <circle cx="30" cy="30" r="2" fill="white" opacity="0.5"></circle>
+            </svg>
+            <svg width="60" height="60" viewBox="0 0 60 60" className="absolute top-40 right-32">
+               <circle cx="30" cy="30" r="2" fill="white" opacity="0.3"></circle>
+            </svg>
+            <svg width="60" height="60" viewBox="0 0 60 60" className="absolute bottom-32 left-40">
+               <circle cx="30" cy="30" r="2" fill="white" opacity="0.4"></circle>
+            </svg>
+         </div>
+      </div>
+      <div className="container mx-auto px-4 sm:px-6 text-center relative z-10 cta-section-bt">
+         <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6">Ready to stop overpaying for outdated software?</h2>
+            <p className="text-lg sm:text-xl text-purple-100 mb-6 sm:mb-8">Join 10,000+ contractors who switched to FieldCamp and got their time back.</p>
+            <div className="hidden md:block">
+            <div className="mb-6 sm:mb-8">
+               <a href="https://app.fieldcamp.ai/signup" data-medium="btn-start-free-trial-1" className="utm-medium-signup bg-white text-purple-600 px-8 sm:px-12 py-4 sm:py-6 inline-flex items-center justify-center rounded-2xl text-lg sm:text-xl font-bold hover:shadow-2xl transition-all duration-300 hover:scale-105 hover:bg-gray-50">Start Your 14-Day Free Trial</a>
+               <p className="text-purple-100 mt-3 sm:mt-4 text-sm">No credit card. No setup fees. Import from HouseCall Pro in minutes.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6 sm:mb-8">
+               <a href="https://calendly.com/jeel-fieldcamp/30min" className="calendly-open border-2 border-white/30 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl hover:bg-white/10 transition-all duration-300">Schedule Demo</a>
+            </div>
+            </div>
+            <DemoForm />
+            <a href='https://calendly.com/jeel-fieldcamp/30min' className="border mt-[20px] sm:mt-0 bg-white md:hidden border-[#D3D8DF] p-[10px_13px] rounded-[10px] relative inline-flex cursor-pointer items-center justify-center text-nowrap transition-colors duration-400 ease-in-out hover:duration-150 active:duration-50 disabled:pointer-events-none disabled:cursor-default button-ghost gap-x-1.5 text-base has-[&gt;svg:last-child,&gt;img:last-child]:pr-2 has-[&gt;svg:first-child,&gt;img:first-child]:pl-2 max-lg:gap-x-2 max-lg:rounded-xl max-lg:px-3.5 max-lg:text-base max-lg:has-[&gt;svg:last-child,&gt;img:last-child]:pr-3 max-lg:has-[&gt;svg:first-child,&gt;img:first-child]:pl-3 group self-center"><span>Talk to sales</span><svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="relative transition-[translate] duration-400 ease-in-out group-hover:translate-x-0.25 group-hover:duration-150 group-active:translate-x-0.25 group-active:duration-50"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.1" d="M2.25 7h9.5m0 0L8.357 3.5M11.75 7l-3.393 3.5"></path></svg></a>
+          <div className="flex flex-col sm:flex-row gap-4 justify-start hidden md:flex"></div>
+            <div className="flex flex-col sm:flex-row justify-center items-center mt-[20px] sm:mt-0 space-y-3 sm:space-y-0 sm:space-x-6 lg:space-x-8 text-purple-100 text-sm sm:text-base">
+               <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-green-400 rounded-full flex items-center justify-center"><span className="text-white text-xs font-bold">✓</span></div>
+                  <span>30-day money back guarantee</span>
+               </div>
+               <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-green-400 rounded-full flex items-center justify-center"><span className="text-white text-xs font-bold">✓</span></div>
+                  <span>Free migration from HouseCall Pro</span>
+               </div>
+               <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 bg-green-400 rounded-full flex items-center justify-center"><span className="text-white text-xs font-bold">✓</span></div>
+                  <span>Cancel anytime</span>
+               </div>
+            </div>
+         </div>
+      </div>
+   </section>
+    </div>
+  );
+}

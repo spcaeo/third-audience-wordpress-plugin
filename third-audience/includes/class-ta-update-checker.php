@@ -85,7 +85,11 @@ class TA_Update_Checker {
 	/**
 	 * Check for plugin updates.
 	 *
+	 * Fetches the raw plugin file from GitHub main branch and parses the Version header.
+	 * This provides real-time version checking without requiring GitHub Releases.
+	 *
 	 * @since 2.0.0
+	 * @since 3.3.8 Changed to fetch raw plugin file instead of GitHub Releases API.
 	 * @param bool $force Force check even if cached.
 	 * @return array|false Latest version info or false on failure.
 	 */
@@ -98,18 +102,15 @@ class TA_Update_Checker {
 			}
 		}
 
-		// Fetch latest version from GitHub API.
+		// Fetch raw plugin file from GitHub main branch.
 		$url = sprintf(
-			'https://api.github.com/repos/%s/%s/releases/latest',
+			'https://raw.githubusercontent.com/%s/%s/main/third-audience.php',
 			self::GITHUB_OWNER,
 			self::GITHUB_REPO
 		);
 
 		$response = wp_remote_get( $url, array(
 			'timeout' => 10,
-			'headers' => array(
-				'Accept' => 'application/vnd.github.v3+json',
-			),
 		) );
 
 		if ( is_wp_error( $response ) ) {
@@ -119,21 +120,29 @@ class TA_Update_Checker {
 			return false;
 		}
 
-		$body = wp_remote_retrieve_body( $response );
-		$data = json_decode( $body, true );
-
-		if ( empty( $data['tag_name'] ) ) {
-			$this->logger->warning( 'Invalid response from GitHub API.' );
+		$status_code = wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $status_code ) {
+			$this->logger->warning( 'GitHub returned non-200 status.', array( 'status' => $status_code ) );
 			return false;
 		}
 
-		// Parse version info.
+		$body = wp_remote_retrieve_body( $response );
+
+		// Parse Version header from plugin file.
+		if ( preg_match( '/^\s*\*?\s*Version:\s*(.+)$/mi', $body, $matches ) ) {
+			$latest_version = trim( $matches[1] );
+		} else {
+			$this->logger->warning( 'Could not parse version from GitHub plugin file.' );
+			return false;
+		}
+
+		// Build version info.
 		$version_info = array(
-			'version'      => ltrim( $data['tag_name'], 'v' ),
-			'download_url' => $data['zipball_url'] ?? '',
-			'release_url'  => $data['html_url'] ?? '',
-			'release_date' => $data['published_at'] ?? '',
-			'changelog'    => $data['body'] ?? '',
+			'version'      => $latest_version,
+			'download_url' => sprintf( 'https://github.com/%s/%s/archive/refs/heads/main.zip', self::GITHUB_OWNER, self::GITHUB_REPO ),
+			'release_url'  => sprintf( 'https://github.com/%s/%s', self::GITHUB_OWNER, self::GITHUB_REPO ),
+			'release_date' => '',
+			'changelog'    => '',
 			'checked_at'   => current_time( 'mysql' ),
 		);
 

@@ -136,6 +136,7 @@ $top_cited_pages = $wpdb->get_results(
 );
 
 // Recent citations (ALL - not just those with queries).
+// Use only core columns that exist in all database versions.
 $recent_citations = $wpdb->get_results(
 	"SELECT
 		ai_platform,
@@ -482,46 +483,65 @@ for ( $week = 3; $week >= 0; $week-- ) {
 		</div>
 	</div>
 
-	<!-- Citations by Platform -->
+	<!-- Citations by Platform (Column-Dense Layout) -->
 	<div class="ta-card" style="margin-top: 20px;">
 		<div class="ta-card-header">
 			<h2><?php esc_html_e( 'Citations by AI Platform', 'third-audience' ); ?></h2>
 		</div>
-		<div class="ta-card-body">
+		<div class="ta-card-body" style="overflow-x: auto;">
 			<?php if ( empty( $citations_by_platform ) ) : ?>
 				<p style="text-align: center; color: #646970; padding: 40px 0;">
 					<?php esc_html_e( 'No citations detected yet. When users click citations from AI platforms, they will appear here.', 'third-audience' ); ?>
 				</p>
 			<?php else : ?>
-				<table class="wp-list-table widefat fixed striped">
+				<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
 					<thead>
 						<tr>
-							<th><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
-							<th style="text-align: right;"><?php esc_html_e( 'Total Citations', 'third-audience' ); ?></th>
-							<th style="text-align: right;"><?php esc_html_e( 'Queries Captured', 'third-audience' ); ?></th>
-							<th style="text-align: right;"><?php esc_html_e( 'Capture Rate', 'third-audience' ); ?></th>
-							<th style="width: 200px;"><?php esc_html_e( 'Last Citation', 'third-audience' ); ?></th>
+							<th style="width: 120px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
+							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
+							<th style="width: 70px; text-align: center;"><?php esc_html_e( '% Total', 'third-audience' ); ?></th>
+							<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Queries', 'third-audience' ); ?></th>
+							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Capture %', 'third-audience' ); ?></th>
+							<th style="width: 140px; text-align: center;"><?php esc_html_e( 'First Seen', 'third-audience' ); ?></th>
+							<th style="width: 140px; text-align: center;"><?php esc_html_e( 'Last Seen', 'third-audience' ); ?></th>
+							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Days Active', 'third-audience' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ( $citations_by_platform as $platform ) : ?>
 							<?php
 							$platform_capture_rate = $platform['count'] > 0 ? round( ( $platform['queries_captured'] / $platform['count'] ) * 100 ) : 0;
-							$last_citation_time = human_time_diff( strtotime( $platform['last_citation'] ), current_time( 'timestamp' ) );
+							$percent_of_total = $total_citations > 0 ? round( ( $platform['count'] / $total_citations ) * 100, 1 ) : 0;
+							$first_ts = strtotime( $platform['first_citation'] );
+							$last_ts = strtotime( $platform['last_citation'] );
+							$days_active = max( 1, ceil( ( $last_ts - $first_ts ) / 86400 ) );
 							?>
 							<tr>
 								<td>
-									<span class="ta-bot-badge">
-										<?php echo esc_html( $platform['ai_platform'] ); ?>
+									<span class="ta-bot-badge"><?php echo esc_html( $platform['ai_platform'] ); ?></span>
+								</td>
+								<td style="text-align: center;"><strong><?php echo number_format( $platform['count'] ); ?></strong></td>
+								<td style="text-align: center;">
+									<span style="background: rgba(0,122,255,<?php echo esc_attr( min( 0.5, $percent_of_total / 100 ) ); ?>); padding: 2px 8px; border-radius: 10px; font-size: 11px;">
+										<?php echo esc_html( $percent_of_total ); ?>%
 									</span>
 								</td>
-								<td style="text-align: right;"><strong><?php echo number_format( $platform['count'] ); ?></strong></td>
-								<td style="text-align: right;"><?php echo number_format( $platform['queries_captured'] ); ?></td>
-								<td style="text-align: right;"><?php echo esc_html( $platform_capture_rate ); ?>%</td>
-								<td style="color: #646970;" title="<?php echo esc_attr( $platform['last_citation'] ); ?>">
-									<?php echo esc_html( $last_citation_time ); ?> ago
-									<br>
-									<small><?php echo esc_html( gmdate( 'M j, Y g:i A', strtotime( $platform['last_citation'] ) ) ); ?></small>
+								<td style="text-align: center;"><?php echo number_format( $platform['queries_captured'] ); ?></td>
+								<td style="text-align: center;">
+									<span style="color: <?php echo $platform_capture_rate >= 50 ? '#34c759' : ( $platform_capture_rate >= 20 ? '#ff9500' : '#8e8e93' ); ?>; font-weight: 600;">
+										<?php echo esc_html( $platform_capture_rate ); ?>%
+									</span>
+								</td>
+								<td style="text-align: center; font-size: 12px; color: #646970;">
+									<?php echo esc_html( gmdate( 'M j, Y', $first_ts ) ); ?>
+									<br><small><?php echo esc_html( gmdate( 'g:i A', $first_ts ) ); ?></small>
+								</td>
+								<td style="text-align: center; font-size: 12px; color: #646970;">
+									<?php echo esc_html( gmdate( 'M j, Y', $last_ts ) ); ?>
+									<br><small><?php echo esc_html( gmdate( 'g:i A', $last_ts ) ); ?></small>
+								</td>
+								<td style="text-align: center; font-weight: 500;">
+									<?php echo esc_html( $days_active ); ?>
 								</td>
 							</tr>
 						<?php endforeach; ?>
@@ -531,7 +551,7 @@ for ( $week = 3; $week >= 0; $week-- ) {
 		</div>
 	</div>
 
-	<!-- Recent Search Queries -->
+	<!-- Recent Search Queries (Column-Dense Layout) -->
 	<?php if ( ! empty( $recent_queries ) ) : ?>
 		<div class="ta-card" style="margin-top: 20px;">
 			<div class="ta-card-header">
@@ -540,41 +560,32 @@ for ( $week = 3; $week >= 0; $week-- ) {
 					<?php esc_html_e( 'Search queries extracted from Perplexity referrer URLs. Other platforms don\'t include query data in referrers.', 'third-audience' ); ?>
 				</p>
 			</div>
-			<div class="ta-card-body">
-				<table class="wp-list-table widefat fixed striped">
+			<div class="ta-card-body" style="overflow-x: auto;">
+				<table class="wp-list-table widefat fixed striped" style="min-width: 850px;">
 					<thead>
 						<tr>
-							<th style="width: 15%;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
-							<th style="width: 35%;"><?php esc_html_e( 'Search Query', 'third-audience' ); ?></th>
-							<th style="width: 30%;"><?php esc_html_e( 'Landing Page', 'third-audience' ); ?></th>
-							<th style="width: 20%;"><?php esc_html_e( 'When', 'third-audience' ); ?></th>
+							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
+							<th style="width: 280px;"><?php esc_html_e( 'Search Query', 'third-audience' ); ?></th>
+							<th><?php esc_html_e( 'Landing Page', 'third-audience' ); ?></th>
+							<th style="width: 110px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
+							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
+							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Ago', 'third-audience' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ( $recent_queries as $query ) : ?>
 							<?php
-							$time_ago   = human_time_diff( strtotime( $query['visit_timestamp'] ), current_time( 'timestamp' ) );
-							$short_url  = strlen( $query['url'] ) > 50 ? substr( $query['url'], 0, 47 ) . '...' : $query['url'];
+							$ts = strtotime( $query['visit_timestamp'] );
+							$time_ago   = human_time_diff( $ts, current_time( 'timestamp' ) );
+							$short_url  = strlen( $query['url'] ) > 40 ? substr( $query['url'], 0, 37 ) . '...' : $query['url'];
 							?>
 							<tr>
-								<td>
-									<span class="ta-bot-badge">
-										<?php echo esc_html( $query['ai_platform'] ); ?>
-									</span>
-								</td>
-								<td>
-									<strong style="color: #007aff;">
-										<?php echo esc_html( $query['search_query'] ); ?>
-									</strong>
-								</td>
-								<td>
-									<code style="font-size: 11px; color: #646970;">
-										<?php echo esc_html( $short_url ); ?>
-									</code>
-								</td>
-								<td style="color: #646970;">
-									<?php echo esc_html( $time_ago ); ?> ago
-								</td>
+								<td><span class="ta-bot-badge"><?php echo esc_html( $query['ai_platform'] ); ?></span></td>
+								<td><strong style="color: #007aff;"><?php echo esc_html( $query['search_query'] ); ?></strong></td>
+								<td><code style="font-size: 11px; color: #646970;"><?php echo esc_html( $short_url ); ?></code></td>
+								<td style="text-align: center; font-size: 12px;"><?php echo esc_html( gmdate( 'M j, Y', $ts ) ); ?></td>
+								<td style="text-align: center; font-size: 12px; color: #646970;"><?php echo esc_html( gmdate( 'g:i A', $ts ) ); ?></td>
+								<td style="text-align: center; font-size: 11px; color: #8e8e93;"><?php echo esc_html( $time_ago ); ?></td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -583,68 +594,64 @@ for ( $week = 3; $week >= 0; $week-- ) {
 		</div>
 	<?php endif; ?>
 
-	<!-- Recent Citations (ALL) -->
+	<!-- Recent Citations (Column-Dense Layout) -->
 	<?php if ( ! empty( $recent_citations ) ) : ?>
 		<div class="ta-card" style="margin-top: 20px;">
 			<div class="ta-card-header">
 				<h2><?php esc_html_e( 'Recent Citations', 'third-audience' ); ?></h2>
 				<p class="description" style="margin-top: 8px;">
-					<?php esc_html_e( 'All recent citation clicks from AI platforms, regardless of whether a search query was captured.', 'third-audience' ); ?>
+					<?php esc_html_e( 'All recent citation clicks from AI platforms with timing and referrer details.', 'third-audience' ); ?>
 				</p>
 			</div>
-			<div class="ta-card-body">
-				<table class="wp-list-table widefat fixed striped">
+			<div class="ta-card-body" style="overflow-x: auto;">
+				<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
 					<thead>
 						<tr>
-							<th style="width: 12%;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
-							<th style="width: 28%;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
-							<th style="width: 20%;"><?php esc_html_e( 'Search Query', 'third-audience' ); ?></th>
-							<th style="width: 20%;"><?php esc_html_e( 'Date & Time', 'third-audience' ); ?></th>
-							<th style="width: 20%;"><?php esc_html_e( 'Referrer', 'third-audience' ); ?></th>
+							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
+							<th style="width: 60px; text-align: center;"><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
+							<th style="width: 200px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
+							<th style="width: 160px;"><?php esc_html_e( 'Search Query', 'third-audience' ); ?></th>
+							<th style="width: 95px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
+							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
+							<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Ago', 'third-audience' ); ?></th>
+							<th><?php esc_html_e( 'Referrer', 'third-audience' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ( $recent_citations as $citation ) : ?>
 							<?php
-							$time_ago   = human_time_diff( strtotime( $citation['visit_timestamp'] ), current_time( 'timestamp' ) );
-							$short_url  = strlen( $citation['url'] ) > 40 ? substr( $citation['url'], 0, 37 ) . '...' : $citation['url'];
-							$short_ref  = ! empty( $citation['referer'] ) ? ( strlen( $citation['referer'] ) > 30 ? substr( $citation['referer'], 0, 27 ) . '...' : $citation['referer'] ) : '—';
+							$ts = strtotime( $citation['visit_timestamp'] );
+							$time_ago   = human_time_diff( $ts, current_time( 'timestamp' ) );
+							$short_url  = strlen( $citation['url'] ) > 30 ? substr( $citation['url'], 0, 27 ) . '...' : $citation['url'];
+							$short_ref  = ! empty( $citation['referer'] ) ? ( strlen( $citation['referer'] ) > 35 ? substr( $citation['referer'], 0, 32 ) . '...' : $citation['referer'] ) : '—';
+							// Detect method from URL (UTM) or referrer
+							$has_utm = strpos( $citation['url'], 'utm_source=' ) !== false;
+							$method_color = $has_utm ? '#34c759' : '#007aff';
+							$method_label = $has_utm ? 'UTM' : 'Ref';
 							?>
 							<tr>
-								<td>
-									<span class="ta-bot-badge">
-										<?php echo esc_html( $citation['ai_platform'] ); ?>
+								<td><span class="ta-bot-badge"><?php echo esc_html( $citation['ai_platform'] ); ?></span></td>
+								<td style="text-align: center;">
+									<span style="background: <?php echo esc_attr( $method_color ); ?>; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">
+										<?php echo esc_html( $method_label ); ?>
 									</span>
 								</td>
-								<td>
-									<strong><?php echo esc_html( $citation['post_title'] ?: 'Untitled' ); ?></strong>
-									<br>
-									<code style="font-size: 10px; color: #646970;">
-										<?php echo esc_html( $short_url ); ?>
-									</code>
+								<td title="<?php echo esc_attr( $citation['url'] ); ?>">
+									<strong style="font-size: 12px;"><?php echo esc_html( $citation['post_title'] ?: 'Untitled' ); ?></strong>
+									<br><code style="font-size: 9px; color: #8e8e93;"><?php echo esc_html( $short_url ); ?></code>
 								</td>
-								<td>
+								<td style="font-size: 11px;">
 									<?php if ( ! empty( $citation['search_query'] ) ) : ?>
-										<span style="color: #007aff;">
-											<?php echo esc_html( $citation['search_query'] ); ?>
-										</span>
+										<span style="color: #007aff;"><?php echo esc_html( substr( $citation['search_query'], 0, 35 ) ); ?><?php echo strlen( $citation['search_query'] ) > 35 ? '...' : ''; ?></span>
 									<?php else : ?>
-										<span style="color: #8e8e93;">—</span>
+										<span style="color: #d1d1d6;">—</span>
 									<?php endif; ?>
 								</td>
-								<td>
-									<strong><?php echo esc_html( gmdate( 'M j, Y', strtotime( $citation['visit_timestamp'] ) ) ); ?></strong>
-									<br>
-									<span style="color: #646970; font-size: 12px;">
-										<?php echo esc_html( gmdate( 'g:i:s A', strtotime( $citation['visit_timestamp'] ) ) ); ?>
-										<br>
-										(<?php echo esc_html( $time_ago ); ?> ago)
-									</span>
-								</td>
-								<td>
-									<code style="font-size: 10px; color: #646970;" title="<?php echo esc_attr( $citation['referer'] ); ?>">
-										<?php echo esc_html( $short_ref ); ?>
-									</code>
+								<td style="text-align: center; font-size: 11px;"><?php echo esc_html( gmdate( 'M j, Y', $ts ) ); ?></td>
+								<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( gmdate( 'g:i A', $ts ) ); ?></td>
+								<td style="text-align: center; font-size: 10px; color: #8e8e93;"><?php echo esc_html( $time_ago ); ?></td>
+								<td style="font-size: 10px; color: #8e8e93;" title="<?php echo esc_attr( $citation['referer'] ); ?>">
+									<?php echo esc_html( $short_ref ); ?>
 								</td>
 							</tr>
 						<?php endforeach; ?>
@@ -654,41 +661,59 @@ for ( $week = 3; $week >= 0; $week-- ) {
 		</div>
 	<?php endif; ?>
 
-	<!-- Top Cited Pages -->
+	<!-- Top Cited Pages (Column-Dense Layout) -->
 	<?php if ( ! empty( $top_cited_pages ) ) : ?>
 		<div class="ta-card" style="margin-top: 20px;">
 			<div class="ta-card-header">
 				<h2><?php esc_html_e( 'Most Cited Pages', 'third-audience' ); ?></h2>
 			</div>
-			<div class="ta-card-body">
-				<table class="wp-list-table widefat fixed striped">
+			<div class="ta-card-body" style="overflow-x: auto;">
+				<table class="wp-list-table widefat fixed striped" style="min-width: 950px;">
 					<thead>
 						<tr>
 							<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
-							<th style="width: 12%; text-align: right;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
-							<th style="width: 12%; text-align: right;"><?php esc_html_e( 'Platforms', 'third-audience' ); ?></th>
-							<th style="width: 20%;"><?php esc_html_e( 'Last Cited', 'third-audience' ); ?></th>
+							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
+							<th style="width: 70px; text-align: center;"><?php esc_html_e( '% Total', 'third-audience' ); ?></th>
+							<th style="width: 75px; text-align: center;"><?php esc_html_e( 'Platforms', 'third-audience' ); ?></th>
+							<th style="width: 110px; text-align: center;"><?php esc_html_e( 'First Cited', 'third-audience' ); ?></th>
+							<th style="width: 110px; text-align: center;"><?php esc_html_e( 'Last Cited', 'third-audience' ); ?></th>
+							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Days', 'third-audience' ); ?></th>
+							<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Avg/Day', 'third-audience' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ( $top_cited_pages as $page ) : ?>
 							<?php
-							$last_cited_time = human_time_diff( strtotime( $page['last_cited'] ), current_time( 'timestamp' ) );
+							$first_ts = strtotime( $page['first_cited'] );
+							$last_ts = strtotime( $page['last_cited'] );
+							$days_span = max( 1, ceil( ( $last_ts - $first_ts ) / 86400 ) );
+							$avg_per_day = round( $page['citation_count'] / $days_span, 1 );
+							$percent_of_total = $total_citations > 0 ? round( ( $page['citation_count'] / $total_citations ) * 100, 1 ) : 0;
+							$short_url = strlen( $page['url'] ) > 45 ? substr( $page['url'], 0, 42 ) . '...' : $page['url'];
 							?>
 							<tr>
 								<td>
-									<strong><?php echo esc_html( $page['post_title'] ?: 'Untitled' ); ?></strong>
-									<br>
-									<code style="font-size: 11px; color: #646970;">
-										<?php echo esc_html( $page['url'] ); ?>
-									</code>
+									<strong style="font-size: 13px;"><?php echo esc_html( $page['post_title'] ?: 'Untitled' ); ?></strong>
+									<br><code style="font-size: 10px; color: #8e8e93;"><?php echo esc_html( $short_url ); ?></code>
 								</td>
-								<td style="text-align: right;"><strong><?php echo number_format( $page['citation_count'] ); ?></strong></td>
-								<td style="text-align: right;"><?php echo number_format( $page['platforms'] ); ?></td>
-								<td style="color: #646970;">
-									<?php echo esc_html( gmdate( 'M j, Y g:i A', strtotime( $page['last_cited'] ) ) ); ?>
-									<br>
-									<small>(<?php echo esc_html( $last_cited_time ); ?> ago)</small>
+								<td style="text-align: center;"><strong style="font-size: 14px;"><?php echo number_format( $page['citation_count'] ); ?></strong></td>
+								<td style="text-align: center;">
+									<span style="background: rgba(0,122,255,<?php echo esc_attr( min( 0.5, $percent_of_total / 100 ) ); ?>); padding: 2px 8px; border-radius: 10px; font-size: 11px;">
+										<?php echo esc_html( $percent_of_total ); ?>%
+									</span>
+								</td>
+								<td style="text-align: center; font-weight: 500;"><?php echo number_format( $page['platforms'] ); ?></td>
+								<td style="text-align: center; font-size: 11px; color: #646970;">
+									<?php echo esc_html( gmdate( 'M j, Y', $first_ts ) ); ?>
+									<br><small><?php echo esc_html( gmdate( 'g:i A', $first_ts ) ); ?></small>
+								</td>
+								<td style="text-align: center; font-size: 11px; color: #646970;">
+									<?php echo esc_html( gmdate( 'M j, Y', $last_ts ) ); ?>
+									<br><small><?php echo esc_html( gmdate( 'g:i A', $last_ts ) ); ?></small>
+								</td>
+								<td style="text-align: center; font-size: 12px;"><?php echo esc_html( $days_span ); ?></td>
+								<td style="text-align: center; font-weight: 600; color: <?php echo $avg_per_day >= 1 ? '#34c759' : '#646970'; ?>;">
+									<?php echo esc_html( $avg_per_day ); ?>
 								</td>
 							</tr>
 						<?php endforeach; ?>

@@ -1,0 +1,1050 @@
+.crm-banner {
+  @apply pt-24 md:pt-32;
+  h1 {
+    @apply md:px-40;
+    // padding-inline: 150px;
+  }
+  .tagline {
+    @apply text-lg text-[#333333] py-5;
+  }
+  .desciption {
+    @apply text-base text-[#333333] md:w-[902px] mx-auto mb-5 md:mb-20;
+  }
+}
+
+.agents {
+  @apply mt-10 md:mt-24;
+  h2 {
+    @apply mb-5;
+  }
+}
+
+.faq-image {
+  font-family: "SF Pro", sans-serif; // SF Pro font class
+  @apply mt-10 md:mt-24;
+  h2 {
+    @apply mb-6;
+  }
+  .faq-inner {
+    @apply grid md:grid-cols-2 gap-3;
+    li {
+      @apply mb-5 border-b pb-5;
+      .title {
+        @apply text-[20px] xl:text-[22px] text-[#232529] relative cursor-pointer;
+
+        em {
+          @apply absolute top-[12px] right-0 rotate-180;
+        }
+      }
+      .content {
+        @apply hidden pt-2;
+      }
+      .mobile-faq-image {
+        @apply block md:hidden;
+      }
+    }
+    li.open {
+      em {
+        @apply rotate-0;
+      }
+      .content {
+        @apply block;
+      }
+    }
+    .web-faq-image {
+      @apply hidden md:block;
+      img {
+        @apply md:ml-[50px];
+      }
+    }
+  }
+}
+
+.scheduling {
+  @apply mt-10 md:mt-24 mx-2 md:mx-0;
+  h2 {
+    @apply mb-5;
+  }
+  .schudling-text {
+    @apply mb-4;
+  }
+  .scheduling-inner {
+    @apply bg-[#F5F5F5] rounded-[20px] p-10;
+    .wp-block-columns {
+      @apply gap-5 mb-0;
+      h3 {
+        @apply mt-3 text-xl font-medium;
+      }
+      p {
+        @apply pb-5 md:pb-0;
+      }
+    }
+  }
+}
+
+.analytics {
+  @apply mt-10 md:mt-24;
+  h2 {
+    @apply mb-5;
+  }
+  p {
+    @apply pb-10;
+  }
+}
+
+.relationships {
+  @apply mt-10 md:mt-24;
+  h2 {
+    @apply mb-5;
+  }
+  p {
+    @apply pb-10;
+  }
+}
+
+.banto-grid {
+  @apply mb-24 mt-16 md:mt-24;
+  h2 {
+    @apply text-base font-medium mb-3;
+  }
+  p {
+    @apply text-sm;
+  }
+
+  .col-40 {
+    flex-basis: 40% !important;
+
+    @apply border border-[#eeeeee] p-5 relative overflow-hidden min-h-[440px];
+  }
+  .col-60 {
+    flex-basis: 60% !important;
+    @apply border border-[#eeeeee]  p-5 relative overflow-hidden min-h-[440px];
+  }
+
+  .upper-col {
+    .col-60 {
+      @apply md:border-l-0;
+    }
+  }
+  .lower-col {
+    .col-40 {
+      @apply border-t-0;
+    }
+    .col-60 {
+      @apply border-l md:border-r-0 border-t-0;
+    }
+  }
+  .wp-block-columns {
+    @apply mb-0;
+  }
+  .bantogrid-img-1 {
+    img {
+      @apply absolute right-0 bottom-0 md:bottom-2 w-[95%] md:w-[98%];
+    }
+  }
+  .bantogrid-img-2 {
+    img {
+      @apply absolute right-5 md:right-7 bottom-8 w-[90%];
+    }
+  }
+  .bantogrid-img-4 {
+    img {
+      @apply absolute right-7 bottom-24 w-[90%];
+    }
+  }
+}
+
+.keen-highlight-slider {
+  h2 {
+    @apply mt-10 md:mt-24 mb-12;
+  }
+  .nav-arrow {
+    display: none;
+  }
+  .common-process-inner {
+    background: #f5f5f5;
+    border-radius: 20px;
+    padding: 30px 40px;
+    height: 491px;
+    h3 {
+      @apply text-[#232529] text-2xl font-medium;
+    }
+    p {
+      @apply text-base text-[#333333];
+    }
+    img {
+      @apply absolute mx-auto right-0 left-0;
+    }
+    .slider-img-1 {
+      @apply bottom-[100px];
+    }
+    .slider-img-2 {
+      @apply bottom-[50px];
+    }
+    .slider-img-3 {
+      @apply bottom-[30px];
+    }
+    .slider-img-4 {
+      @apply bottom-[36px];
+    }
+  }
+}
+
+.max-w-1140 {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1150px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.max-w-900 {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 900px;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.cta-btn a {
+  margin-top: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: 0.5rem;
+  --tw-bg-opacity: 1;
+  background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+  padding: .7rem 1.25rem;
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.py125{
+  padding-top: 125px;
+  padding-bottom: 125px;
+}
+.pt125{
+  padding-top: 125px;
+}
+.pb125{
+  padding-bottom: 125px;
+}
+.mb125{
+  margin-bottom: 125px;
+}
+.py100{
+  padding-top: 100px;
+  padding-bottom: 100px;
+}
+.pt100{
+  padding-top: 100px;
+}
+.pb100{
+  padding-bottom: 100px;
+}
+.use-case-banner{
+  
+  @media (max-width: 991px) {
+    padding-top: 100px;
+  }
+  .use-case-banner-row{
+    gap: 20px;
+
+  }
+  .banner-tag-bx {
+    background-color: #7239EA1A;
+    color: #000;
+    padding: 10px;
+    border: 1px solid #D5C4F9;
+    border-radius: 10px;
+    width: fit-content;
+    margin-bottom: 20px;
+    p{
+      padding-bottom: 0px;
+      font-size: 14px;
+    }
+  }
+  .banner-tag-desc {
+    gap: 5px;
+    display: ruby;
+  }
+}
+
+.title-head-bx{
+  margin-bottom: 80px;
+  h2{
+    padding-bottom: 20px;
+  }
+}
+
+.helps-field{
+  
+
+  .helps-field-grid {
+    gap: 50px;
+    align-items: center !important;
+    display: flex;
+    flex-direction: row;
+    margin-bottom: 125px;
+   }
+   ul{
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 5px;
+    list-style: disc;
+    li{
+      line-height: 1.75;
+      font-weight: 400;
+      --tw-text-opacity: 1;
+      color: rgb(35 37 41 / var(--tw-text-opacity));
+      font-size: 18px;
+      margin-inline-start: 20px;
+    }
+  }
+}
+.helps-field-grid:last-child{
+  margin-bottom: 0px;
+}
+.trasted-img-logo figure img {
+  // max-width: 160px !important;
+  max-height: 100px !important;
+  object-fit: contain;
+}
+.indu-cta-green {
+  background-color: #a2d858;
+  padding: 80px 50px 70px;
+  border-radius: 10px;
+  .cta-column{
+    margin-bottom: 0px;
+  }
+  h2{
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 15px;
+  }
+  .cta-btn{
+    text-align: right;
+  }
+  p{
+    padding-bottom: 0px;
+  }
+}
+
+.pros-section{
+  .pros-row{
+    gap: 30px;
+    text-align: center;
+    margin-bottom: 50px;
+    &:last-child{
+      margin-bottom: 0px;
+    }
+  }
+  .pros-bx {
+    text-align: center;
+    gap: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    img{
+      margin: auto;
+    }
+    h3{
+      font-weight: 600;
+      font-size: 26px;
+      line-height: normal;
+    }
+    p{
+      padding-bottom: 0px;
+    }
+    .pros-link a{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      img{
+        margin: unset;
+      }
+    }
+ }
+}
+
+.user-box-column{
+  margin-bottom: 0px;
+}
+
+.estimate-temaplte-list-bx-default figure img {
+  min-height: 160px;
+  width: 100%;
+  object-fit: cover;
+}
+
+
+/********** New Feature Page Design *****************/
+.hero-section-feature-section{
+  background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/12/features-hero-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 150px 0px 80px;
+  .lefi-right-hero-section{
+    gap: 70px;
+    align-items: center !important;
+  }
+  .new-hero-desc{
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    h1{
+      font-size: 56px;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    p{
+      padding-bottom: 0px;
+    }
+  }
+  .new-home-trusted-section{
+      margin-bottom: 0px;
+      padding-top: 60px;
+      h2{
+        font-weight: 700 !important;
+      }
+      
+    }
+}
+.key-diffrence-features-section{
+  background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/11/key-diffrence-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  .fsm-software-box-list{
+      background-color: #ffffff6e;
+      padding: 40px;
+      border-radius: 40px;
+     .fsm-box{
+          background-color: transparent;
+          filter: unset;
+        .fsm-head{
+          text-align: left;
+        }
+         p{
+          text-align: left;
+          margin: unset;
+        }
+     }
+     .fsm-box-2{
+        background-color: #fff;
+        filter: drop-shadow(0 1.917px 5.752px rgba(0, 0, 0, 0.08)) drop-shadow(0 9.587px 9.587px rgba(0, 0, 0, 0.07)) drop-shadow(0 23.009px 13.422px rgba(0, 0, 0, 0.04)) drop-shadow(0 40.265px 15.339px rgba(0, 0, 0, 0.01)) drop-shadow(0 63.274px 17.257px rgba(0, 0, 0, 0));
+        .fsm-head{
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        h3{
+          position: relative;
+          &::after{
+            background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/11/Squiggle-Med-01.png");
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 8px;
+            background-repeat: no-repeat;
+            background-size: contain;
+            width: 100%;
+          }
+        }
+      }
+     }
+  }
+
+}
+.faq-feartire{
+  h2{
+    font-size: 56px !important;
+    font-weight: 700;
+    line-height: 1.2 !important;
+    padding-bottom: 20px;
+  }
+  .faq-flex{
+    gap: 50px;
+  }
+  .wp-block-details{
+    background-color: #F5F5F5;
+    padding: 25px !important;
+    margin-bottom: 15px;
+    border-radius: 10px;
+    border-bottom: unset !important;
+    h3{
+        font-weight: 500 !important;
+    }
+  }
+}
+.ctaboxfiulldesc {
+    padding: 60px 40px;
+    h2{
+        font-size: 50px;
+    }
+}
+.ind-pros-main-box{
+  border: 1px solid #C8D4D9;
+  padding: 60px;
+  border-radius: 40px;
+  margin-top: 80px;
+}
+.ind-pros-new-section{
+  background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/11/pros-new-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: rgb(255 255 255 / 50%);
+  background-blend-mode: overlay;
+}
+/**********END New Feature Page Design *****************/
+
+
+
+
+.review-ind {
+  background-image: url(https://cms.fieldcamp.ai/wp-content/uploads/2025/09/recview-bg-ind.png);
+  width: 100%;
+  height: 100%;
+  background-position: bottom;
+  background-repeat: no-repeat;
+  background-size: cover;
+  padding-top: 125px;
+  padding-bottom: 125px;
+
+.review-ind-row {
+  
+  .review-ind-bx{
+    border: 1px solid #B3B3B3;
+    padding: 20px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background-color: #fff;
+    cursor: move;
+    .user-name{
+      padding-bottom: 0px;
+    }
+    .user-compnay{
+      padding-bottom: 0px;
+    }
+    .user-img-col{
+      display: flex;
+      align-items: center;
+      justify-content: end;
+    }
+  }
+}
+.nav-arrow{display: none;}
+}
+
+.workflow-section {
+  background-color: #202020;
+  border-radius: 20px;
+  padding: 45px 35px;
+  h2{
+    color: #fff;
+    padding-bottom: 10px;
+  }
+  p{
+    color: #fff;
+    padding-bottom: 0px;
+  }
+
+  .trusted-group{
+    margin-top: 50px;
+    .inner-smart-group{
+      gap: 12px;
+    }
+    .smart-box {
+      background-color: #2B2B2B;
+      border-radius: 10px;
+      h3{
+        padding: 15px 22px;
+        background-color: #363636;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        font-size: 18px;
+        color: #ffffff91;
+      }
+      .smart-bx-innert-desc{
+        padding: 15px 22px;
+      }
+      .smart-sub-row{
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding-bottom: 15px;
+        p{
+          padding-bottom: 0px;
+        }
+      }
+    }
+  }
+
+}
+.common-faq-section{margin-bottom: 0px;}
+.common-faq-section h2 {
+  margin-bottom: unset;
+  font-size: xx-large;
+  line-height: normal;
+}
+.common-faq-section .common-faq-wrapper {
+  margin-top: 0rem;
+}
+
+.industries-list-slider-section{
+  .estimate-temaplte-list-bx{
+    background-color: #202020;
+    border-radius: 10px;
+    padding: 30px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    justify-content: space-between;
+    h3{
+      font-size: 28px;
+      color: #fff;
+      text-align: center;
+      line-height: normal;
+    }
+    img{
+      margin: auto;
+    }
+    .wp-block-buttons{
+      background-color: #3B3B3B;
+      border-radius: 10px;
+      padding: 12px 10px;
+      color: #fff;
+      text-align: center;
+      a{
+        padding: 0px;
+        font-size: 16px;
+        font-weight: 500;
+        line-height: normal;
+      }
+    }
+  }
+  .estimate-temaplte-list-bx-default{
+    background-color: #fff;
+    border-radius: 20px;
+    border: 1px solid #C5C5C5;
+    .desc-ind{
+      padding: 20px 25px;
+    }
+    h3{
+      font-size: 18px;
+      font-weight: 700;
+      line-height: normal;
+      padding-bottom: 24px;
+    }
+    .pros-link a{
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 0;
+      margin-top: 10px;
+      img{
+        margin: unset;
+      }
+    }
+  }
+  .nav-arrow{
+    display: none;
+  }
+}
+
+.indu-cta-default {
+  background-color: #F5F5F5;
+  padding: 70px 30px 50px;
+  border-radius: 10px;
+  .cta-column{
+    margin-bottom: 0px;
+  }
+  h2{
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 15px;
+  }
+  .cta-btn{
+    text-align: right;
+  }
+  p{
+    padding-bottom: 0px;
+  }
+  .home-cta-image-col{
+    .wp-block-group-is-layout-constrained{
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      align-items: center;
+      justify-content: right;
+      .ghost-btn{
+        a{
+          background-color: rgb(255 255 255);
+        color: rgb(0 0 0);
+        border-color: rgb(0 0 0);
+        border: 1px solid;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 767px) {
+
+/********** New Industries page design *************/
+
+.hero-section-feature-section{
+  padding: 120px 0px 60px;
+  .lefi-right-hero-section{
+    gap: 40px;
+    align-items: center !important;
+  }
+  .new-hero-desc{
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    text-align: center;
+    h1{
+      font-size: 38px;
+    }
+    p{
+      padding-bottom: 0px;
+      text-align: center !important;
+    }
+  }
+  .new-home-trusted-section{
+      margin-bottom: 0px;
+      padding-top: 60px;
+      h2{
+        font-weight: 700 !important;
+      }
+      
+    }
+}
+.key-diffrence-features-section{
+ .fsm-software-box-list{
+      background-color: unset;
+      padding: 0px;
+      border-radius: 40px;
+      gap: 20px;
+      margin-top: 30px;
+     .fsm-box{
+          background-color: transparent;
+          filter: unset;
+                  padding: 20px;
+        .fsm-head{
+          text-align: left;
+        }
+        h3{
+          padding-bottom: 20px;
+        }
+         p{
+          text-align: left;
+          margin: unset;
+        }
+     }
+     .fsm-box-2{
+        background-color: #fff;
+        filter: drop-shadow(0 1.917px 5.752px rgba(0, 0, 0, 0.08)) drop-shadow(0 9.587px 9.587px rgba(0, 0, 0, 0.07)) drop-shadow(0 23.009px 13.422px rgba(0, 0, 0, 0.04)) drop-shadow(0 40.265px 15.339px rgba(0, 0, 0, 0.01)) drop-shadow(0 63.274px 17.257px rgba(0, 0, 0, 0));
+        .fsm-head{
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        h3{
+          position: relative;
+          &::after{
+            background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/11/Squiggle-Med-01.png");
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 8px;
+            background-repeat: no-repeat;
+            background-size: contain;
+            width: 100%;
+          }
+        }
+      }
+     }
+  }
+
+}
+.faq-feartire{
+  .heading-column{
+    h2{
+      font-size: 36px !important;
+      line-height: 1.2 !important;
+    }
+    p{
+      padding-left: 0px;
+    }
+  }
+  
+  .faq-flex{
+    gap: 50px;
+  }
+  .wp-block-details{
+    background-color: #F5F5F5;
+    padding: 25px !important;
+    margin-bottom: 15px;
+  }
+}
+.featrure-evolve-cta{
+  background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/11/freature-main-cta-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/**********END New Industries page design *************/
+
+  .use-case-banner-desc{
+    display: block;
+    margin-bottom: 15px;
+    text-align: center;
+    h1{
+      text-align: center;
+    }
+    p{
+      text-align: center;
+    }
+  }
+  .trasted-img-logo figure img {
+    max-width: 150px !important;
+    max-height: 80px !important;
+    object-fit: contain;
+}
+  .use-case-banner .banner-tag-bx{
+    margin-bottom: 10px;
+  }
+  .row-rev-mb {
+    flex-direction: column-reverse !important;
+  }
+  .py125{
+    padding-top: 80px;
+    padding-bottom: 80px;
+  }
+  .pt125{
+    padding-top: 80px;
+  }
+  .pb125{
+    padding-bottom: 80px;
+  }
+  .mb125{
+    margin-bottom: 80px;
+  }
+  .py100{
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+  .pt100{
+    padding-top: 60px;
+  }
+  .pb100{
+    padding-bottom: 60px;
+  }
+  .title-head-bx{
+    margin-bottom: 60px;
+    h2{
+      padding-bottom: 20px;
+      font-size: 34px;
+    }
+  }
+  
+  .helps-field .helps-field-grid{
+    gap: 50px;
+  }
+
+  .helps-field .helps-field-grid{
+    margin-bottom: 100px;
+  }
+  .helps-field .helps-field-grid:last-child{
+    margin-bottom: 00px;
+  }
+
+  .indu-cta-green {
+    text-align: center;
+    margin: 0px 15px;
+    padding: 50px 20px 40px;
+    .cta-btn{
+      text-align: center;
+    }
+    p{
+      padding-bottom: 15px;
+    }
+  }
+
+  .pros-section .pros-row {
+    gap: 50px;
+  }
+  .pros-section .pros-bx{
+    gap: 20px;
+  }
+
+  .industries-list-slider-section{
+    .estimate-temaplte-list-bx{
+      background-color: #202020;
+      border-radius: 10px;
+      padding: 30px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      justify-content: space-between;
+      h3{
+        font-size: 28px;
+        color: #fff;
+        text-align: center;
+        line-height: normal;
+      }
+      figure{
+        margin: auto;
+      }
+      .wp-block-buttons{
+        background-color: #3B3B3B;
+        border-radius: 10px;
+        padding: 12px 10px;
+        color: #fff;
+        text-align: center;
+        a{
+          padding: 0px;
+          font-size: 16px;
+          font-weight: 500;
+          line-height: normal;
+        }
+      }
+    }
+    .estimate-temaplte-list-bx-default{
+      background-color: #fff;
+      border-radius: 10px;
+      border: 1px solid #C5C5C5;
+      .desc-ind{
+        padding: 20px 25px;
+      }
+      h3{
+        font-size: 18px;
+        font-weight: 600;
+        line-height: normal;
+        padding-bottom: 24px;
+      }
+      .pros-link a{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        padding: 0;
+        margin-top: 10px;
+        img{
+          margin: unset;
+        }
+      }
+    }
+    .nav-arrow{
+      position: absolute;
+      left: 0;
+      right: 0;
+      display: flex;
+      width: 100%;
+      justify-content: center;
+      gap: 1rem;
+      margin-left: auto;
+      margin-right: auto;
+      max-width: 830px;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      padding-top: 20px;
+
+      svg{
+        height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    --tw-border-opacity: 1;
+    border-color: rgb(180 168 187);
+    background-color: rgb(180 168 187);
+    cursor: pointer;
+    padding: 12px;
+      }
+
+    }
+  }
+
+  .workflow-section {
+    padding: 30px 15px;
+  }
+  .workflow-section .trusted-group .inner-smart-group {
+      gap: 20px;
+  }
+  .review-ind{
+    padding-top: 0px;
+    padding-bottom: 0px;
+    background-image: unset;
+  }
+  .workflow-section-bx{
+    margin: 0px 15px;
+  }
+
+  .review-ind .review-ind-row .review-ind-bx .user-img-col{
+    display: flex;
+    align-items: center;
+    justify-content: start;
+  }
+
+  .review-ind .review-ind-row .review-ind-bx .user-img-col figure img{
+    width: 50px !important;
+  }
+
+  .indu-cta-default h2, .indu-cta-default p{text-align: center;}
+  .indu-cta-default .home-cta-image-col .wp-block-group-is-layout-constrained {
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .trusted-section{
+    margin-bottom: 0px;
+  }
+  // .trusted-section .trusted-img-col {
+  //   justify-content: space-between;
+  //   flex-direction: row;
+  //   display: block;
+  //   text-align: center;
+  // }
+  // .trasted-img-logo{
+  //   display: inline-block;
+  //   width: auto !important;
+  //   padding-bottom: 40px;
+  //   vertical-align: middle;
+  //   padding-left: 10px;
+  //   padding-right: 10px;
+  // }
+  // .trasted-img-logo:last-child{
+  //   padding-bottom: 00px;
+  // }
+  .review-ind .review-ind-row .review-ind-bx .user-compnay{
+    padding-bottom: 20px;
+  }
+  .estimate-temaplte-list-bx-default figure img {
+    min-height: 100%;
+  }
+}
+
+@media (min-width: 1023px) {
+  .use-case-banner {
+      padding-top: 170px;
+  }
+  .max-w-1140 {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+  .max-w-900 {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+  .trusted-section {
+    margin-bottom: 0;
+}
+}
+
+

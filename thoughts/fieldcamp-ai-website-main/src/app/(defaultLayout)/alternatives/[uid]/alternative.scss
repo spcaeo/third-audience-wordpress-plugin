@@ -1,0 +1,56 @@
+// Alternative page specific styles
+.blog-artical {
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    display: inline-table !important;
+
+    tbody {
+      tr {
+        border: 1px solid #000;
+
+        &:first-child {
+
+          td {
+            font-weight: 700;
+            padding: 1rem;
+            border-right: 1px solid #000;
+
+            &:first-child {
+              // background-color: #f0f5ff;
+            }
+
+            &:last-child {
+              border-right: none;
+            }
+          }
+        }
+
+        td {
+          padding: 1rem;
+          border-right: 1px solid #000;
+          vertical-align: top;
+          line-height: 1.5;
+          word-break: unset !important;
+
+          &:first-child {
+            // background-color: #f0f5ff;
+          }
+
+          &:last-child {
+            border-right: none;
+          }
+
+          strong {
+            font-weight: 700;
+          }
+        }
+      }
+    }
+
+    &.has-fixed-layout {
+      table-layout: fixed;
+    }
+  }
+}

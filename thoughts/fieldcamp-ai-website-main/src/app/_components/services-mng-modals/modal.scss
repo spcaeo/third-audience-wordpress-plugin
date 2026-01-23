@@ -1,0 +1,228 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 12px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  animation: slideUp 0.3s ease-out;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0px;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  background-image: url("https://cms.fieldcamp.ai/wp-content/uploads/2025/08/modal-hm-arrow-path.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.service-popup {
+  padding: 48px 32px;
+  
+  .popup-img {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    
+    img {
+      width: 100%;
+      height: auto;
+      margin: 0 auto;
+      max-width: 550px;
+    }
+  }
+
+  .popup-desc {
+    text-align: left;
+    max-width: 700px;
+    
+    .popup-head {
+      font-size: 1.9rem;
+      font-weight: 700;
+      margin-bottom: 7px;
+      color: #111827;
+    }
+    
+    .popup-subhead {
+      margin-bottom: 0px;
+      padding-bottom: 0px;
+      color: #232529;
+    }
+    
+    .popup-list-desc {
+      text-align: left;
+      max-width: 28rem;
+      list-style: none;
+      padding: 10px 0px 0px;
+      
+      li {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+        color: #232529;
+        font-weight: 500;
+        font-size: 18px;
+        
+        span:first-child {
+          margin-right: 0.5rem;
+        }
+      }
+    }
+  }
+}
+
+.italic-text {
+  margin-top: 20px;
+}
+
+.dispatch-links {
+  text-align: left;
+  max-width: 448px;
+  margin: 0 auto 24px;
+  
+  p {
+    margin-bottom: 12px;
+    color: #374151;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .link-text {
+    color: #2563eb;
+    text-decoration: underline;
+    cursor: pointer;
+    
+    &:hover {
+      color: #1d4ed8;
+    }
+  }
+}
+
+.default-popup {
+  padding: 48px 32px;
+  text-align: center;
+  
+  h2 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 16px;
+  }
+  
+  p {
+    color: #6b7280;
+    margin-bottom: 24px;
+  }
+  
+  form {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+    text-align: left;
+    
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 4px;
+    }
+    
+    input,
+    textarea {
+      width: 100%;
+      padding: 8px 16px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      
+      &:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+    }
+    
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+  }
+  
+  button {
+    width: 100%;
+    background-color: #2563eb;
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s;
+    
+    &:hover {
+      background-color: #1d4ed8;
+    }
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+
+@media (max-width: 991px){
+  .modal-close {
+    top: 10px;
+    right: 10px;
+    width: 50px;
+    height: 50px;
+  }
+}
