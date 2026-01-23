@@ -10,6 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Ensure is_plugin_active() is available.
+if ( ! function_exists( 'is_plugin_active' ) ) {
+	include_once ABSPATH . 'wp-admin/includes/plugin.php';
+}
+
 // Handle form submission.
 if ( isset( $_POST['ta_save_digest_settings'] ) && check_admin_referer( 'ta_digest_settings' ) ) {
 	update_option( 'ta_email_digest_enabled', isset( $_POST['ta_digest_enabled'] ) );
@@ -43,6 +48,31 @@ $inc_cites   = get_option( 'ta_digest_include_citations', true );
 $inc_new     = get_option( 'ta_digest_include_new_bots', true );
 $inc_content = get_option( 'ta_digest_include_content_type', true );
 $alerts      = get_option( 'ta_email_alerts_enabled', false );
+
+// Check email configuration status.
+$wp_mail_smtp_installed = class_exists( 'WPMailSMTP\Core' ) || is_plugin_active( 'wp-mail-smtp/wp_mail_smtp.php' );
+$wp_mail_smtp_configured = get_option( 'wp_mail_smtp', array() );
+$smtp_host = isset( $wp_mail_smtp_configured['smtp']['host'] ) ? $wp_mail_smtp_configured['smtp']['host'] : '';
+$is_smtp_configured = ! empty( $smtp_host );
+
+// Check for other popular SMTP plugins.
+$other_smtp_plugins = array(
+	'easy-wp-smtp/easy-wp-smtp.php' => 'Easy WP SMTP',
+	'post-smtp/postman-smtp.php' => 'Post SMTP',
+	'smtp-mailer/main.php' => 'SMTP Mailer',
+	'fluent-smtp/fluent-smtp.php' => 'FluentSMTP',
+);
+$active_smtp_plugin = '';
+foreach ( $other_smtp_plugins as $plugin_path => $plugin_name ) {
+	if ( is_plugin_active( $plugin_path ) ) {
+		$active_smtp_plugin = $plugin_name;
+		$is_smtp_configured = true;
+		break;
+	}
+}
+if ( $wp_mail_smtp_installed && $is_smtp_configured ) {
+	$active_smtp_plugin = 'WP Mail SMTP';
+}
 ?>
 
 <div class="wrap ta-email-digest-settings">
@@ -51,6 +81,89 @@ $alerts      = get_option( 'ta_email_alerts_enabled', false );
 		<?php esc_html_e( 'Email Digest Settings', 'third-audience' ); ?>
 	</h1>
 	<p class="description"><?php esc_html_e( 'Configure automated email reports of AI bot activity.', 'third-audience' ); ?></p>
+
+	<!-- Email Configuration Status -->
+	<div class="ta-email-status-box <?php echo $is_smtp_configured ? 'status-ok' : 'status-warning'; ?>">
+		<div class="ta-status-icon">
+			<span class="dashicons <?php echo $is_smtp_configured ? 'dashicons-yes-alt' : 'dashicons-warning'; ?>"></span>
+		</div>
+		<div class="ta-status-content">
+			<?php if ( $is_smtp_configured ) : ?>
+				<strong><?php esc_html_e( 'Email is configured', 'third-audience' ); ?></strong>
+				<p>
+					<?php
+					printf(
+						/* translators: %s: SMTP plugin name */
+						esc_html__( 'Using: %s', 'third-audience' ),
+						'<strong>' . esc_html( $active_smtp_plugin ) . '</strong>'
+					);
+					?>
+					<?php if ( $wp_mail_smtp_installed ) : ?>
+						&mdash; <a href="<?php echo esc_url( admin_url( 'admin.php?page=wp-mail-smtp' ) ); ?>"><?php esc_html_e( 'View Settings', 'third-audience' ); ?></a>
+					<?php endif; ?>
+				</p>
+			<?php else : ?>
+				<strong><?php esc_html_e( 'Email not configured', 'third-audience' ); ?></strong>
+				<p><?php esc_html_e( 'WordPress cannot send emails reliably without SMTP configuration. Digest emails may not be delivered.', 'third-audience' ); ?></p>
+			<?php endif; ?>
+		</div>
+	</div>
+
+	<?php if ( ! $is_smtp_configured ) : ?>
+	<!-- SMTP Setup Instructions -->
+	<div class="ta-settings-section ta-setup-guide">
+		<h2>
+			<span class="dashicons dashicons-admin-tools"></span>
+			<?php esc_html_e( 'How to Configure Email', 'third-audience' ); ?>
+		</h2>
+		<p><?php esc_html_e( 'WordPress needs an SMTP plugin to send emails reliably. Follow these steps:', 'third-audience' ); ?></p>
+
+		<div class="ta-setup-steps">
+			<div class="ta-step">
+				<div class="ta-step-number">1</div>
+				<div class="ta-step-content">
+					<h4><?php esc_html_e( 'Install WP Mail SMTP Plugin', 'third-audience' ); ?></h4>
+					<p><?php esc_html_e( 'This is the most popular and reliable email plugin for WordPress.', 'third-audience' ); ?></p>
+					<a href="<?php echo esc_url( admin_url( 'plugin-install.php?s=wp+mail+smtp&tab=search&type=term' ) ); ?>" class="button button-primary">
+						<span class="dashicons dashicons-admin-plugins"></span>
+						<?php esc_html_e( 'Install WP Mail SMTP', 'third-audience' ); ?>
+					</a>
+				</div>
+			</div>
+
+			<div class="ta-step">
+				<div class="ta-step-number">2</div>
+				<div class="ta-step-content">
+					<h4><?php esc_html_e( 'Configure SMTP Settings', 'third-audience' ); ?></h4>
+					<p><?php esc_html_e( 'After installation, go to WP Mail SMTP settings and choose your email provider:', 'third-audience' ); ?></p>
+					<ul class="ta-provider-list">
+						<li><strong>Gmail / Google Workspace</strong> &mdash; <?php esc_html_e( 'Best for personal sites', 'third-audience' ); ?></li>
+						<li><strong>SendGrid / Mailgun</strong> &mdash; <?php esc_html_e( 'Best for high-volume sites', 'third-audience' ); ?></li>
+						<li><strong>Amazon SES</strong> &mdash; <?php esc_html_e( 'Best for AWS users', 'third-audience' ); ?></li>
+						<li><strong>Other SMTP</strong> &mdash; <?php esc_html_e( 'Any SMTP server (hosting provider, etc.)', 'third-audience' ); ?></li>
+					</ul>
+				</div>
+			</div>
+
+			<div class="ta-step">
+				<div class="ta-step-number">3</div>
+				<div class="ta-step-content">
+					<h4><?php esc_html_e( 'Send a Test Email', 'third-audience' ); ?></h4>
+					<p><?php esc_html_e( 'Use WP Mail SMTP\'s built-in test feature to verify emails are working, then return here to enable digests.', 'third-audience' ); ?></p>
+				</div>
+			</div>
+		</div>
+
+		<div class="ta-help-box">
+			<span class="dashicons dashicons-info"></span>
+			<div>
+				<strong><?php esc_html_e( 'Gmail SMTP Quick Setup', 'third-audience' ); ?></strong>
+				<p><?php esc_html_e( 'For Gmail, you\'ll need to create an "App Password" in your Google Account security settings. Regular Gmail passwords won\'t work with SMTP.', 'third-audience' ); ?></p>
+				<a href="https://wpmailsmtp.com/docs/how-to-set-up-the-gmail-mailer-in-wp-mail-smtp/" target="_blank" rel="noopener"><?php esc_html_e( 'View Gmail Setup Guide', 'third-audience' ); ?> &rarr;</a>
+			</div>
+		</div>
+	</div>
+	<?php endif; ?>
 
 	<form method="post" class="ta-settings-form">
 		<?php wp_nonce_field( 'ta_digest_settings' ); ?>
@@ -186,5 +299,93 @@ jQuery(document).ready(function($) {
 .ta-email-digest-settings h1 .dashicons { vertical-align: middle; margin-right: 8px; }
 .ta-settings-section { background: #fff; padding: 20px; border: 1px solid #e5e5e5; border-radius: 4px; margin: 20px 0; }
 .ta-settings-section h2 { margin-top: 0; padding-bottom: 10px; border-bottom: 1px solid #e5e5e5; }
+.ta-settings-section h2 .dashicons { vertical-align: middle; margin-right: 5px; color: #2271b1; }
 .ta-settings-form .form-table th { width: 200px; }
+
+/* Email Status Box */
+.ta-email-status-box {
+	display: flex;
+	align-items: flex-start;
+	gap: 15px;
+	padding: 15px 20px;
+	border-radius: 4px;
+	margin: 20px 0;
+}
+.ta-email-status-box.status-ok {
+	background: #e7f8ed;
+	border: 1px solid #00a32a;
+}
+.ta-email-status-box.status-warning {
+	background: #fff8e5;
+	border: 1px solid #dba617;
+}
+.ta-status-icon .dashicons {
+	font-size: 24px;
+	width: 24px;
+	height: 24px;
+}
+.status-ok .ta-status-icon .dashicons { color: #00a32a; }
+.status-warning .ta-status-icon .dashicons { color: #dba617; }
+.ta-status-content p { margin: 5px 0 0; }
+.ta-status-content strong { font-size: 14px; }
+
+/* Setup Guide */
+.ta-setup-guide { background: #f8f9fa; }
+.ta-setup-steps { margin: 20px 0; }
+.ta-step {
+	display: flex;
+	gap: 15px;
+	margin-bottom: 25px;
+	padding-bottom: 25px;
+	border-bottom: 1px dashed #ddd;
+}
+.ta-step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.ta-step-number {
+	flex-shrink: 0;
+	width: 32px;
+	height: 32px;
+	background: #2271b1;
+	color: #fff;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	font-size: 14px;
+}
+.ta-step-content h4 { margin: 0 0 8px; font-size: 14px; }
+.ta-step-content p { margin: 0 0 10px; color: #50575e; }
+.ta-step-content .button .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+	vertical-align: middle;
+	margin-right: 3px;
+	margin-top: -2px;
+}
+.ta-provider-list {
+	margin: 10px 0 0;
+	padding-left: 20px;
+	color: #50575e;
+}
+.ta-provider-list li { margin-bottom: 5px; }
+.ta-provider-list strong { color: #1d2327; }
+
+/* Help Box */
+.ta-help-box {
+	display: flex;
+	gap: 12px;
+	background: #e7f6ff;
+	border: 1px solid #72aee6;
+	border-radius: 4px;
+	padding: 15px;
+	margin-top: 20px;
+}
+.ta-help-box > .dashicons {
+	color: #2271b1;
+	flex-shrink: 0;
+}
+.ta-help-box strong { display: block; margin-bottom: 5px; }
+.ta-help-box p { margin: 0 0 8px; color: #50575e; }
+.ta-help-box a { font-weight: 500; }
 </style>
