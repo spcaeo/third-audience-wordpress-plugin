@@ -148,6 +148,13 @@ class TA_Bot_Analytics {
 
 		// Hook to track ALL bot crawls on every page.
 		add_action( 'template_redirect', array( $this, 'maybe_track_bot_crawl' ), 1 );
+
+		// Frontend JavaScript citation tracker (works with cached pages).
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_citation_tracker' ) );
+
+		// AJAX handlers for JS-based citation tracking (both logged-in and public).
+		add_action( 'wp_ajax_ta_track_citation_js', array( $this, 'ajax_track_citation_js' ) );
+		add_action( 'wp_ajax_nopriv_ta_track_citation_js', array( $this, 'ajax_track_citation_js' ) );
 	}
 
 	// =========================================================================
@@ -165,6 +172,107 @@ class TA_Bot_Analytics {
 			return;
 		}
 		$this->tracker->track_citation_click();
+	}
+
+	/**
+	 * Enqueue frontend citation tracker script.
+	 *
+	 * This JavaScript-based tracker works even when pages are served from cache.
+	 *
+	 * @since 3.3.7
+	 * @return void
+	 */
+	public function enqueue_citation_tracker() {
+		// Don't load on admin pages.
+		if ( is_admin() ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'ta-citation-tracker',
+			TA_PLUGIN_URL . 'public/js/citation-tracker.js',
+			array(),
+			TA_VERSION,
+			true // Load in footer.
+		);
+
+		// Pass AJAX URL and nonce to script.
+		wp_localize_script(
+			'ta-citation-tracker',
+			'taCitationTracker',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'ta_citation_tracker' ),
+				'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG,
+			)
+		);
+	}
+
+	/**
+	 * AJAX handler for JavaScript-based citation tracking.
+	 *
+	 * Receives citation data from frontend JS when pages are served from cache.
+	 *
+	 * @since 3.3.7
+	 * @return void
+	 */
+	public function ajax_track_citation_js() {
+		// Verify nonce.
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'ta_citation_tracker' ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid nonce' ), 403 );
+		}
+
+		// Get citation data from request.
+		$platform     = isset( $_POST['platform'] ) ? sanitize_text_field( wp_unslash( $_POST['platform'] ) ) : '';
+		$method       = isset( $_POST['method'] ) ? sanitize_text_field( wp_unslash( $_POST['method'] ) ) : '';
+		$url          = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
+		$path         = isset( $_POST['path'] ) ? sanitize_text_field( wp_unslash( $_POST['path'] ) ) : '';
+		$referrer     = isset( $_POST['referrer'] ) ? esc_url_raw( wp_unslash( $_POST['referrer'] ) ) : '';
+		$search_query = isset( $_POST['search_query'] ) ? sanitize_text_field( wp_unslash( $_POST['search_query'] ) ) : '';
+		$page_title   = isset( $_POST['page_title'] ) ? sanitize_text_field( wp_unslash( $_POST['page_title'] ) ) : '';
+		$utm_source   = isset( $_POST['utm_source'] ) ? sanitize_text_field( wp_unslash( $_POST['utm_source'] ) ) : '';
+
+		// Validate required fields.
+		if ( empty( $platform ) || empty( $url ) ) {
+			wp_send_json_error( array( 'message' => 'Missing required fields' ), 400 );
+		}
+
+		// Get post ID from URL.
+		$post_id = url_to_postid( $url );
+
+		// Prepare tracking data.
+		$tracking_data = array(
+			'bot_type'       => 'AI_Citation',
+			'bot_name'       => $platform,
+			'user_agent'     => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
+			'url'            => $path,
+			'post_id'        => $post_id,
+			'post_type'      => $post_id ? get_post_type( $post_id ) : null,
+			'post_title'     => $post_id ? get_the_title( $post_id ) : $page_title,
+			'request_method' => 'citation_click_js',
+			'cache_status'   => 'N/A',
+			'referer'        => $referrer,
+			'traffic_type'   => 'citation_click',
+			'ai_platform'    => $platform,
+			'search_query'   => $search_query ?: null,
+			'referer_source' => $utm_source ?: $platform,
+			'referer_medium' => 'ai_citation',
+		);
+
+		// Track the visit.
+		$result = $this->tracker->track_visit( $tracking_data );
+
+		if ( $result ) {
+			$this->logger->info( 'JS Citation tracked', array(
+				'platform' => $platform,
+				'method'   => $method,
+				'url'      => $url,
+			) );
+			wp_send_json_success( array( 'tracked' => true, 'id' => $result ) );
+		} else {
+			wp_send_json_error( array( 'message' => 'Failed to track citation' ), 500 );
+		}
 	}
 
 	/**
