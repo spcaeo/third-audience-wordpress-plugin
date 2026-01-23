@@ -374,6 +374,21 @@
 	text-decoration: underline;
 }
 
+.ta-md-link {
+	display: inline-block;
+	margin-left: 6px;
+	color: #8c8f94;
+	vertical-align: middle;
+}
+.ta-md-link:hover {
+	color: #2271b1;
+}
+.ta-md-link .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+}
+
 /* === Live Indicator === */
 .ta-live-indicator {
 	display: inline-block;

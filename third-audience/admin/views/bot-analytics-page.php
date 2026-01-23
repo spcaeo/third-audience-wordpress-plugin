@@ -319,8 +319,11 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 							<?php foreach ( array_slice( $top_pages, 0, 10 ) as $page ) : ?>
 								<tr>
 									<td>
-										<a href="<?php echo esc_url( $page['url'] ); ?>" target="_blank" class="ta-page-link">
+										<a href="<?php echo esc_url( $page['url'] ); ?>" target="_blank" class="ta-page-link" title="<?php esc_attr_e( 'View page', 'third-audience' ); ?>">
 											<?php echo esc_html( wp_trim_words( $page['post_title'] ?? $page['url'], 8 ) ); ?>
+										</a>
+										<a href="<?php echo esc_url( untrailingslashit( $page['url'] ) . '.md' ); ?>" target="_blank" class="ta-md-link" title="<?php esc_attr_e( 'View as Markdown (what bots see)', 'third-audience' ); ?>">
+											<span class="dashicons dashicons-media-text"></span>
 										</a>
 									</td>
 									<td><strong><?php echo number_format( $page['visits'] ); ?></strong></td>
