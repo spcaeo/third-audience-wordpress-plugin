@@ -599,6 +599,12 @@ function ta_self_test_callback( $request ) {
 /**
  * Verify API key for headless citation tracking.
  *
+ * Security measures:
+ * 1. API key validation
+ * 2. Rate limiting (60 requests per minute per IP)
+ * 3. Origin/Referer domain validation
+ * 4. Platform whitelist validation
+ *
  * @since 3.3.2
  * @param WP_REST_Request $request The request object.
  * @return bool|WP_Error True if valid, WP_Error if not.
@@ -609,13 +615,13 @@ function ta_verify_citation_api_key( $request ) {
 	// Get configured API key from options.
 	$configured_key = get_option( 'ta_headless_api_key', '' );
 
-	// If no key configured, generate one and allow first request.
+	// If no key configured, generate one.
 	if ( empty( $configured_key ) ) {
 		$configured_key = wp_generate_password( 32, false );
 		update_option( 'ta_headless_api_key', $configured_key );
 	}
 
-	// Verify key matches.
+	// 1. Verify API key matches.
 	if ( empty( $api_key ) || ! hash_equals( $configured_key, $api_key ) ) {
 		return new WP_Error(
 			'unauthorized',
@@ -624,7 +630,96 @@ function ta_verify_citation_api_key( $request ) {
 		);
 	}
 
+	// 2. Rate limiting - 60 requests per minute per IP.
+	$client_ip    = ta_get_client_ip_for_rate_limit();
+	$transient_key = 'ta_citation_rate_' . md5( $client_ip );
+	$request_count = (int) get_transient( $transient_key );
+
+	if ( $request_count >= 60 ) {
+		return new WP_Error(
+			'rate_limited',
+			__( 'Too many requests. Please try again later.', 'third-audience' ),
+			array( 'status' => 429 )
+		);
+	}
+	set_transient( $transient_key, $request_count + 1, MINUTE_IN_SECONDS );
+
+	// 3. Validate origin/referer against configured frontend URL.
+	$headless_settings = get_option( 'ta_headless_settings', array() );
+	$frontend_url      = isset( $headless_settings['frontend_url'] ) ? $headless_settings['frontend_url'] : '';
+
+	if ( ! empty( $frontend_url ) ) {
+		$origin  = $request->get_header( 'Origin' );
+		$referer = $request->get_header( 'Referer' );
+
+		$frontend_host = wp_parse_url( $frontend_url, PHP_URL_HOST );
+		$origin_host   = $origin ? wp_parse_url( $origin, PHP_URL_HOST ) : '';
+		$referer_host  = $referer ? wp_parse_url( $referer, PHP_URL_HOST ) : '';
+
+		// Allow if origin or referer matches frontend domain, or if no origin (server-side calls).
+		$is_valid_origin = empty( $origin ) || $origin_host === $frontend_host || $referer_host === $frontend_host;
+
+		if ( ! $is_valid_origin ) {
+			return new WP_Error(
+				'invalid_origin',
+				__( 'Request origin not allowed.', 'third-audience' ),
+				array( 'status' => 403 )
+			);
+		}
+	}
+
+	// 4. Validate platform is from allowed list.
+	$platform = $request->get_param( 'platform' );
+	$allowed_platforms = array(
+		'ChatGPT', 'Chatgpt', 'chatgpt',
+		'Perplexity', 'perplexity',
+		'Claude', 'claude',
+		'Gemini', 'gemini',
+		'Copilot', 'copilot',
+		'Bing', 'bing', 'Bing AI',
+		'Google', 'google',
+	);
+
+	$platform_valid = false;
+	foreach ( $allowed_platforms as $allowed ) {
+		if ( stripos( $platform, $allowed ) !== false ) {
+			$platform_valid = true;
+			break;
+		}
+	}
+
+	if ( ! $platform_valid ) {
+		return new WP_Error(
+			'invalid_platform',
+			__( 'Invalid platform specified.', 'third-audience' ),
+			array( 'status' => 400 )
+		);
+	}
+
 	return true;
+}
+
+/**
+ * Get client IP for rate limiting.
+ *
+ * @since 3.3.2
+ * @return string Client IP address.
+ */
+function ta_get_client_ip_for_rate_limit() {
+	$ip = '';
+
+	if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+		$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+	} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+		$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+		$ip  = trim( $ips[0] );
+	} elseif ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
+		$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) );
+	} elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+		$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+	}
+
+	return $ip ?: 'unknown';
 }
 
 /**
@@ -642,6 +737,28 @@ function ta_track_citation_callback( $request ) {
 	$referer      = $request->get_param( 'referer' );
 	$search_query = $request->get_param( 'search_query' );
 	$ip           = $request->get_param( 'ip' ) ?: 'unknown';
+
+	// Sanitize URL - only allow relative paths or paths from this site.
+	$url = wp_parse_url( $url, PHP_URL_PATH ) ?: $url;
+	$url = sanitize_text_field( $url );
+
+	// Normalize platform name.
+	$platform = ucfirst( strtolower( sanitize_text_field( $platform ) ) );
+
+	// 5. Duplicate prevention - don't track same URL+platform within 5 minutes.
+	$dedup_key    = 'ta_citation_' . md5( $url . $platform . ta_get_client_ip_for_rate_limit() );
+	$already_tracked = get_transient( $dedup_key );
+
+	if ( $already_tracked ) {
+		return new WP_REST_Response( array(
+			'success'  => true,
+			'message'  => 'Citation already tracked recently',
+			'duplicate' => true,
+		), 200 );
+	}
+
+	// Mark as tracked for 5 minutes.
+	set_transient( $dedup_key, true, 5 * MINUTE_IN_SECONDS );
 
 	// Determine platform color.
 	$platform_colors = array(

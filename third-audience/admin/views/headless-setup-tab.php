@@ -142,24 +142,224 @@ $api_key  = $wizard->get_api_key();
 </div>
 
 <?php if ( $settings['enabled'] && $api_key ) : ?>
-	<!-- Developer Setup Guide Button -->
-	<div class="ta-settings-section" style="margin-top: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 8px; color: white;">
-		<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-			<div>
-				<h2 style="margin: 0 0 8px 0; color: white; display: flex; align-items: center; gap: 10px;">
-					<span class="dashicons dashicons-book-alt" style="font-size: 28px;"></span>
-					<?php esc_html_e( 'Developer Setup Guide', 'third-audience' ); ?>
-				</h2>
-				<p style="margin: 0; opacity: 0.9; font-size: 14px;">
-					<?php esc_html_e( 'Step-by-step instructions to integrate citation tracking with your Next.js frontend.', 'third-audience' ); ?>
-				</p>
+	<!-- Citation Tracking Setup Options -->
+	<?php
+	$citation_api_key_setup = get_option( 'ta_headless_api_key', '' );
+	if ( empty( $citation_api_key_setup ) ) {
+		$citation_api_key_setup = wp_generate_password( 32, false );
+		update_option( 'ta_headless_api_key', $citation_api_key_setup );
+	}
+	$citation_endpoint_setup = rest_url( 'third-audience/v1/track-citation' );
+	?>
+
+	<div class="ta-settings-section" style="margin-top: 30px;">
+		<h2><?php esc_html_e( 'Citation Tracking Setup', 'third-audience' ); ?></h2>
+		<p class="description">
+			<?php esc_html_e( 'Choose the setup method that works best for your team. Both options track AI citations (ChatGPT, Perplexity, Claude, etc.).', 'third-audience' ); ?>
+		</p>
+
+		<!-- Setup Options Tabs -->
+		<div class="ta-setup-tabs" style="margin-top: 20px;">
+			<div style="display: flex; gap: 0; border-bottom: 2px solid #ddd;">
+				<button type="button" class="ta-setup-tab active" data-tab="easy" style="padding: 12px 24px; border: none; background: #0073aa; color: white; cursor: pointer; font-weight: 600; border-radius: 4px 4px 0 0;">
+					<span class="dashicons dashicons-yes-alt" style="margin-right: 5px;"></span>
+					<?php esc_html_e( 'Easy Setup', 'third-audience' ); ?>
+					<span style="background: #46b450; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 8px;"><?php esc_html_e( 'Recommended', 'third-audience' ); ?></span>
+				</button>
+				<button type="button" class="ta-setup-tab" data-tab="advanced" style="padding: 12px 24px; border: none; background: #f0f0f1; color: #1e1e1e; cursor: pointer; font-weight: 600; border-radius: 4px 4px 0 0;">
+					<span class="dashicons dashicons-admin-tools" style="margin-right: 5px;"></span>
+					<?php esc_html_e( 'Advanced Setup', 'third-audience' ); ?>
+				</button>
 			</div>
-			<button type="button" class="button button-large" id="ta-open-setup-guide" style="background: white; color: #667eea; border: none; font-weight: 600; padding: 10px 25px;">
-				<span class="dashicons dashicons-welcome-learn-more" style="margin-right: 5px;"></span>
-				<?php esc_html_e( 'Open Setup Guide', 'third-audience' ); ?>
-			</button>
+
+			<!-- Easy Setup Tab Content -->
+			<div class="ta-setup-tab-content" id="ta-tab-easy" style="padding: 25px; background: #f8f9fa; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px;">
+				<div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px;">
+					<div style="background: #46b450; color: white; padding: 10px; border-radius: 8px;">
+						<span class="dashicons dashicons-yes" style="font-size: 24px;"></span>
+					</div>
+					<div>
+						<h3 style="margin: 0 0 8px 0;"><?php esc_html_e( 'Script Tag (No .env Required)', 'third-audience' ); ?></h3>
+						<p style="margin: 0; color: #666;">
+							<?php esc_html_e( 'Just paste this script into your Next.js layout. No environment variables or middleware needed.', 'third-audience' ); ?>
+						</p>
+					</div>
+				</div>
+
+				<!-- Benefits -->
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+					<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+						<span class="dashicons dashicons-performance" style="color: #46b450;"></span>
+						<strong><?php esc_html_e( 'Lightweight', 'third-audience' ); ?></strong>
+						<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;"><?php esc_html_e( '< 1KB, async loading, no page speed impact', 'third-audience' ); ?></p>
+					</div>
+					<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+						<span class="dashicons dashicons-shield" style="color: #0073aa;"></span>
+						<strong><?php esc_html_e( 'Secure', 'third-audience' ); ?></strong>
+						<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;"><?php esc_html_e( 'Rate-limited API, citation-only endpoint', 'third-audience' ); ?></p>
+					</div>
+					<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+						<span class="dashicons dashicons-clock" style="color: #764ba2;"></span>
+						<strong><?php esc_html_e( '2-Minute Setup', 'third-audience' ); ?></strong>
+						<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;"><?php esc_html_e( 'Copy, paste, deploy - done!', 'third-audience' ); ?></p>
+					</div>
+				</div>
+
+				<!-- Script Code -->
+				<div style="margin-bottom: 20px;">
+					<h4 style="margin: 0 0 10px 0;"><?php esc_html_e( 'Step 1: Copy this script', 'third-audience' ); ?></h4>
+					<div style="background: #1e1e1e; border-radius: 6px; padding: 15px; position: relative;">
+						<pre style="margin: 0; color: #d4d4d4; font-size: 12px; overflow-x: auto; white-space: pre-wrap;"><code id="easy-script-code">&lt;Script
+  id="ta-citation-tracker"
+  strategy="afterInteractive"
+  dangerouslySetInnerHTML={{
+    __html: `
+      (function(){
+        var defined = ['chatgpt','perplexity','claude','gemini','copilot','bing'];
+        var u = new URLSearchParams(window.location.search);
+        var s = u.get('utm_source') || '';
+        var r = document.referrer || '';
+        var p = null;
+        for(var i=0;i&lt;defined.length;i++){
+          if(s.toLowerCase().indexOf(defined[i])!==-1 || r.toLowerCase().indexOf(defined[i])!==-1){
+            p = defined[i].charAt(0).toUpperCase() + defined[i].slice(1);
+            break;
+          }
+        }
+        if(p){
+          fetch('<?php echo esc_js( $citation_endpoint_setup ); ?>',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-TA-Api-Key':'<?php echo esc_js( $citation_api_key_setup ); ?>'},
+            body:JSON.stringify({url:window.location.pathname,platform:p,referer:r,search_query:'',ip:'client'})
+          }).catch(function(){});
+        }
+      })();
+    `
+  }}
+/&gt;</code></pre>
+						<button type="button" class="button ta-copy-btn" data-target="easy-script-code" style="position: absolute; top: 10px; right: 10px;">
+							<span class="dashicons dashicons-clipboard"></span> <?php esc_html_e( 'Copy', 'third-audience' ); ?>
+						</button>
+					</div>
+				</div>
+
+				<!-- Where to paste -->
+				<div style="margin-bottom: 20px;">
+					<h4 style="margin: 0 0 10px 0;"><?php esc_html_e( 'Step 2: Paste in your layout file', 'third-audience' ); ?></h4>
+					<div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 15px;">
+						<p style="margin: 0 0 10px 0;"><strong><?php esc_html_e( 'For Next.js App Router:', 'third-audience' ); ?></strong></p>
+						<code style="background: #1e1e1e; color: #d4d4d4; padding: 8px 12px; border-radius: 4px; display: block; margin-bottom: 15px;">app/layout.tsx</code>
+
+						<p style="margin: 0 0 10px 0;"><strong><?php esc_html_e( 'For Next.js Pages Router:', 'third-audience' ); ?></strong></p>
+						<code style="background: #1e1e1e; color: #d4d4d4; padding: 8px 12px; border-radius: 4px; display: block;">pages/_app.tsx</code>
+					</div>
+				</div>
+
+				<!-- Example -->
+				<div>
+					<h4 style="margin: 0 0 10px 0;"><?php esc_html_e( 'Example: layout.tsx', 'third-audience' ); ?></h4>
+					<div style="background: #1e1e1e; border-radius: 6px; padding: 15px; position: relative;">
+						<pre style="margin: 0; color: #d4d4d4; font-size: 12px; overflow-x: auto;"><code id="layout-example-code">import Script from 'next/script';
+
+export default function RootLayout({ children }) {
+  return (
+    &lt;html&gt;
+      &lt;body&gt;
+        {children}
+
+        {/* Third Audience Citation Tracking */}
+        &lt;Script
+          id="ta-citation-tracker"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `... paste the script content here ...`
+          }}
+        /&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;
+  );
+}</code></pre>
+						<button type="button" class="button ta-copy-btn" data-target="layout-example-code" style="position: absolute; top: 10px; right: 10px;">
+							<span class="dashicons dashicons-clipboard"></span> <?php esc_html_e( 'Copy', 'third-audience' ); ?>
+						</button>
+					</div>
+				</div>
+
+				<!-- Test -->
+				<div style="margin-top: 20px; background: #d4edda; border: 1px solid #28a745; border-radius: 6px; padding: 15px;">
+					<h4 style="margin: 0 0 10px 0; color: #155724;">
+						<span class="dashicons dashicons-yes-alt"></span>
+						<?php esc_html_e( 'Step 3: Test it!', 'third-audience' ); ?>
+					</h4>
+					<p style="margin: 0 0 10px 0; color: #155724;">
+						<?php esc_html_e( 'After deploying, visit:', 'third-audience' ); ?>
+					</p>
+					<code style="background: white; padding: 8px 12px; border-radius: 4px; display: inline-block;">
+						<?php echo esc_html( $settings['frontend_url'] ); ?>?utm_source=chatgpt.com
+					</code>
+					<p style="margin: 10px 0 0 0; font-size: 13px; color: #155724;">
+						<?php esc_html_e( 'Then check Bot Analytics → AI Citations in WordPress admin.', 'third-audience' ); ?>
+					</p>
+				</div>
+			</div>
+
+			<!-- Advanced Setup Tab Content -->
+			<div class="ta-setup-tab-content" id="ta-tab-advanced" style="display: none; padding: 25px; background: #f8f9fa; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px;">
+				<div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 20px;">
+					<div style="background: #667eea; color: white; padding: 10px; border-radius: 8px;">
+						<span class="dashicons dashicons-admin-tools" style="font-size: 24px;"></span>
+					</div>
+					<div>
+						<h3 style="margin: 0 0 8px 0;"><?php esc_html_e( 'Server-Side Middleware', 'third-audience' ); ?></h3>
+						<p style="margin: 0; color: #666;">
+							<?php esc_html_e( 'More control with Next.js middleware. Requires .env access and code deployment.', 'third-audience' ); ?>
+						</p>
+					</div>
+				</div>
+
+				<!-- Benefits -->
+				<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+					<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+						<span class="dashicons dashicons-visibility" style="color: #667eea;"></span>
+						<strong><?php esc_html_e( 'Server-Side', 'third-audience' ); ?></strong>
+						<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;"><?php esc_html_e( 'Tracks before page renders, more reliable', 'third-audience' ); ?></p>
+					</div>
+					<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+						<span class="dashicons dashicons-lock" style="color: #0073aa;"></span>
+						<strong><?php esc_html_e( 'Hidden API Key', 'third-audience' ); ?></strong>
+						<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;"><?php esc_html_e( 'Key stays in .env, not exposed to client', 'third-audience' ); ?></p>
+					</div>
+					<div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
+						<span class="dashicons dashicons-admin-network" style="color: #764ba2;"></span>
+						<strong><?php esc_html_e( 'IP Detection', 'third-audience' ); ?></strong>
+						<p style="margin: 5px 0 0 0; font-size: 12px; color: #666;"><?php esc_html_e( 'Can capture real visitor IP address', 'third-audience' ); ?></p>
+					</div>
+				</div>
+
+				<button type="button" class="button button-primary" id="ta-open-setup-guide" style="padding: 10px 25px;">
+					<span class="dashicons dashicons-welcome-learn-more" style="margin-right: 5px;"></span>
+					<?php esc_html_e( 'Open Full Setup Guide', 'third-audience' ); ?>
+				</button>
+			</div>
 		</div>
 	</div>
+
+	<!-- Tab Switching Script -->
+	<script>
+	jQuery(document).ready(function($) {
+		$('.ta-setup-tab').on('click', function() {
+			var tab = $(this).data('tab');
+
+			// Update tab buttons
+			$('.ta-setup-tab').css({ background: '#f0f0f1', color: '#1e1e1e' });
+			$(this).css({ background: '#0073aa', color: 'white' });
+
+			// Show/hide content
+			$('.ta-setup-tab-content').hide();
+			$('#ta-tab-' + tab).show();
+		});
+	});
+	</script>
 
 	<!-- Developer Setup Guide Modal -->
 	<div id="ta-setup-guide-modal" class="ta-modal" style="display: none;">
