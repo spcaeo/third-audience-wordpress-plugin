@@ -1102,10 +1102,14 @@ class TA_Cache_Manager implements TA_Cacheable {
 		if ( null === $url_map ) {
 			$url_map = array();
 
-			$enabled_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
-			$posts         = get_posts(
+			// Get ALL public post types, not just enabled ones, to ensure reverse lookup works.
+			$public_types = get_post_types( array( 'public' => true ), 'names' );
+			// Remove attachment type as it's not relevant for cache.
+			unset( $public_types['attachment'] );
+
+			$posts = get_posts(
 				array(
-					'post_type'      => $enabled_types,
+					'post_type'      => array_values( $public_types ),
 					'post_status'    => 'publish',
 					'posts_per_page' => -1,
 					'fields'         => 'ids',
