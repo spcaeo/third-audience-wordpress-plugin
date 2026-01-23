@@ -1131,3 +1131,175 @@
 	transform: translateY(-1px);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* === Session Analytics Clickable Cards === */
+.ta-hero-card-clickable {
+	cursor: pointer;
+	position: relative;
+}
+
+.ta-hero-card-clickable:hover {
+	border-color: #007aff;
+	box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
+	transform: translateY(-2px);
+}
+
+.ta-hero-card-clickable .ta-click-hint {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #c5c5c7;
+	transition: all 0.2s ease;
+}
+
+.ta-hero-card-clickable:hover .ta-click-hint {
+	color: #007aff;
+	right: 8px;
+}
+
+/* === Session Analytics Modal === */
+.ta-session-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 100000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ta-session-modal {
+	background: white;
+	border-radius: 12px;
+	width: 90%;
+	max-width: 1000px;
+	max-height: 85vh;
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.ta-session-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px 24px;
+	border-bottom: 1px solid #e5e5e7;
+	background: #f5f5f7;
+}
+
+.ta-session-modal-header h2 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.ta-session-modal-close {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 8px;
+	border-radius: 6px;
+	color: #86868b;
+	transition: all 0.2s ease;
+}
+
+.ta-session-modal-close:hover {
+	background: #e5e5e7;
+	color: #1d1d1f;
+}
+
+.ta-session-modal-body {
+	padding: 24px;
+	overflow-y: auto;
+	flex: 1;
+}
+
+/* Session Summary Stats */
+.ta-session-summary {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 12px;
+	margin-bottom: 24px;
+}
+
+.ta-session-stat {
+	background: #f5f5f7;
+	border-radius: 8px;
+	padding: 16px;
+	text-align: center;
+}
+
+.ta-session-stat .ta-stat-value {
+	display: block;
+	font-size: 24px;
+	font-weight: 600;
+	color: #1d1d1f;
+	margin-bottom: 4px;
+}
+
+.ta-session-stat .ta-stat-label {
+	font-size: 12px;
+	color: #86868b;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+/* Session Chart Section */
+.ta-session-chart-section {
+	background: #f5f5f7;
+	border-radius: 8px;
+	padding: 16px;
+	margin-bottom: 20px;
+}
+
+.ta-session-chart-section h4 {
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d1d1f;
+}
+
+.ta-session-chart-section h4 .dashicons {
+	color: #007aff;
+	margin-right: 4px;
+}
+
+/* Session Table Section */
+.ta-session-table-section h4 {
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d1d1f;
+}
+
+.ta-session-table-section h4 .dashicons {
+	color: #007aff;
+	margin-right: 4px;
+}
+
+#ta-session-table {
+	margin: 0;
+}
+
+#ta-session-table th {
+	position: sticky;
+	top: 0;
+	background: white;
+	z-index: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	.ta-session-modal {
+		width: 95%;
+		max-height: 90vh;
+	}
+
+	.ta-session-summary {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}

@@ -358,9 +358,12 @@ class TA_URL_Router {
 			// Extract bot name from user agent.
 			$bot_name = $this->extract_bot_name_from_user_agent( $user_agent );
 
+			// Use extracted name as type if it's meaningful (not just "Mozilla").
+			$bot_type = ( 'Mozilla' !== $bot_name && strlen( $bot_name ) > 2 ) ? $bot_name : 'Unknown_Bot';
+
 			// Create generic bot info for unknown bots.
 			$bot_info = array(
-				'type'  => 'Unknown_Bot',
+				'type'  => $bot_type,
 				'name'  => $bot_name,
 				'color' => '#6B7280', // Gray color for unknown bots.
 			);
@@ -552,9 +555,37 @@ class TA_URL_Router {
 	 */
 	private function extract_bot_name_from_user_agent( $user_agent ) {
 		// Common patterns for bot names:
-		// 1. "BotName/version" -> extract "BotName"
-		// 2. "BotName version" -> extract "BotName"
-		// 3. "curl/7.68.0" -> extract "curl"
+		// 1. "compatible; BotName" -> extract "BotName" (Mozilla-style UAs)
+		// 2. "BotName/version" -> extract "BotName"
+		// 3. "BotName version" -> extract "BotName"
+		// 4. "curl/7.68.0" -> extract "curl"
+
+		// Pattern 0: Mozilla-style "compatible; BotName" (most reliable for crawlers)
+		// This catches SEOkicks, AhrefsBot, SemrushBot, etc.
+		if ( preg_match( '/compatible;\s*([a-zA-Z0-9._-]+)/i', $user_agent, $matches ) ) {
+			return ucfirst( $matches[1] );
+		}
+
+		// Pattern 0b: Check for well-known bot names anywhere in the UA
+		$known_crawlers = array(
+			'SEOkicks'        => 'SEOkicks',
+			'AhrefsBot'       => 'AhrefsBot',
+			'SemrushBot'      => 'SemrushBot',
+			'DotBot'          => 'DotBot',
+			'MJ12bot'         => 'Majestic',
+			'BLEXBot'         => 'BLEXBot',
+			'YandexBot'       => 'YandexBot',
+			'Baiduspider'     => 'Baiduspider',
+			'DuckDuckBot'     => 'DuckDuckBot',
+			'facebot'         => 'Facebook',
+			'ia_archiver'     => 'Alexa',
+			'meta-externalagent' => 'Meta',
+		);
+		foreach ( $known_crawlers as $pattern => $name ) {
+			if ( stripos( $user_agent, $pattern ) !== false ) {
+				return $name;
+			}
+		}
 
 		// Pattern 1: Name/Version (most common)
 		if ( preg_match( '/^([a-zA-Z0-9._-]+)\/[\d.]+/i', $user_agent, $matches ) ) {
@@ -567,12 +598,12 @@ class TA_URL_Router {
 		}
 
 		// Pattern 3: Just the first word if it contains "bot", "crawler", "spider"
-		if ( preg_match( '/^([a-zA-Z0-9._-]*(?:bot|crawler|spider)[a-zA-Z0-9._-]*)/i', $user_agent, $matches ) ) {
+		if ( preg_match( '/([a-zA-Z0-9._-]*(?:bot|crawler|spider)[a-zA-Z0-9._-]*)/i', $user_agent, $matches ) ) {
 			return ucfirst( strtolower( $matches[1] ) );
 		}
 
 		// Pattern 4: Common tools (curl, wget, python-requests, etc.)
-		$common_tools = array( 'curl', 'wget', 'python-requests', 'python', 'java', 'go-http', 'okhttp' );
+		$common_tools = array( 'curl', 'wget', 'python-requests', 'python', 'java', 'go-http', 'okhttp', 'httpx' );
 		foreach ( $common_tools as $tool ) {
 			if ( stripos( $user_agent, $tool ) !== false ) {
 				return ucfirst( $tool );

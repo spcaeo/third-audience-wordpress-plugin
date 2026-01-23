@@ -2012,6 +2012,92 @@ class TA_Bot_Analytics {
 	}
 
 	/**
+	 * Get detailed bot fingerprints list for drill-down.
+	 *
+	 * Returns all bot fingerprints with full details for session analytics modal.
+	 *
+	 * @since 3.2.2
+	 * @param string $sort_by Column to sort by.
+	 * @param string $order   Sort order (ASC/DESC).
+	 * @param int    $limit   Number of results.
+	 * @return array List of bot fingerprints with all metrics.
+	 */
+	public function get_bot_fingerprints_list( $sort_by = 'last_seen', $order = 'DESC', $limit = 50 ) {
+		global $wpdb;
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+
+		$allowed_columns = array(
+			'last_seen'            => 'last_seen',
+			'first_seen'           => 'first_seen',
+			'visit_count'          => 'visit_count',
+			'pages_per_session'    => 'pages_per_session_avg',
+			'session_duration'     => 'session_duration_avg',
+			'request_interval'     => 'request_interval_avg',
+			'classification'       => 'classification',
+		);
+
+		$order_column = $allowed_columns[ $sort_by ] ?? 'last_seen';
+		$order_dir    = 'ASC' === strtoupper( $order ) ? 'ASC' : 'DESC';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$results = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					id,
+					fingerprint_hash,
+					classification as bot_type,
+					user_agent,
+					ip_address,
+					visit_count,
+					pages_per_session_avg,
+					session_duration_avg,
+					request_interval_avg,
+					unique_paths_ratio,
+					first_seen,
+					last_seen,
+					bot_score
+				FROM {$fingerprints_table}
+				ORDER BY {$order_column} {$order_dir}
+				LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+
+		// Format the data for display.
+		foreach ( $results as &$row ) {
+			$row['pages_per_session_avg']  = round( floatval( $row['pages_per_session_avg'] ?? 0 ), 1 );
+			$row['session_duration_avg']   = absint( $row['session_duration_avg'] ?? 0 );
+			$row['session_duration_human'] = $this->format_duration( $row['session_duration_avg'] );
+			$row['request_interval_avg']   = absint( $row['request_interval_avg'] ?? 0 );
+			$row['request_interval_human'] = $this->format_duration( $row['request_interval_avg'] );
+			$row['unique_paths_ratio']     = round( floatval( $row['unique_paths_ratio'] ?? 0 ) * 100, 1 );
+			$row['first_seen_human']       = human_time_diff( strtotime( $row['first_seen'] ), current_time( 'timestamp' ) ) . ' ago';
+			$row['last_seen_human']        = human_time_diff( strtotime( $row['last_seen'] ), current_time( 'timestamp' ) ) . ' ago';
+			$row['user_agent_short']       = wp_trim_words( $row['user_agent'], 10 );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Format seconds into human-readable duration.
+	 *
+	 * @since 3.2.2
+	 * @param int $seconds Duration in seconds.
+	 * @return string Human-readable duration.
+	 */
+	private function format_duration( $seconds ) {
+		if ( $seconds < 60 ) {
+			return $seconds . 's';
+		} elseif ( $seconds < 3600 ) {
+			return round( $seconds / 60, 1 ) . ' min';
+		} else {
+			return round( $seconds / 3600, 1 ) . ' hr';
+		}
+	}
+
+	/**
 	 * Get top bots by session metrics.
 	 *
 	 * Returns bots sorted by pages per session, session duration, etc.

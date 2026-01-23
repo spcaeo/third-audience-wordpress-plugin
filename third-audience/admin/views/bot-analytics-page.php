@@ -135,11 +135,17 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			<span class="dashicons dashicons-groups"></span>
 			<?php esc_html_e( 'Session Analytics', 'third-audience' ); ?>
 		</h2>
-		<p class="description"><?php esc_html_e( 'Bot crawl sessions grouped by 30-minute windows', 'third-audience' ); ?></p>
+		<p class="description">
+			<?php esc_html_e( 'Bot crawl sessions grouped by 30-minute windows', 'third-audience' ); ?>
+			<span style="color: #007aff; margin-left: 8px;">
+				<span class="dashicons dashicons-info" style="font-size: 14px; vertical-align: middle;"></span>
+				<?php esc_html_e( 'Click any card for details', 'third-audience' ); ?>
+			</span>
+		</p>
 	</div>
 
 	<div class="ta-hero-metrics ta-hero-metrics-secondary">
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="fingerprints" title="<?php esc_attr_e( 'Click to see all bot fingerprints', 'third-audience' ); ?>">
 			<div class="ta-hero-icon ta-hero-icon-purple">
 				<span class="dashicons dashicons-admin-users"></span>
 			</div>
@@ -148,9 +154,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-value"><?php echo number_format( $session_stats['total_bot_fingerprints'] ); ?></div>
 				<div class="ta-hero-meta">Unique bot+IP combinations</div>
 			</div>
+			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="pages_per_session" title="<?php esc_attr_e( 'Click to see pages per session breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon ta-hero-icon-blue">
 				<span class="dashicons dashicons-admin-page"></span>
 			</div>
@@ -159,9 +166,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-value"><?php echo number_format( $session_stats['avg_pages_per_session'], 1 ); ?></div>
 				<div class="ta-hero-meta"><?php echo number_format( $session_stats['avg_visits_per_bot'], 1 ); ?> visits/bot avg</div>
 			</div>
+			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="session_duration" title="<?php esc_attr_e( 'Click to see session duration breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon ta-hero-icon-green">
 				<span class="dashicons dashicons-clock"></span>
 			</div>
@@ -176,9 +184,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				</div>
 				<div class="ta-hero-meta"><?php echo number_format( $session_stats['avg_session_duration'] ); ?>s average</div>
 			</div>
+			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card">
+		<div class="ta-hero-card ta-hero-card-clickable" data-metric="request_interval" title="<?php esc_attr_e( 'Click to see request interval breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon ta-hero-icon-orange">
 				<span class="dashicons dashicons-update"></span>
 			</div>
@@ -187,6 +196,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-value"><?php echo number_format( $session_stats['avg_request_interval'] ); ?><span style="font-size: 14px;">s</span></div>
 				<div class="ta-hero-meta">Time between requests</div>
 			</div>
+			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 	</div>
 
@@ -1017,3 +1027,254 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		</div>
 	</div>
 </div>
+
+<!-- Session Analytics Drill-Down Modal -->
+<div class="ta-session-modal-overlay" style="display: none;">
+	<div class="ta-session-modal">
+		<div class="ta-session-modal-header">
+			<h2 id="ta-session-modal-title"><?php esc_html_e( 'Session Analytics Details', 'third-audience' ); ?></h2>
+			<button type="button" class="ta-session-modal-close">
+				<span class="dashicons dashicons-no-alt"></span>
+			</button>
+		</div>
+		<div class="ta-session-modal-body">
+			<div class="ta-session-loading" style="text-align: center; padding: 40px;">
+				<span class="spinner is-active" style="float: none;"></span>
+				<p><?php esc_html_e( 'Loading session data...', 'third-audience' ); ?></p>
+			</div>
+			<div class="ta-session-content" style="display: none;">
+				<!-- Summary Stats -->
+				<div class="ta-session-summary" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+					<div class="ta-session-stat">
+						<span class="ta-stat-value" id="ta-modal-fingerprints">-</span>
+						<span class="ta-stat-label"><?php esc_html_e( 'Total Fingerprints', 'third-audience' ); ?></span>
+					</div>
+					<div class="ta-session-stat">
+						<span class="ta-stat-value" id="ta-modal-pages">-</span>
+						<span class="ta-stat-label"><?php esc_html_e( 'Avg Pages/Session', 'third-audience' ); ?></span>
+					</div>
+					<div class="ta-session-stat">
+						<span class="ta-stat-value" id="ta-modal-duration">-</span>
+						<span class="ta-stat-label"><?php esc_html_e( 'Avg Duration', 'third-audience' ); ?></span>
+					</div>
+					<div class="ta-session-stat">
+						<span class="ta-stat-value" id="ta-modal-interval">-</span>
+						<span class="ta-stat-label"><?php esc_html_e( 'Avg Interval', 'third-audience' ); ?></span>
+					</div>
+				</div>
+
+				<!-- Chart Section -->
+				<div class="ta-session-chart-section" style="margin-bottom: 20px;">
+					<h4 style="margin: 0 0 12px 0;">
+						<span class="dashicons dashicons-chart-bar"></span>
+						<?php esc_html_e( 'Bot Activity Distribution', 'third-audience' ); ?>
+					</h4>
+					<canvas id="ta-session-chart" style="max-height: 200px;"></canvas>
+				</div>
+
+				<!-- Detailed Table -->
+				<div class="ta-session-table-section">
+					<h4 style="margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center;">
+						<span>
+							<span class="dashicons dashicons-list-view"></span>
+							<?php esc_html_e( 'Bot Fingerprints Detail', 'third-audience' ); ?>
+						</span>
+						<select id="ta-session-sort" style="font-weight: normal; font-size: 13px;">
+							<option value="last_seen"><?php esc_html_e( 'Last Seen (Recent)', 'third-audience' ); ?></option>
+							<option value="visit_count"><?php esc_html_e( 'Total Visits', 'third-audience' ); ?></option>
+							<option value="pages_per_session"><?php esc_html_e( 'Pages/Session', 'third-audience' ); ?></option>
+							<option value="session_duration"><?php esc_html_e( 'Session Duration', 'third-audience' ); ?></option>
+							<option value="request_interval"><?php esc_html_e( 'Request Interval', 'third-audience' ); ?></option>
+						</select>
+					</h4>
+					<div style="max-height: 350px; overflow-y: auto;">
+						<table class="ta-table ta-table-compact" id="ta-session-table">
+							<thead>
+								<tr>
+									<th><?php esc_html_e( 'Bot', 'third-audience' ); ?></th>
+									<th><?php esc_html_e( 'IP Address', 'third-audience' ); ?></th>
+									<th style="text-align: right;"><?php esc_html_e( 'Visits', 'third-audience' ); ?></th>
+									<th style="text-align: right;"><?php esc_html_e( 'Pages/Session', 'third-audience' ); ?></th>
+									<th style="text-align: right;"><?php esc_html_e( 'Duration', 'third-audience' ); ?></th>
+									<th style="text-align: right;"><?php esc_html_e( 'Interval', 'third-audience' ); ?></th>
+									<th><?php esc_html_e( 'Last Seen', 'third-audience' ); ?></th>
+								</tr>
+							</thead>
+							<tbody id="ta-session-tbody">
+								<!-- Populated by JavaScript -->
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript">
+// Session Analytics Drill-Down
+jQuery(document).ready(function($) {
+	var sessionChart = null;
+
+	// Click handler for session cards
+	$('.ta-hero-card-clickable').on('click', function() {
+		var metric = $(this).data('metric');
+		openSessionModal(metric);
+	});
+
+	// Close modal
+	$('.ta-session-modal-close, .ta-session-modal-overlay').on('click', function(e) {
+		if (e.target === this || $(this).hasClass('ta-session-modal-close')) {
+			$('.ta-session-modal-overlay').fadeOut(200);
+		}
+	});
+
+	// Sort change
+	$('#ta-session-sort').on('change', function() {
+		loadSessionData($(this).val());
+	});
+
+	function openSessionModal(metric) {
+		$('.ta-session-modal-overlay').fadeIn(200);
+		$('.ta-session-loading').show();
+		$('.ta-session-content').hide();
+
+		// Set title based on metric
+		var titles = {
+			'fingerprints': '<?php echo esc_js( __( 'Bot Fingerprints - All Unique Bot+IP Combinations', 'third-audience' ) ); ?>',
+			'pages_per_session': '<?php echo esc_js( __( 'Pages Per Session - Crawl Depth Analysis', 'third-audience' ) ); ?>',
+			'session_duration': '<?php echo esc_js( __( 'Session Duration - Time Spent Crawling', 'third-audience' ) ); ?>',
+			'request_interval': '<?php echo esc_js( __( 'Request Interval - Time Between Requests', 'third-audience' ) ); ?>'
+		};
+		$('#ta-session-modal-title').text(titles[metric] || '<?php echo esc_js( __( 'Session Analytics Details', 'third-audience' ) ); ?>');
+
+		// Set default sort based on metric
+		var sortMap = {
+			'fingerprints': 'last_seen',
+			'pages_per_session': 'pages_per_session',
+			'session_duration': 'session_duration',
+			'request_interval': 'request_interval'
+		};
+		$('#ta-session-sort').val(sortMap[metric] || 'last_seen');
+
+		loadSessionData(sortMap[metric] || 'last_seen');
+	}
+
+	function loadSessionData(sortBy) {
+		$.ajax({
+			url: ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'ta_get_session_details',
+				nonce: taAnalyticsData.nonce,
+				sort_by: sortBy,
+				order: 'DESC'
+			},
+			success: function(response) {
+				if (response.success) {
+					renderSessionData(response.data);
+				} else {
+					alert('<?php echo esc_js( __( 'Failed to load session data', 'third-audience' ) ); ?>');
+				}
+			},
+			error: function() {
+				alert('<?php echo esc_js( __( 'Error loading session data', 'third-audience' ) ); ?>');
+			}
+		});
+	}
+
+	function renderSessionData(data) {
+		var summary = data.summary;
+		var fingerprints = data.fingerprints;
+
+		// Update summary stats
+		$('#ta-modal-fingerprints').text(summary.total_bot_fingerprints);
+		$('#ta-modal-pages').text(summary.avg_pages_per_session.toFixed(1));
+		$('#ta-modal-duration').text(formatDuration(summary.avg_session_duration));
+		$('#ta-modal-interval').text(formatDuration(summary.avg_request_interval));
+
+		// Render table
+		var tbody = $('#ta-session-tbody');
+		tbody.empty();
+
+		if (fingerprints.length === 0) {
+			tbody.append('<tr><td colspan="7" class="ta-no-data"><?php echo esc_js( __( 'No session data yet', 'third-audience' ) ); ?></td></tr>');
+		} else {
+			fingerprints.forEach(function(fp) {
+				var row = '<tr>' +
+					'<td><span class="ta-bot-name">' + escapeHtml(fp.bot_type) + '</span>' +
+					'<div style="font-size: 11px; color: #646970; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">' + escapeHtml(fp.user_agent_short) + '</div></td>' +
+					'<td><code style="font-size: 11px;">' + escapeHtml(fp.ip_address) + '</code></td>' +
+					'<td style="text-align: right;"><strong>' + fp.visit_count + '</strong></td>' +
+					'<td style="text-align: right;">' + fp.pages_per_session_avg + '</td>' +
+					'<td style="text-align: right;">' + fp.session_duration_human + '</td>' +
+					'<td style="text-align: right;">' + fp.request_interval_human + '</td>' +
+					'<td>' + fp.last_seen_human + '</td>' +
+				'</tr>';
+				tbody.append(row);
+			});
+		}
+
+		// Render chart
+		renderSessionChart(fingerprints);
+
+		$('.ta-session-loading').hide();
+		$('.ta-session-content').show();
+	}
+
+	function renderSessionChart(fingerprints) {
+		var ctx = document.getElementById('ta-session-chart').getContext('2d');
+
+		// Aggregate by bot type
+		var botCounts = {};
+		fingerprints.forEach(function(fp) {
+			var botType = fp.bot_type || 'Unknown';
+			botCounts[botType] = (botCounts[botType] || 0) + fp.visit_count;
+		});
+
+		var labels = Object.keys(botCounts);
+		var values = Object.values(botCounts);
+		var colors = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#5856d6', '#00c7be', '#ff2d55'];
+
+		if (sessionChart) {
+			sessionChart.destroy();
+		}
+
+		sessionChart = new Chart(ctx, {
+			type: 'bar',
+			data: {
+				labels: labels,
+				datasets: [{
+					label: '<?php echo esc_js( __( 'Total Visits', 'third-audience' ) ); ?>',
+					data: values,
+					backgroundColor: colors.slice(0, labels.length),
+					borderRadius: 4
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: { display: false }
+				},
+				scales: {
+					y: { beginAtZero: true }
+				}
+			}
+		});
+	}
+
+	function formatDuration(seconds) {
+		if (seconds < 60) return seconds + 's';
+		if (seconds < 3600) return (seconds / 60).toFixed(1) + ' min';
+		return (seconds / 3600).toFixed(1) + ' hr';
+	}
+
+	function escapeHtml(text) {
+		if (!text) return '';
+		var div = document.createElement('div');
+		div.textContent = text;
+		return div.innerHTML;
+	}
+});
+</script>

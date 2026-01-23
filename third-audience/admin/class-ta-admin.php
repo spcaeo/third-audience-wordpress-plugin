@@ -135,6 +135,9 @@ class TA_Admin {
 		// Email Digest AJAX handlers.
 		add_action( 'wp_ajax_ta_send_test_digest', array( $this, 'ajax_send_test_digest' ) );
 
+		// Session Analytics drill-down AJAX handler.
+		add_action( 'wp_ajax_ta_get_session_details', array( $this, 'ajax_get_session_details' ) );
+
 		// Metadata settings hooks - clear pre-generated markdown when settings change.
 		add_action( 'update_option_ta_enable_enhanced_metadata', array( $this, 'on_metadata_settings_change' ), 10, 2 );
 		add_action( 'update_option_ta_metadata_word_count', array( $this, 'on_metadata_settings_change' ), 10, 2 );
@@ -1108,6 +1111,35 @@ class TA_Admin {
 		} else {
 			wp_send_json_error( array( 'message' => __( 'Failed to send test email. Check your SMTP settings.', 'third-audience' ) ) );
 		}
+	}
+
+	/**
+	 * AJAX handler for session analytics drill-down.
+	 *
+	 * Returns detailed bot fingerprint data for the session analytics modal.
+	 *
+	 * @since 3.2.2
+	 * @return void
+	 */
+	public function ajax_get_session_details() {
+		check_ajax_referer( 'ta_bot_analytics', 'nonce' );
+		$this->security->verify_admin_capability();
+
+		$sort_by = isset( $_POST['sort_by'] ) ? sanitize_text_field( wp_unslash( $_POST['sort_by'] ) ) : 'last_seen';
+		$order   = isset( $_POST['order'] ) ? sanitize_text_field( wp_unslash( $_POST['order'] ) ) : 'DESC';
+
+		$analytics    = TA_Bot_Analytics::get_instance();
+		$fingerprints = $analytics->get_bot_fingerprints_list( $sort_by, $order, 50 );
+
+		// Get summary stats too.
+		$session_stats = $analytics->get_session_analytics();
+
+		wp_send_json_success(
+			array(
+				'fingerprints' => $fingerprints,
+				'summary'      => $session_stats,
+			)
+		);
 	}
 
 	/**
