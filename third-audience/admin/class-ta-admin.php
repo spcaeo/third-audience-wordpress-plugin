@@ -163,6 +163,7 @@ class TA_Admin {
 		// Settings page.
 		if ( 'settings_page_third-audience' === $hook ) {
 			wp_enqueue_style( 'ta-admin', TA_PLUGIN_URL . 'admin/css/admin.css', array(), TA_VERSION );
+			wp_enqueue_style( 'ta-settings', TA_PLUGIN_URL . 'admin/css/settings.css', array( 'ta-admin' ), TA_VERSION );
 			wp_enqueue_script( 'ta-admin', TA_PLUGIN_URL . 'admin/js/admin.js', array( 'jquery' ), TA_VERSION, true );
 			wp_localize_script( 'ta-admin', 'taAdmin', array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),

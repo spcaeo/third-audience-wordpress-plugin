@@ -1,0 +1,261 @@
+/**
+ * Third Audience Settings Page Styles
+ *
+ * @package ThirdAudience
+ * @since   3.3.1
+ */
+
+/* Third Audience Admin Styles */
+.ta-settings-wrap {
+	max-width: 1400px;
+}
+
+.ta-nav-tabs {
+	margin-bottom: 20px;
+}
+
+.ta-admin-container {
+	margin-top: 20px;
+}
+
+.ta-settings-layout {
+	display: flex;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+
+.ta-settings-main {
+	flex: 2;
+	min-width: 500px;
+}
+
+.ta-settings-sidebar {
+	flex: 1;
+	min-width: 300px;
+	max-width: 400px;
+}
+
+.ta-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.ta-card h2 {
+	margin-top: 0;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eee;
+}
+
+.ta-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 15px;
+}
+
+.ta-card-header h2 {
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+
+.ta-checkbox-label {
+	display: block;
+	margin-bottom: 8px;
+}
+
+.ta-stat-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 15px;
+	margin-bottom: 15px;
+}
+
+.ta-stat {
+	text-align: center;
+	padding: 15px;
+	background: #f6f7f7;
+	border-radius: 4px;
+}
+
+.ta-stat-value {
+	display: block;
+	font-size: 24px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.ta-stat-label {
+	display: block;
+	font-size: 12px;
+	color: #50575e;
+	margin-top: 5px;
+}
+
+.ta-steps-list {
+	padding-left: 20px;
+	margin: 0;
+}
+
+.ta-steps-list li {
+	margin-bottom: 8px;
+}
+
+.ta-url-display {
+	display: block;
+	padding: 8px;
+	background: #f6f7f7;
+	border-radius: 3px;
+	word-break: break-all;
+	font-size: 12px;
+}
+
+.ta-form-inline {
+	margin-top: 10px;
+}
+
+.ta-info-table {
+	width: 100%;
+}
+
+.ta-info-table td {
+	padding: 5px 0;
+}
+
+.ta-info-table td:first-child {
+	font-weight: 500;
+	width: 45%;
+}
+
+.ta-status-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.ta-status-success {
+	background: #d4edda;
+	color: #155724;
+}
+
+.ta-status-warning {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.ta-status-error {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+/* Error Log Styles */
+.ta-errors-table {
+	margin-top: 10px;
+}
+
+.ta-errors-table th {
+	text-align: left;
+}
+
+.ta-error-time {
+	white-space: nowrap;
+	width: 150px;
+}
+
+.ta-error-level {
+	width: 80px;
+}
+
+.ta-level-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 11px;
+	font-weight: 500;
+	text-transform: uppercase;
+}
+
+.ta-level-error {
+	background: #f8d7da;
+	color: #721c24;
+}
+
+.ta-level-critical {
+	background: #721c24;
+	color: #fff;
+}
+
+.ta-level-warning {
+	background: #fff3cd;
+	color: #856404;
+}
+
+.ta-level-info {
+	background: #d1ecf1;
+	color: #0c5460;
+}
+
+.ta-level-debug {
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.ta-error-context {
+	margin-top: 8px;
+}
+
+.ta-error-context summary {
+	cursor: pointer;
+	font-size: 12px;
+	color: #2271b1;
+}
+
+.ta-error-context pre {
+	background: #f6f7f7;
+	padding: 10px;
+	border-radius: 3px;
+	font-size: 11px;
+	overflow-x: auto;
+	margin-top: 5px;
+}
+
+.ta-empty-state {
+	text-align: center;
+	padding: 40px 20px;
+	color: #50575e;
+}
+
+.ta-empty-state .dashicons {
+	font-size: 48px;
+	width: 48px;
+	height: 48px;
+	color: #00a32a;
+}
+
+.ta-last-error {
+	font-size: 12px;
+	color: #50575e;
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid #eee;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+	.ta-settings-layout {
+		flex-direction: column;
+	}
+
+	.ta-settings-main,
+	.ta-settings-sidebar {
+		min-width: 100%;
+		max-width: 100%;
+	}
+}
