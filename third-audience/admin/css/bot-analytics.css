@@ -1440,3 +1440,43 @@
 		font-size: 12px;
 	}
 }
+
+/* Export Button Styles */
+.ta-export-btn {
+	padding: 4px 8px !important;
+	min-height: 28px !important;
+	line-height: 1 !important;
+}
+
+.ta-export-btn .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+	vertical-align: middle;
+}
+
+.ta-export-btn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+}
+
+/* Spinner animation */
+.ta-spin {
+	animation: ta-spin 1s linear infinite;
+}
+
+@keyframes ta-spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Header actions container */
+.ta-header-actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}

@@ -165,6 +165,62 @@
 			$(document).on('click', '.ta-export-option', function() {
 				$('.ta-export-dropdown').removeClass('ta-export-dropdown-active');
 			});
+
+			// Handle export button clicks
+			$(document).on('click', '.ta-export-btn', function(e) {
+				e.preventDefault();
+				var exportType = $(this).data('export');
+				self.exportData(exportType);
+			});
+		},
+
+		/**
+		 * Export data via AJAX
+		 *
+		 * @param {string} exportType The type of data to export
+		 */
+		exportData: function(exportType) {
+			var $btn = $('.ta-export-btn[data-export="' + exportType + '"]');
+			var originalHtml = $btn.html();
+
+			$btn.prop('disabled', true).html('<span class="dashicons dashicons-update ta-spin"></span>');
+
+			$.ajax({
+				url: taAnalyticsData.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'ta_export_analytics_data',
+					nonce: taAnalyticsData.nonce,
+					export_type: exportType
+				},
+				success: function(response) {
+					if (response.success && response.data.csv) {
+						// Create and download CSV file
+						var blob = new Blob([response.data.csv], { type: 'text/csv;charset=utf-8;' });
+						var link = document.createElement('a');
+						var filename = 'third-audience-' + exportType + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+
+						if (navigator.msSaveBlob) {
+							navigator.msSaveBlob(blob, filename);
+						} else {
+							link.href = URL.createObjectURL(blob);
+							link.download = filename;
+							link.style.display = 'none';
+							document.body.appendChild(link);
+							link.click();
+							document.body.removeChild(link);
+						}
+					} else {
+						alert(response.data.message || 'Export failed');
+					}
+				},
+				error: function() {
+					alert('Export request failed');
+				},
+				complete: function() {
+					$btn.prop('disabled', false).html(originalHtml);
+				}
+			});
 		},
 
 		/**

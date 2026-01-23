@@ -263,6 +263,11 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		<div class="ta-card">
 			<div class="ta-card-header">
 				<h2><?php esc_html_e( 'Bot Activity Distribution', 'third-audience' ); ?></h2>
+				<?php if ( ! empty( $bot_stats ) ) : ?>
+				<button type="button" class="button button-small ta-export-btn" data-export="bot-distribution" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+					<span class="dashicons dashicons-download"></span>
+				</button>
+				<?php endif; ?>
 			</div>
 			<div class="ta-card-body">
 				<?php if ( ! empty( $bot_stats ) ) : ?>
@@ -316,6 +321,11 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		<div class="ta-card">
 			<div class="ta-card-header">
 				<h2><?php esc_html_e( 'Most Crawled Content', 'third-audience' ); ?></h2>
+				<?php if ( ! empty( $top_pages ) ) : ?>
+				<button type="button" class="button button-small ta-export-btn" data-export="top-content" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+					<span class="dashicons dashicons-download"></span>
+				</button>
+				<?php endif; ?>
 			</div>
 			<div class="ta-card-body">
 				<?php if ( ! empty( $top_pages ) ) : ?>
@@ -355,6 +365,11 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		<div class="ta-card">
 			<div class="ta-card-header">
 				<h2><?php esc_html_e( 'Top Bots by Session Activity', 'third-audience' ); ?></h2>
+				<?php if ( ! empty( $top_bots_session ) ) : ?>
+				<button type="button" class="button button-small ta-export-btn" data-export="session-activity" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+					<span class="dashicons dashicons-download"></span>
+				</button>
+				<?php endif; ?>
 			</div>
 			<div class="ta-card-body">
 				<?php if ( ! empty( $top_bots_session ) ) : ?>
@@ -402,6 +417,9 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		<div class="ta-card">
 			<div class="ta-card-header">
 				<h2><?php esc_html_e( 'Crawl Budget Analysis', 'third-audience' ); ?></h2>
+				<button type="button" class="button button-small ta-export-btn" data-export="crawl-budget" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+					<span class="dashicons dashicons-download"></span>
+				</button>
 			</div>
 			<div class="ta-card-body">
 				<div class="ta-crawl-budget-grid">
@@ -556,9 +574,11 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<span class="dashicons dashicons-admin-links"></span>
 				<?php esc_html_e( 'Citation Performance', 'third-audience' ); ?>
 			</h2>
-			<p class="description" style="margin: 8px 0 0 0;">
-				<?php esc_html_e( 'Pages crawled by AI bots vs. cited by AI platforms', 'third-audience' ); ?>
-			</p>
+			<?php if ( ! empty( $citation_data ) ) : ?>
+			<button type="button" class="button button-small ta-export-btn" data-export="citation-performance" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+				<span class="dashicons dashicons-download"></span>
+			</button>
+			<?php endif; ?>
 		</div>
 		<div class="ta-card-body">
 			<?php if ( empty( $citation_data ) ) : ?>
@@ -631,9 +651,11 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			<span class="dashicons dashicons-media-document"></span>
 			<?php esc_html_e( 'Content Performance Insights', 'third-audience' ); ?>
 		</h2>
-		<p class="description" style="margin: 8px 0 0 0;">
-			<?php esc_html_e( 'Content characteristics correlated with citation rates', 'third-audience' ); ?>
-		</p>
+		<?php if ( $content_performance['cited_posts']['total_count'] > 0 || $content_performance['crawled_posts']['total_count'] > 0 ) : ?>
+		<button type="button" class="button button-small ta-export-btn" data-export="content-insights" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+			<span class="dashicons dashicons-download"></span>
+		</button>
+		<?php endif; ?>
 	</div>
 	<div class="ta-card-body">
 		<?php if ( $content_performance['cited_posts']['total_count'] === 0 && $content_performance['crawled_posts']['total_count'] === 0 ) : ?>
@@ -783,12 +805,17 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 	<div class="ta-card">
 		<div class="ta-card-header">
 			<h2><?php esc_html_e( 'Activity Timeline', 'third-audience' ); ?></h2>
-			<select id="ta-period-selector" onchange="location.href='<?php echo esc_url( admin_url( 'admin.php?page=third-audience-bot-analytics&period=' ) ); ?>'+this.value">
-				<option value="hour" <?php selected( $time_period, 'hour' ); ?>><?php esc_html_e( 'Hourly', 'third-audience' ); ?></option>
-				<option value="day" <?php selected( $time_period, 'day' ); ?>><?php esc_html_e( 'Daily', 'third-audience' ); ?></option>
-				<option value="week" <?php selected( $time_period, 'week' ); ?>><?php esc_html_e( 'Weekly', 'third-audience' ); ?></option>
-				<option value="month" <?php selected( $time_period, 'month' ); ?>><?php esc_html_e( 'Monthly', 'third-audience' ); ?></option>
-			</select>
+			<div class="ta-header-actions">
+				<select id="ta-period-selector" onchange="location.href='<?php echo esc_url( admin_url( 'admin.php?page=third-audience-bot-analytics&period=' ) ); ?>'+this.value">
+					<option value="hour" <?php selected( $time_period, 'hour' ); ?>><?php esc_html_e( 'Hourly', 'third-audience' ); ?></option>
+					<option value="day" <?php selected( $time_period, 'day' ); ?>><?php esc_html_e( 'Daily', 'third-audience' ); ?></option>
+					<option value="week" <?php selected( $time_period, 'week' ); ?>><?php esc_html_e( 'Weekly', 'third-audience' ); ?></option>
+					<option value="month" <?php selected( $time_period, 'month' ); ?>><?php esc_html_e( 'Monthly', 'third-audience' ); ?></option>
+				</select>
+				<button type="button" class="button button-small ta-export-btn" data-export="activity-timeline" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+					<span class="dashicons dashicons-download"></span>
+				</button>
+			</div>
 		</div>
 		<div class="ta-card-body">
 			<canvas id="ta-visits-chart" style="max-height: 300px;"></canvas>
@@ -803,6 +830,9 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<?php esc_html_e( 'Live Activity Feed', 'third-audience' ); ?>
 			</h2>
 			<div class="ta-card-actions">
+				<button type="button" class="button button-small ta-export-btn" data-export="live-activity" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
+					<span class="dashicons dashicons-download"></span>
+				</button>
 				<button type="button" class="button button-secondary ta-cache-help-toggle"><?php esc_html_e( 'Cache Guide', 'third-audience' ); ?></button>
 				<button type="button" class="button ta-feed-toggle-btn" data-paused="false"><?php esc_html_e( 'Pause', 'third-audience' ); ?></button>
 			</div>
@@ -975,6 +1005,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 	<!-- JavaScript Data -->
 	<script type="text/javascript">
 		var taAnalyticsData = {
+			ajaxUrl: <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
 			visitsOverTime: <?php echo wp_json_encode( array_reverse( $visits_time ) ); ?>,
 			botDistribution: <?php echo wp_json_encode( $bot_stats ); ?>,
 			period: <?php echo wp_json_encode( $time_period ); ?>,

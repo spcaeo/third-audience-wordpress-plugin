@@ -67,6 +67,295 @@ class TA_Admin_AJAX_Analytics {
 		add_action( 'wp_ajax_ta_get_session_details', array( $this, 'ajax_get_session_details' ) );
 		add_action( 'wp_ajax_ta_get_hero_metric_details', array( $this, 'ajax_get_hero_metric_details' ) );
 		add_action( 'wp_ajax_ta_get_bot_details', array( $this, 'ajax_get_bot_details' ) );
+		add_action( 'wp_ajax_ta_export_analytics_data', array( $this, 'ajax_export_analytics_data' ) );
+	}
+
+	/**
+	 * AJAX handler for exporting analytics data as CSV.
+	 *
+	 * @since 3.3.3
+	 * @return void
+	 */
+	public function ajax_export_analytics_data() {
+		$this->security->verify_ajax_request( 'bot_analytics' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$export_type = isset( $_POST['export_type'] ) ? sanitize_text_field( wp_unslash( $_POST['export_type'] ) ) : '';
+
+		if ( empty( $export_type ) ) {
+			wp_send_json_error( array( 'message' => __( 'Export type is required.', 'third-audience' ) ) );
+		}
+
+		$analytics = TA_Bot_Analytics::get_instance();
+		$csv_data  = '';
+
+		switch ( $export_type ) {
+			case 'bot-distribution':
+				$csv_data = $this->export_bot_distribution( $analytics );
+				break;
+
+			case 'top-content':
+				$csv_data = $this->export_top_content( $analytics );
+				break;
+
+			case 'session-activity':
+				$csv_data = $this->export_session_activity( $analytics );
+				break;
+
+			case 'crawl-budget':
+				$csv_data = $this->export_crawl_budget( $analytics );
+				break;
+
+			case 'citation-performance':
+				$csv_data = $this->export_citation_performance( $analytics );
+				break;
+
+			case 'content-insights':
+				$csv_data = $this->export_content_insights( $analytics );
+				break;
+
+			case 'activity-timeline':
+				$csv_data = $this->export_activity_timeline( $analytics );
+				break;
+
+			case 'live-activity':
+				$csv_data = $this->export_live_activity( $analytics );
+				break;
+
+			default:
+				wp_send_json_error( array( 'message' => __( 'Unknown export type.', 'third-audience' ) ) );
+		}
+
+		wp_send_json_success( array( 'csv' => $csv_data ) );
+	}
+
+	/**
+	 * Export bot distribution data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_bot_distribution( $analytics ) {
+		$bot_stats = $analytics->get_visits_by_bot( array(), 50 );
+		$csv       = "Bot Name,Bot Type,Visits,Share %\n";
+		$total     = array_sum( wp_list_pluck( $bot_stats, 'count' ) );
+
+		foreach ( $bot_stats as $bot ) {
+			$share = $total > 0 ? round( ( $bot['count'] / $total ) * 100, 1 ) : 0;
+			$csv  .= sprintf(
+				"\"%s\",\"%s\",%d,%.1f\n",
+				str_replace( '"', '""', $bot['bot_name'] ),
+				str_replace( '"', '""', $bot['bot_type'] ),
+				$bot['count'],
+				$share
+			);
+		}
+
+		return $csv;
+	}
+
+	/**
+	 * Export top content data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_top_content( $analytics ) {
+		$top_pages = $analytics->get_top_pages( array(), 100 );
+		$csv       = "Page URL,Post Title,Visits\n";
+
+		foreach ( $top_pages as $page ) {
+			$csv .= sprintf(
+				"\"%s\",\"%s\",%d\n",
+				str_replace( '"', '""', $page['url'] ),
+				str_replace( '"', '""', $page['post_title'] ?? '' ),
+				$page['visit_count']
+			);
+		}
+
+		return $csv;
+	}
+
+	/**
+	 * Export session activity data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_session_activity( $analytics ) {
+		$top_bots = $analytics->get_top_bots_by_metric( 'session_depth', 20 );
+		$csv      = "Bot Type,User Agent,Pages/Session,Session Duration (min),Total Visits\n";
+
+		foreach ( $top_bots as $bot ) {
+			$duration_mins = round( $bot['session_duration_avg'] / 60, 1 );
+			$csv          .= sprintf(
+				"\"%s\",\"%s\",%.1f,%.1f,%d\n",
+				str_replace( '"', '""', $bot['bot_type'] ),
+				str_replace( '"', '""', $bot['user_agent'] ),
+				$bot['pages_per_session_avg'],
+				$duration_mins,
+				$bot['visit_count']
+			);
+		}
+
+		return $csv;
+	}
+
+	/**
+	 * Export crawl budget data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_crawl_budget( $analytics ) {
+		$day_metrics  = $analytics->get_crawl_budget_metrics( null, 'day' );
+		$hour_metrics = $analytics->get_crawl_budget_metrics( null, 'hour' );
+
+		$csv  = "Period,Total Requests,Unique Pages,Bandwidth (MB),Cache Hit Rate %,Avg Response Time (ms)\n";
+		$csv .= sprintf(
+			"\"Last 24 Hours\",%d,%d,%.2f,%.1f,%d\n",
+			$day_metrics['total_requests'],
+			$day_metrics['unique_pages'],
+			$day_metrics['total_bandwidth_mb'],
+			$day_metrics['cache_hit_rate'],
+			$day_metrics['avg_response_time']
+		);
+		$csv .= sprintf(
+			"\"Last Hour\",%d,%d,%.2f,%.1f,%d\n",
+			$hour_metrics['total_requests'],
+			$hour_metrics['unique_pages'],
+			$hour_metrics['total_bandwidth_mb'],
+			$hour_metrics['cache_hit_rate'],
+			$hour_metrics['avg_response_time']
+		);
+
+		return $csv;
+	}
+
+	/**
+	 * Export citation performance data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_citation_performance( $analytics ) {
+		$citation_data = $analytics->get_citation_to_crawl_ratio( array(), 100 );
+		$csv           = "Page URL,Post Title,Crawls,Citations,Citation Rate %\n";
+
+		foreach ( $citation_data as $page ) {
+			$rate = round( $page['citation_rate'] * 100, 1 );
+			$csv .= sprintf(
+				"\"%s\",\"%s\",%d,%d,%.1f\n",
+				str_replace( '"', '""', $page['url'] ),
+				str_replace( '"', '""', $page['post_title'] ?? '' ),
+				$page['crawls'],
+				$page['citations'],
+				$rate
+			);
+		}
+
+		return $csv;
+	}
+
+	/**
+	 * Export content insights data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_content_insights( $analytics ) {
+		$content_perf = $analytics->get_content_performance_analysis( array() );
+
+		$csv  = "Metric,Cited Posts,Crawled Posts\n";
+		$csv .= sprintf(
+			"\"Total Count\",%d,%d\n",
+			$content_perf['cited_posts']['total_count'],
+			$content_perf['crawled_posts']['total_count']
+		);
+		$csv .= sprintf(
+			"\"Avg Word Count\",%d,%d\n",
+			$content_perf['cited_posts']['avg_word_count'],
+			$content_perf['crawled_posts']['avg_word_count']
+		);
+		$csv .= sprintf(
+			"\"Avg Headings\",%.1f,%.1f\n",
+			$content_perf['cited_posts']['avg_heading_count'],
+			$content_perf['crawled_posts']['avg_heading_count']
+		);
+		$csv .= sprintf(
+			"\"Avg Images\",%.1f,%.1f\n",
+			$content_perf['cited_posts']['avg_image_count'],
+			$content_perf['crawled_posts']['avg_image_count']
+		);
+		$csv .= sprintf(
+			"\"Schema Markup %%\",%.1f,%.1f\n",
+			$content_perf['cited_posts']['schema_percentage'],
+			$content_perf['crawled_posts']['schema_percentage']
+		);
+		$csv .= sprintf(
+			"\"Avg Freshness (days)\",%d,%d\n",
+			$content_perf['cited_posts']['avg_freshness_days'],
+			$content_perf['crawled_posts']['avg_freshness_days']
+		);
+
+		return $csv;
+	}
+
+	/**
+	 * Export activity timeline data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_activity_timeline( $analytics ) {
+		$timeline = $analytics->get_visits_over_time( array(), 'day', 30 );
+		$csv      = "Period,Total Visits,Unique Bots\n";
+
+		foreach ( $timeline as $item ) {
+			$csv .= sprintf(
+				"\"%s\",%d,%d\n",
+				$item['period'],
+				$item['visits'],
+				$item['unique_bots']
+			);
+		}
+
+		return $csv;
+	}
+
+	/**
+	 * Export live activity data.
+	 *
+	 * @since 3.3.3
+	 * @param TA_Bot_Analytics $analytics Analytics instance.
+	 * @return string CSV data.
+	 */
+	private function export_live_activity( $analytics ) {
+		$recent = $analytics->get_recent_visits( array(), 100, 0 );
+		$csv    = "Timestamp,Bot Name,Bot Type,Page URL,IP Address,Country,Cache Status,Response Time (ms)\n";
+
+		foreach ( $recent as $visit ) {
+			$csv .= sprintf(
+				"\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d\n",
+				$visit['visit_time'],
+				str_replace( '"', '""', $visit['bot_name'] ),
+				str_replace( '"', '""', $visit['bot_type'] ),
+				str_replace( '"', '""', $visit['url'] ),
+				$visit['ip_address'] ?? '',
+				$visit['country'] ?? '',
+				$visit['cache_status'] ?? '',
+				$visit['response_time'] ?? 0
+			);
+		}
+
+		return $csv;
 	}
 
 	/**
