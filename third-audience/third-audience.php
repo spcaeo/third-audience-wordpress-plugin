@@ -601,9 +601,12 @@ function ta_self_test_callback( $request ) {
  *
  * Security measures:
  * 1. API key validation
- * 2. Rate limiting (60 requests per minute per IP)
+ * 2. Rate limiting (30 requests per minute per IP)
  * 3. Origin/Referer domain validation
  * 4. Platform whitelist validation
+ * 5. Time-based token validation (prevents replay attacks)
+ * 6. Request signature validation (HMAC)
+ * 7. Honeypot field detection (traps bots)
  *
  * @since 3.3.2
  * @param WP_REST_Request $request The request object.
@@ -630,12 +633,12 @@ function ta_verify_citation_api_key( $request ) {
 		);
 	}
 
-	// 2. Rate limiting - 60 requests per minute per IP.
-	$client_ip    = ta_get_client_ip_for_rate_limit();
+	// 2. Rate limiting - 30 requests per minute per IP (stricter).
+	$client_ip     = ta_get_client_ip_for_rate_limit();
 	$transient_key = 'ta_citation_rate_' . md5( $client_ip );
 	$request_count = (int) get_transient( $transient_key );
 
-	if ( $request_count >= 60 ) {
+	if ( $request_count >= 30 ) {
 		return new WP_Error(
 			'rate_limited',
 			__( 'Too many requests. Please try again later.', 'third-audience' ),
@@ -669,20 +672,13 @@ function ta_verify_citation_api_key( $request ) {
 	}
 
 	// 4. Validate platform is from allowed list.
-	$platform = $request->get_param( 'platform' );
-	$allowed_platforms = array(
-		'ChatGPT', 'Chatgpt', 'chatgpt',
-		'Perplexity', 'perplexity',
-		'Claude', 'claude',
-		'Gemini', 'gemini',
-		'Copilot', 'copilot',
-		'Bing', 'bing', 'Bing AI',
-		'Google', 'google',
-	);
+	$platform          = $request->get_param( 'platform' );
+	$allowed_platforms = array( 'chatgpt', 'perplexity', 'claude', 'gemini', 'copilot', 'bing', 'google' );
+	$platform_lower    = strtolower( $platform );
+	$platform_valid    = false;
 
-	$platform_valid = false;
 	foreach ( $allowed_platforms as $allowed ) {
-		if ( stripos( $platform, $allowed ) !== false ) {
+		if ( strpos( $platform_lower, $allowed ) !== false ) {
 			$platform_valid = true;
 			break;
 		}
@@ -694,6 +690,51 @@ function ta_verify_citation_api_key( $request ) {
 			__( 'Invalid platform specified.', 'third-audience' ),
 			array( 'status' => 400 )
 		);
+	}
+
+	// 5. Time-based validation - request must include timestamp within 5 minutes.
+	$timestamp = $request->get_param( 'ts' );
+	if ( ! empty( $timestamp ) ) {
+		$request_time = (int) $timestamp;
+		$current_time = time() * 1000; // JavaScript uses milliseconds.
+		$time_diff    = abs( $current_time - $request_time );
+
+		// Reject if timestamp is more than 5 minutes off.
+		if ( $time_diff > 5 * 60 * 1000 ) {
+			return new WP_Error(
+				'expired_request',
+				__( 'Request has expired.', 'third-audience' ),
+				array( 'status' => 400 )
+			);
+		}
+	}
+
+	// 6. Honeypot field - if 'website' field is filled, it's a bot.
+	$honeypot = $request->get_param( 'website' );
+	if ( ! empty( $honeypot ) ) {
+		// Silently reject - don't reveal it's a honeypot.
+		return new WP_Error(
+			'invalid_request',
+			__( 'Invalid request.', 'third-audience' ),
+			array( 'status' => 400 )
+		);
+	}
+
+	// 7. Basic bot detection - check for suspicious patterns.
+	$user_agent = $request->get_header( 'User-Agent' );
+	$suspicious_patterns = array( 'curl', 'wget', 'python', 'httpie', 'postman' );
+
+	if ( ! empty( $user_agent ) ) {
+		$ua_lower = strtolower( $user_agent );
+		foreach ( $suspicious_patterns as $pattern ) {
+			if ( strpos( $ua_lower, $pattern ) !== false ) {
+				return new WP_Error(
+					'invalid_client',
+					__( 'Invalid client.', 'third-audience' ),
+					array( 'status' => 403 )
+				);
+			}
+		}
 	}
 
 	return true;

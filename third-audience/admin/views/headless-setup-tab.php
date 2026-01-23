@@ -215,22 +215,35 @@ $api_key  = $wizard->get_api_key();
   dangerouslySetInnerHTML={{
     __html: `
       (function(){
-        var defined = ['chatgpt','perplexity','claude','gemini','copilot','bing'];
-        var u = new URLSearchParams(window.location.search);
-        var s = u.get('utm_source') || '';
-        var r = document.referrer || '';
-        var p = null;
+        if(typeof window==='undefined')return;
+        var defined=['chatgpt','perplexity','claude','gemini','copilot','bing'];
+        var u=new URLSearchParams(window.location.search);
+        var s=u.get('utm_source')||'';
+        var r=document.referrer||'';
+        var p=null;
         for(var i=0;i&lt;defined.length;i++){
-          if(s.toLowerCase().indexOf(defined[i])!==-1 || r.toLowerCase().indexOf(defined[i])!==-1){
-            p = defined[i].charAt(0).toUpperCase() + defined[i].slice(1);
+          if(s.toLowerCase().indexOf(defined[i])!==-1||r.toLowerCase().indexOf(defined[i])!==-1){
+            p=defined[i].charAt(0).toUpperCase()+defined[i].slice(1);
             break;
           }
         }
         if(p){
+          var d={
+            url:window.location.pathname,
+            platform:p,
+            referer:r,
+            search_query:'',
+            ip:'client',
+            ts:Date.now(),
+            website:''
+          };
           fetch('<?php echo esc_js( $citation_endpoint_setup ); ?>',{
             method:'POST',
-            headers:{'Content-Type':'application/json','X-TA-Api-Key':'<?php echo esc_js( $citation_api_key_setup ); ?>'},
-            body:JSON.stringify({url:window.location.pathname,platform:p,referer:r,search_query:'',ip:'client'})
+            headers:{
+              'Content-Type':'application/json',
+              'X-TA-Api-Key':'<?php echo esc_js( $citation_api_key_setup ); ?>'
+            },
+            body:JSON.stringify(d)
           }).catch(function(){});
         }
       })();
