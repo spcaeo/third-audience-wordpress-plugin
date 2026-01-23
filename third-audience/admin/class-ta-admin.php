@@ -411,7 +411,7 @@ class TA_Admin {
 		add_submenu_page( 'third-audience-bot-analytics', __( 'AI Citations', 'third-audience' ), __( 'AI Citations', 'third-audience' ), 'manage_options', 'third-audience-ai-citations', array( $this, 'render_ai_citations_page' ) );
 		add_submenu_page( 'third-audience-bot-analytics', __( 'Cache Browser', 'third-audience' ), __( 'Cache Browser', 'third-audience' ), 'manage_options', 'third-audience-cache-browser', array( $this, 'render_cache_browser_page' ) );
 		add_submenu_page( 'third-audience-bot-analytics', __( 'System Health', 'third-audience' ), __( 'System Health', 'third-audience' ), 'manage_options', 'third-audience-system-health', array( $this, 'render_system_health_page' ) );
-		add_submenu_page( null, __( 'Competitor Benchmarking', 'third-audience' ), __( 'Competitor Benchmarking', 'third-audience' ), 'manage_options', 'third-audience-competitor-benchmarking', array( $this, 'render_competitor_benchmarking_page' ) );
+		// Competitor Benchmarking removed from v3.3.2 - feature disabled.
 		add_submenu_page( 'third-audience-bot-analytics', __( 'Email Digest', 'third-audience' ), __( 'Email Digest', 'third-audience' ), 'manage_options', 'third-audience-email-digest', array( $this, 'render_email_digest_page' ) );
 		add_submenu_page( 'third-audience-bot-analytics', __( 'About', 'third-audience' ), __( 'About', 'third-audience' ), 'manage_options', 'third-audience-about', array( $this, 'render_about_page' ) );
 		add_submenu_page( null, __( 'Citation Alerts', 'third-audience' ), __( 'Citation Alerts', 'third-audience' ), 'manage_options', 'third-audience-citation-alerts', array( $this, 'render_citation_alerts_page' ) );
