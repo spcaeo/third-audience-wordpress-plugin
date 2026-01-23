@@ -1347,3 +1347,96 @@
 		grid-template-columns: repeat(2, 1fr);
 	}
 }
+
+/* === Bot Diagnostic Modal (v3.3.0) === */
+.ta-bot-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 100000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ta-bot-modal-close {
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 8px;
+	margin: -8px;
+	color: #86868b;
+	transition: color 0.2s;
+}
+
+.ta-bot-modal-close:hover {
+	color: #1d1d1f;
+}
+
+/* Bot table row hover state */
+.ta-bot-management .ta-table tbody tr[data-bot-type]:hover {
+	background: rgba(0, 122, 255, 0.05);
+	cursor: pointer;
+}
+
+/* Tab styles */
+.ta-bot-tabs {
+	display: flex;
+	gap: 4px;
+}
+
+.ta-bot-tab {
+	padding: 10px 16px;
+	background: none;
+	border: none;
+	border-bottom: 2px solid transparent;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	color: #646970;
+	transition: all 0.2s ease;
+}
+
+.ta-bot-tab:hover {
+	color: #1d1d1f;
+}
+
+.ta-bot-tab.active {
+	color: #007aff;
+	border-bottom-color: #007aff;
+}
+
+/* Cache status badges in modal */
+.ta-cache-hit {
+	background: #e7f8ed;
+	color: #00a32a;
+}
+
+.ta-cache-miss {
+	background: #fcf0f1;
+	color: #d63638;
+}
+
+.ta-cache-pre_generated {
+	background: #fff8e5;
+	color: #dba617;
+}
+
+/* Bot summary stats responsive */
+@media (max-width: 768px) {
+	.ta-bot-summary {
+		grid-template-columns: repeat(2, 1fr) !important;
+	}
+
+	.ta-bot-tabs {
+		flex-wrap: wrap;
+	}
+
+	.ta-bot-tab {
+		padding: 8px 12px;
+		font-size: 12px;
+	}
+}

@@ -141,6 +141,9 @@ class TA_Admin {
 		// Hero Metrics drill-down AJAX handler.
 		add_action( 'wp_ajax_ta_get_hero_metric_details', array( $this, 'ajax_get_hero_metric_details' ) );
 
+		// Bot Management diagnostic modal AJAX handler.
+		add_action( 'wp_ajax_ta_get_bot_details', array( $this, 'ajax_get_bot_details' ) );
+
 		// Metadata settings hooks - clear pre-generated markdown when settings change.
 		add_action( 'update_option_ta_enable_enhanced_metadata', array( $this, 'on_metadata_settings_change' ), 10, 2 );
 		add_action( 'update_option_ta_metadata_word_count', array( $this, 'on_metadata_settings_change' ), 10, 2 );
@@ -1185,6 +1188,31 @@ class TA_Admin {
 		}
 
 		wp_send_json_success( $response );
+	}
+
+	/**
+	 * AJAX handler for bot diagnostic drill-down modal.
+	 *
+	 * Returns comprehensive bot details for the bot management diagnostic modal.
+	 *
+	 * @since 3.3.0
+	 * @return void
+	 */
+	public function ajax_get_bot_details() {
+		check_ajax_referer( 'ta_bot_management', 'nonce' );
+		$this->security->verify_admin_capability();
+
+		$bot_type = isset( $_POST['bot_type'] ) ? sanitize_text_field( wp_unslash( $_POST['bot_type'] ) ) : '';
+		$bot_name = isset( $_POST['bot_name'] ) ? sanitize_text_field( wp_unslash( $_POST['bot_name'] ) ) : '';
+
+		if ( empty( $bot_type ) ) {
+			wp_send_json_error( array( 'message' => __( 'Bot type is required.', 'third-audience' ) ) );
+		}
+
+		$analytics = TA_Bot_Analytics::get_instance();
+		$details   = $analytics->get_bot_details( $bot_type, $bot_name );
+
+		wp_send_json_success( $details );
 	}
 
 	/**

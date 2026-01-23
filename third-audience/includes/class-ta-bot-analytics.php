@@ -2878,6 +2878,207 @@ class TA_Bot_Analytics {
 	}
 
 	/**
+	 * Get comprehensive bot details for diagnostic modal.
+	 *
+	 * @since 3.3.0
+	 * @param string $bot_type Bot type identifier (e.g., 'ClaudeBot').
+	 * @param string $bot_name Bot display name (e.g., 'Claude (Anthropic)').
+	 * @return array Comprehensive bot details.
+	 */
+	public function get_bot_details( $bot_type, $bot_name ) {
+		global $wpdb;
+		$table_name         = $wpdb->prefix . self::TABLE_NAME;
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+
+		// 1. Summary Stats.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$summary = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					COUNT(*) as total_visits,
+					COUNT(DISTINCT post_id) as unique_pages,
+					COUNT(DISTINCT ip_address) as unique_ips,
+					AVG(response_time) as avg_response_time,
+					SUM(response_size) as total_bandwidth,
+					SUM(CASE WHEN cache_status IN ('HIT', 'PRE_GENERATED') THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0) as cache_hit_rate,
+					MIN(visit_timestamp) as first_seen,
+					MAX(visit_timestamp) as last_seen
+				FROM {$table_name}
+				WHERE bot_type = %s",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 2. Behavior Analysis (from fingerprints table).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$behavior = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					AVG(pages_per_session_avg) as avg_pages_per_session,
+					AVG(session_duration_avg) as avg_session_duration,
+					AVG(request_interval_avg) as avg_request_interval,
+					SUM(CASE WHEN robots_txt_checked = 1 THEN 1 ELSE 0 END) as robots_checked_count,
+					SUM(CASE WHEN respects_robots_txt = 1 THEN 1 ELSE 0 END) as respects_robots_count,
+					COUNT(*) as fingerprint_count
+				FROM {$fingerprints_table}
+				WHERE classification = %s",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 3. Detection Methods Breakdown.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$detection_methods = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					detection_method,
+					COUNT(*) as count,
+					AVG(confidence_score) as avg_confidence
+				FROM {$table_name}
+				WHERE bot_type = %s
+				GROUP BY detection_method
+				ORDER BY count DESC",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 4. Recent Activity (last 50 visits).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$recent_visits = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					id,
+					url,
+					post_title,
+					ip_address,
+					cache_status,
+					response_time,
+					visit_timestamp,
+					country_code
+				FROM {$table_name}
+				WHERE bot_type = %s
+				ORDER BY visit_timestamp DESC
+				LIMIT 50",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 5. Top Pages Crawled.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$top_pages = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					url,
+					post_title,
+					COUNT(*) as visits,
+					AVG(content_word_count) as avg_word_count,
+					AVG(content_heading_count) as avg_headings,
+					AVG(content_freshness_days) as avg_freshness_days
+				FROM {$table_name}
+				WHERE bot_type = %s
+				GROUP BY url, post_title
+				ORDER BY visits DESC
+				LIMIT 20",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 6. Business Impact (citations for AI bots).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$citations = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT
+					COUNT(CASE WHEN traffic_type = 'citation_click' THEN 1 END) as total_citations,
+					COUNT(CASE WHEN traffic_type = 'bot_crawl' THEN 1 END) as total_crawls
+				FROM {$table_name}
+				WHERE bot_type = %s",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 7. Response Time Distribution.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$response_distribution = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					CASE
+						WHEN response_time < 50 THEN 'fast_under_50'
+						WHEN response_time < 100 THEN 'good_50_100'
+						WHEN response_time < 200 THEN 'ok_100_200'
+						ELSE 'slow_over_200'
+					END as speed_category,
+					COUNT(*) as count
+				FROM {$table_name}
+				WHERE bot_type = %s AND response_time IS NOT NULL
+				GROUP BY speed_category",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 8. IP Addresses and Countries.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$ip_data = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					ip_address,
+					country_code,
+					COUNT(*) as visit_count,
+					MAX(ip_verified) as verified
+				FROM {$table_name}
+				WHERE bot_type = %s
+				GROUP BY ip_address, country_code
+				ORDER BY visit_count DESC
+				LIMIT 20",
+				$bot_type
+			),
+			ARRAY_A
+		);
+
+		// 9. User Agent(s).
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$user_agents = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT DISTINCT user_agent
+				FROM {$table_name}
+				WHERE bot_type = %s
+				LIMIT 10",
+				$bot_type
+			)
+		);
+
+		return array(
+			'summary'               => $summary,
+			'behavior'              => $behavior ?: array(
+				'avg_pages_per_session' => 0,
+				'avg_session_duration'  => 0,
+				'avg_request_interval'  => 0,
+				'robots_checked_count'  => 0,
+				'respects_robots_count' => 0,
+				'fingerprint_count'     => 0,
+			),
+			'detection_methods'     => $detection_methods,
+			'recent_visits'         => $recent_visits,
+			'top_pages'             => $top_pages,
+			'citations'             => $citations ?: array( 'total_citations' => 0, 'total_crawls' => 0 ),
+			'response_distribution' => $response_distribution,
+			'ip_data'               => $ip_data,
+			'user_agents'           => $user_agents,
+			'bot_info'              => array(
+				'type'  => $bot_type,
+				'name'  => $bot_name,
+				'color' => $this->get_bot_color( $bot_type ),
+			),
+		);
+	}
+
+	/**
 	 * Uninstall - Drop table and delete options.
 	 *
 	 * @since 1.4.0
