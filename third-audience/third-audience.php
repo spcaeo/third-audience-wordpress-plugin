@@ -200,6 +200,147 @@ function ta_run_migrations() {
 add_action( 'plugins_loaded', 'ta_run_migrations', 1 );
 
 /**
+ * Auto-fix database schema on every admin page load if needed.
+ * This ensures migration runs even if activation hook failed.
+ *
+ * @since 3.3.10
+ * @return void
+ */
+function ta_auto_fix_database() {
+	// Only run in admin area.
+	if ( ! is_admin() ) {
+		return;
+	}
+
+	// Check if we've already verified the fix this session.
+	if ( get_transient( 'ta_db_check_done' ) ) {
+		return;
+	}
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+	// Check if content_type column exists.
+	$column_exists = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+			WHERE TABLE_SCHEMA = %s
+			AND TABLE_NAME = %s
+			AND COLUMN_NAME = 'content_type'",
+			DB_NAME,
+			$table_name
+		)
+	);
+
+	// Add column if it doesn't exist.
+	if ( empty( $column_exists ) ) {
+		$result = $wpdb->query(
+			"ALTER TABLE {$table_name}
+			ADD COLUMN content_type VARCHAR(50) DEFAULT 'html'
+			AFTER traffic_type"
+		);
+
+		// Clear error logs after fixing.
+		if ( false !== $result ) {
+			delete_option( 'ta_error_log' );
+			update_option( 'ta_db_version', TA_DB_VERSION, false );
+			update_option( 'ta_db_auto_fixed', current_time( 'mysql' ), false );
+		}
+	}
+
+	// Set transient so we don't check again for 1 hour.
+	set_transient( 'ta_db_check_done', true, HOUR_IN_SECONDS );
+}
+add_action( 'admin_init', 'ta_auto_fix_database', 1 );
+
+/**
+ * Show admin notice if database needs fixing.
+ *
+ * @since 3.3.10
+ * @return void
+ */
+function ta_admin_notice_db_fix() {
+	// Only show to admins.
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+	// Check if content_type column exists.
+	$column_exists = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+			WHERE TABLE_SCHEMA = %s
+			AND TABLE_NAME = %s
+			AND COLUMN_NAME = 'content_type'",
+			DB_NAME,
+			$table_name
+		)
+	);
+
+	// Show notice if column is missing.
+	if ( empty( $column_exists ) ) {
+		?>
+		<div class="notice notice-error">
+			<p>
+				<strong>Third Audience:</strong> Database update required.
+				<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=ta_fix_database' ), 'ta_fix_database' ) ); ?>" class="button button-primary" style="margin-left: 10px;">
+					Fix Database Now
+				</a>
+			</p>
+		</div>
+		<?php
+	}
+}
+add_action( 'admin_notices', 'ta_admin_notice_db_fix' );
+
+/**
+ * Handle manual database fix request.
+ *
+ * @since 3.3.10
+ * @return void
+ */
+function ta_handle_fix_database() {
+	// Verify nonce.
+	check_admin_referer( 'ta_fix_database' );
+
+	// Verify admin capability.
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Unauthorized' );
+	}
+
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+	// Add the column.
+	$result = $wpdb->query(
+		"ALTER TABLE {$table_name}
+		ADD COLUMN IF NOT EXISTS content_type VARCHAR(50) DEFAULT 'html'
+		AFTER traffic_type"
+	);
+
+	// Clear error logs.
+	delete_option( 'ta_error_log' );
+	update_option( 'ta_db_version', TA_DB_VERSION, false );
+
+	// Redirect back with success message.
+	wp_safe_redirect(
+		add_query_arg(
+			array(
+				'page'    => 'third-audience',
+				'tab'     => 'logs',
+				'fixed'   => 'true',
+			),
+			admin_url( 'admin.php' )
+		)
+	);
+	exit;
+}
+add_action( 'admin_post_ta_fix_database', 'ta_handle_fix_database' );
+
+/**
  * Run migrations on plugin activation.
  * This ensures migrations run even if plugin was already at the correct version.
  *
