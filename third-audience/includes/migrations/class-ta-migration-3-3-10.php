@@ -48,20 +48,20 @@ class TA_Migration_3_3_10 {
 			return false;
 		}
 
-		// Check if content_type column already exists.
+		// Check if content_type column already exists using SHOW COLUMNS.
+		// This is more reliable than INFORMATION_SCHEMA on some servers.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$column_exists = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-				WHERE TABLE_SCHEMA = %s
-				AND TABLE_NAME = %s
-				AND COLUMN_NAME = 'content_type'",
-				DB_NAME,
-				$table_name
-			)
-		);
+		$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
 
-		if ( ! empty( $column_exists ) ) {
+		$column_exists = false;
+		foreach ( $columns as $column ) {
+			if ( 'content_type' === $column->Field ) {
+				$column_exists = true;
+				break;
+			}
+		}
+
+		if ( $column_exists ) {
 			if ( class_exists( 'TA_Logger' ) ) {
 				TA_Logger::get_instance()->info( 'Migration 3.3.10: content_type column already exists.' );
 			}

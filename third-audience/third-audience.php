@@ -220,20 +220,19 @@ function ta_auto_fix_database() {
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-	// Check if content_type column exists.
-	$column_exists = $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-			WHERE TABLE_SCHEMA = %s
-			AND TABLE_NAME = %s
-			AND COLUMN_NAME = 'content_type'",
-			DB_NAME,
-			$table_name
-		)
-	);
+	// Check if content_type column exists using SHOW COLUMNS (more reliable).
+	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
+
+	$column_exists = false;
+	foreach ( $columns as $column ) {
+		if ( 'content_type' === $column->Field ) {
+			$column_exists = true;
+			break;
+		}
+	}
 
 	// Add column if it doesn't exist.
-	if ( empty( $column_exists ) ) {
+	if ( ! $column_exists ) {
 		$result = $wpdb->query(
 			"ALTER TABLE {$table_name}
 			ADD COLUMN content_type VARCHAR(50) DEFAULT 'html'
@@ -268,20 +267,19 @@ function ta_admin_notice_db_fix() {
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-	// Check if content_type column exists.
-	$column_exists = $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-			WHERE TABLE_SCHEMA = %s
-			AND TABLE_NAME = %s
-			AND COLUMN_NAME = 'content_type'",
-			DB_NAME,
-			$table_name
-		)
-	);
+	// Check if content_type column exists using SHOW COLUMNS (more reliable).
+	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
+
+	$column_exists = false;
+	foreach ( $columns as $column ) {
+		if ( 'content_type' === $column->Field ) {
+			$column_exists = true;
+			break;
+		}
+	}
 
 	// Show notice if column is missing.
-	if ( empty( $column_exists ) ) {
+	if ( ! $column_exists ) {
 		?>
 		<div class="notice notice-error">
 			<p>
@@ -352,20 +350,19 @@ function ta_activation_hook() {
 
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-	// Check if content_type column exists.
-	$column_exists = $wpdb->get_results(
-		$wpdb->prepare(
-			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
-			WHERE TABLE_SCHEMA = %s
-			AND TABLE_NAME = %s
-			AND COLUMN_NAME = 'content_type'",
-			DB_NAME,
-			$table_name
-		)
-	);
+	// Check if content_type column exists using SHOW COLUMNS (more reliable).
+	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
+
+	$column_exists = false;
+	foreach ( $columns as $column ) {
+		if ( 'content_type' === $column->Field ) {
+			$column_exists = true;
+			break;
+		}
+	}
 
 	// Add column if it doesn't exist.
-	if ( empty( $column_exists ) ) {
+	if ( ! $column_exists ) {
 		$wpdb->query(
 			"ALTER TABLE {$table_name}
 			ADD COLUMN content_type VARCHAR(50) DEFAULT 'html'
