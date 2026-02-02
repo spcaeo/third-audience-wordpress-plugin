@@ -200,6 +200,34 @@ function ta_run_migrations() {
 add_action( 'plugins_loaded', 'ta_run_migrations', 1 );
 
 /**
+ * Run migrations on plugin activation.
+ * This ensures migrations run even if plugin was already at the correct version.
+ *
+ * @since 3.3.10
+ * @return void
+ */
+function ta_activation_hook() {
+	// Load logger if not already loaded.
+	if ( ! class_exists( 'TA_Logger' ) ) {
+		require_once TA_PLUGIN_DIR . 'includes/class-ta-logger.php';
+	}
+
+	// Force run migration for 3.3.10 (add content_type column).
+	require_once TA_PLUGIN_DIR . 'includes/migrations/class-ta-migration-3-3-10.php';
+	TA_Migration_3_3_10::migrate();
+
+	// Update database version to current.
+	update_option( 'ta_db_version', TA_DB_VERSION, false );
+
+	// Clear error logs on activation.
+	delete_option( 'ta_error_log' );
+
+	// Log activation.
+	TA_Logger::get_instance()->info( 'Third Audience plugin activated. DB version: ' . TA_DB_VERSION );
+}
+register_activation_hook( __FILE__, 'ta_activation_hook' );
+
+/**
  * Initialize the plugin.
  *
  * @since 1.0.0
