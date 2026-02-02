@@ -351,7 +351,7 @@ $security = TA_Security::get_instance();
 									<span class="ta-stat-label"><?php esc_html_e( 'Cache Size', 'third-audience' ); ?></span>
 								</div>
 							</div>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline">
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline" onsubmit="return confirm('<?php echo esc_js( __( 'Are you sure you want to clear all cached items?', 'third-audience' ) ); ?>');">
 								<?php $security->nonce_field( 'clear_cache' ); ?>
 								<input type="hidden" name="action" value="ta_clear_cache" />
 								<button type="submit" class="button button-secondary" id="ta-clear-cache-btn">
@@ -1012,7 +1012,7 @@ $security = TA_Security::get_instance();
 										<?php esc_html_e( 'Export Logs', 'third-audience' ); ?>
 									</a>
 									<?php endif; ?>
-									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline" style="display: inline;">
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ta-form-inline" style="display: inline;" onsubmit="return confirm('<?php echo esc_js( __( 'Are you sure you want to clear all error logs?', 'third-audience' ) ); ?>');">
 										<?php $security->nonce_field( 'clear_errors' ); ?>
 										<input type="hidden" name="action" value="ta_clear_errors" />
 										<button type="submit" class="button button-secondary" id="ta-clear-errors-btn">

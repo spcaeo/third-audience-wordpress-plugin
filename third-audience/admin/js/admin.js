@@ -30,11 +30,8 @@
 		 * Bind event handlers.
 		 */
 		bindEvents: function() {
-			// Clear cache confirmation
-			$('#ta-clear-cache-btn').on('click', this.confirmClearCache.bind(this));
-
-			// Clear errors confirmation
-			$('#ta-clear-errors-btn').on('click', this.confirmClearErrors.bind(this));
+			// Clear cache and clear errors now use onsubmit confirmation in HTML
+			// No JavaScript handlers needed - forms handle it natively
 
 			// AJAX test connection (optional enhancement)
 			$('#ta-test-connection-ajax').on('click', this.testConnectionAjax.bind(this));
