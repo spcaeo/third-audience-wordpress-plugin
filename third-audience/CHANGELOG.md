@@ -27,6 +27,9 @@ All notable changes to Third Audience plugin will be documented in this file.
   - `admin/class-ta-admin-notices.php` - Admin notification system
   - `assets/js/ta-auto-endpoint-detector.js` - Frontend auto-detection client
   - `AUTO-DEPLOYMENT.md` - Comprehensive deployment guide
+  - `BROWSER-TESTING.md` - Browser-based testing guide for non-technical users
+  - `test-citations-browser.html` - Interactive HTML testing tool with visual interface
+  - `test-data-tracking.sh` - Automated bash script for command-line testing
 
 ### Deployment Benefits
 - ✅ **Zero server configuration required** - No .htaccess, wp-config.php, or SQL changes needed

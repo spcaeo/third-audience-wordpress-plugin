@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Third Audience - Browser Citation Testing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .setup-section {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .setup-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .test-section {
+            margin-top: 30px;
+        }
+
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-chatgpt {
+            background: linear-gradient(135deg, #10a37f 0%, #0d8a6a 100%);
+            color: white;
+        }
+
+        .btn-perplexity {
+            background: linear-gradient(135deg, #1fb6ff 0%, #0090d9 100%);
+            color: white;
+        }
+
+        .btn-claude {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            color: white;
+        }
+
+        .btn-gemini {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+        }
+
+        .btn-health {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+        }
+
+        .btn-admin {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .response-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: none;
+        }
+
+        .response-box.success {
+            background: #d1fae5;
+            border: 2px solid #10b981;
+            color: #065f46;
+            display: block;
+        }
+
+        .response-box.error {
+            background: #fee2e2;
+            border: 2px solid #ef4444;
+            color: #991b1b;
+            display: block;
+        }
+
+        .response-box.info {
+            background: #dbeafe;
+            border: 2px solid #3b82f6;
+            color: #1e40af;
+            display: block;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .icon {
+            font-size: 18px;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .instructions h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            color: #856404;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Third Audience Citation Testing</h1>
+        <p class="subtitle">Browser-based testing for monocubed.com</p>
+
+        <div class="instructions">
+            <h4>📋 Before You Start:</h4>
+            <ol>
+                <li>Get your API key from: <strong>WordPress Admin → Settings → Third Audience → Headless Setup</strong></li>
+                <li>Paste it below</li>
+                <li>Click any platform button to test citation tracking</li>
+                <li>Check WordPress Admin to see the citation appear!</li>
+            </ol>
+        </div>
+
+        <div class="setup-section">
+            <h3>⚙️ Configuration</h3>
+
+            <div class="input-group">
+                <label for="siteUrl">WordPress Site URL:</label>
+                <input type="text" id="siteUrl" value="https://www.monocubed.com" placeholder="https://www.monocubed.com">
+                <div class="hint">The base URL of your WordPress site</div>
+            </div>
+
+            <div class="input-group">
+                <label for="apiKey">API Key:</label>
+                <input type="text" id="apiKey" placeholder="ta_1234567890abcdef...">
+                <div class="hint">Get from: WordPress Admin → Settings → Third Audience → Headless Setup</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test Citation Tracking</h3>
+
+            <div class="button-grid">
+                <button class="btn-chatgpt" onclick="testCitation('ChatGPT', 'https://chat.openai.com')">
+                    <span class="icon">🤖</span>
+                    <span>Test ChatGPT</span>
+                </button>
+
+                <button class="btn-perplexity" onclick="testCitation('Perplexity', 'https://www.perplexity.ai')">
+                    <span class="icon">🔍</span>
+                    <span>Test Perplexity</span>
+                </button>
+
+                <button class="btn-claude" onclick="testCitation('Claude', 'https://claude.ai')">
+                    <span class="icon">🧠</span>
+                    <span>Test Claude</span>
+                </button>
+
+                <button class="btn-gemini" onclick="testCitation('Gemini', 'https://gemini.google.com')">
+                    <span class="icon">✨</span>
+                    <span>Test Gemini</span>
+                </button>
+
+                <button class="btn-health" onclick="testHealth()">
+                    <span class="icon">💚</span>
+                    <span>Test Health</span>
+                </button>
+
+                <button class="btn-admin" onclick="openAdmin()">
+                    <span class="icon">📊</span>
+                    <span>Open WordPress Admin → AI Citations</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">Testing...</p>
+        </div>
+
+        <div id="response" class="response-box"></div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="successCount">0</div>
+                <div class="stat-label">Successful Tests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="failCount">0</div>
+                <div class="stat-label">Failed Tests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let successCount = 0;
+        let failCount = 0;
+        let totalCount = 0;
+
+        function updateStats() {
+            document.getElementById('successCount').textContent = successCount;
+            document.getElementById('failCount').textContent = failCount;
+            document.getElementById('totalCount').textContent = totalCount;
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('response').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+
+        function showResponse(message, type) {
+            hideLoading();
+            const responseBox = document.getElementById('response');
+            responseBox.textContent = message;
+            responseBox.className = 'response-box ' + type;
+        }
+
+        async function testCitation(platform, referer) {
+            const siteUrl = document.getElementById('siteUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            if (!apiKey) {
+                showResponse('❌ Error: Please enter your API key first!\n\nGet it from: WordPress Admin → Settings → Third Audience → Headless Setup', 'error');
+                return;
+            }
+
+            showLoading();
+            totalCount++;
+            updateStats();
+
+            const timestamp = Date.now();
+            const testUrl = `/test-${platform.toLowerCase()}-${timestamp}`;
+
+            try {
+                // Try REST API first
+                const response = await fetch(`${siteUrl}/wp-json/third-audience/v1/track-citation`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-TA-Api-Key': apiKey
+                    },
+                    body: JSON.stringify({
+                        url: testUrl,
+                        platform: platform,
+                        search_query: `Test citation from browser testing tool - ${platform}`,
+                        referer: referer
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    successCount++;
+                    updateStats();
+                    showResponse(
+                        `✅ SUCCESS! Citation tracked via REST API\n\n` +
+                        `Platform: ${platform}\n` +
+                        `Page URL: ${testUrl}\n` +
+                        `Referer: ${referer}\n` +
+                        `Method: REST API\n` +
+                        `Timestamp: ${new Date().toLocaleString()}\n\n` +
+                        `Response:\n${JSON.stringify(data, null, 2)}\n\n` +
+                        `🎉 Check WordPress Admin → Bot Analytics → AI Citations to see this entry!`,
+                        'success'
+                    );
+                } else if (response.status === 403 || response.status === 404) {
+                    // REST API blocked, try AJAX fallback
+                    await testCitationAjax(platform, referer, testUrl);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+            } catch (error) {
+                // Try AJAX fallback
+                try {
+                    await testCitationAjax(platform, referer, testUrl);
+                } catch (ajaxError) {
+                    failCount++;
+                    updateStats();
+                    showResponse(
+                        `❌ ERROR: Citation tracking failed\n\n` +
+                        `Platform: ${platform}\n` +
+                        `REST API Error: ${error.message}\n` +
+                        `AJAX Error: ${ajaxError.message}\n\n` +
+                        `Troubleshooting:\n` +
+                        `1. Check that your API key is correct\n` +
+                        `2. Verify the plugin is activated\n` +
+                        `3. Check WordPress Admin for error logs\n` +
+                        `4. Try the health check test`,
+                        'error'
+                    );
+                }
+            }
+        }
+
+        async function testCitationAjax(platform, referer, testUrl) {
+            const siteUrl = document.getElementById('siteUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+
+            const formData = new FormData();
+            formData.append('action', 'ta_track_citation');
+            formData.append('api_key', apiKey);
+            formData.append('url', testUrl);
+            formData.append('platform', platform);
+            formData.append('search_query', `Test citation from browser testing tool - ${platform}`);
+            formData.append('referer', referer);
+
+            const response = await fetch(`${siteUrl}/wp-admin/admin-ajax.php`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                successCount++;
+                updateStats();
+                showResponse(
+                    `✅ SUCCESS! Citation tracked via AJAX Fallback\n\n` +
+                    `Platform: ${platform}\n` +
+                    `Page URL: ${testUrl}\n` +
+                    `Referer: ${referer}\n` +
+                    `Method: AJAX Fallback (REST API was blocked)\n` +
+                    `Timestamp: ${new Date().toLocaleString()}\n\n` +
+                    `Response:\n${JSON.stringify(data, null, 2)}\n\n` +
+                    `🎉 Check WordPress Admin → Bot Analytics → AI Citations to see this entry!`,
+                    'success'
+                );
+            } else {
+                throw new Error(data.data?.message || 'AJAX tracking failed');
+            }
+        }
+
+        async function testHealth() {
+            const siteUrl = document.getElementById('siteUrl').value.trim();
+
+            showLoading();
+            totalCount++;
+            updateStats();
+
+            try {
+                // Try REST API health check
+                const response = await fetch(`${siteUrl}/wp-json/third-audience/v1/health`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    successCount++;
+                    updateStats();
+                    showResponse(
+                        `✅ REST API Health Check: PASSED\n\n` +
+                        `Status: ${data.status}\n` +
+                        `Message: ${data.message}\n` +
+                        `Endpoint: REST API\n` +
+                        `HTTP Status: ${response.status}\n\n` +
+                        `Response:\n${JSON.stringify(data, null, 2)}\n\n` +
+                        `✅ REST API is accessible - plugin will use REST endpoints`,
+                        'success'
+                    );
+                } else if (response.status === 403 || response.status === 404) {
+                    // Try AJAX fallback
+                    const ajaxResponse = await fetch(`${siteUrl}/wp-admin/admin-ajax.php`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'action=ta_health_check'
+                    });
+                    const ajaxData = await ajaxResponse.json();
+
+                    if (ajaxData.success) {
+                        successCount++;
+                        updateStats();
+                        showResponse(
+                            `⚠️ REST API Blocked - AJAX Fallback Working\n\n` +
+                            `REST API Status: Blocked (HTTP ${response.status})\n` +
+                            `AJAX Fallback Status: Working\n` +
+                            `Message: ${ajaxData.data.message}\n\n` +
+                            `Response:\n${JSON.stringify(ajaxData, null, 2)}\n\n` +
+                            `ℹ️ REST API is blocked by security plugin or firewall.\n` +
+                            `Plugin will automatically use AJAX endpoints.\n` +
+                            `Everything still works! ✅`,
+                            'info'
+                        );
+                    } else {
+                        throw new Error('Both REST and AJAX health checks failed');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                failCount++;
+                updateStats();
+                showResponse(
+                    `❌ Health Check Failed\n\n` +
+                    `Error: ${error.message}\n\n` +
+                    `Troubleshooting:\n` +
+                    `1. Check that the site URL is correct\n` +
+                    `2. Verify the plugin is activated\n` +
+                    `3. Check for network connectivity issues\n` +
+                    `4. Look for CORS errors in browser console (F12)`,
+                    'error'
+                );
+            }
+        }
+
+        function openAdmin() {
+            const siteUrl = document.getElementById('siteUrl').value.trim();
+            const adminUrl = `${siteUrl}/wp-admin/admin.php?page=third-audience-ai-citations`;
+
+            showResponse(
+                `🚀 Opening WordPress Admin...\n\n` +
+                `URL: ${adminUrl}\n\n` +
+                `You should see:\n` +
+                `- AI Citations page with a table\n` +
+                `- Recent test citations from this tool\n` +
+                `- Platform, Page URL, Search Query, Referer columns\n` +
+                `- Current timestamps\n\n` +
+                `If the page doesn't open automatically, copy the URL above.`,
+                'info'
+            );
+
+            setTimeout(() => {
+                window.open(adminUrl, '_blank');
+            }, 1000);
+        }
+
+        // Load saved API key from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedApiKey = localStorage.getItem('ta_api_key');
+            const savedSiteUrl = localStorage.getItem('ta_site_url');
+
+            if (savedApiKey) {
+                document.getElementById('apiKey').value = savedApiKey;
+            }
+
+            if (savedSiteUrl) {
+                document.getElementById('siteUrl').value = savedSiteUrl;
+            }
+
+            // Save to localStorage when changed
+            document.getElementById('apiKey').addEventListener('change', (e) => {
+                localStorage.setItem('ta_api_key', e.target.value);
+            });
+
+            document.getElementById('siteUrl').addEventListener('change', (e) => {
+                localStorage.setItem('ta_site_url', e.target.value);
+            });
+        });
+    </script>
+</body>
+</html>
