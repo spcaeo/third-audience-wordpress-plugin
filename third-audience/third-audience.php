@@ -207,14 +207,30 @@ add_action( 'plugins_loaded', 'ta_run_migrations', 1 );
  * @return void
  */
 function ta_activation_hook() {
-	// Load logger if not already loaded.
-	if ( ! class_exists( 'TA_Logger' ) ) {
-		require_once TA_PLUGIN_DIR . 'includes/class-ta-logger.php';
-	}
+	global $wpdb;
 
-	// Force run migration for 3.3.10 (add content_type column).
-	require_once TA_PLUGIN_DIR . 'includes/migrations/class-ta-migration-3-3-10.php';
-	TA_Migration_3_3_10::migrate();
+	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+	// Check if content_type column exists.
+	$column_exists = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+			WHERE TABLE_SCHEMA = %s
+			AND TABLE_NAME = %s
+			AND COLUMN_NAME = 'content_type'",
+			DB_NAME,
+			$table_name
+		)
+	);
+
+	// Add column if it doesn't exist.
+	if ( empty( $column_exists ) ) {
+		$wpdb->query(
+			"ALTER TABLE {$table_name}
+			ADD COLUMN content_type VARCHAR(50) DEFAULT 'html'
+			AFTER traffic_type"
+		);
+	}
 
 	// Update database version to current.
 	update_option( 'ta_db_version', TA_DB_VERSION, false );
@@ -222,8 +238,8 @@ function ta_activation_hook() {
 	// Clear error logs on activation.
 	delete_option( 'ta_error_log' );
 
-	// Log activation.
-	TA_Logger::get_instance()->info( 'Third Audience plugin activated. DB version: ' . TA_DB_VERSION );
+	// Add activation timestamp for debugging.
+	update_option( 'ta_last_activation', current_time( 'mysql' ), false );
 }
 register_activation_hook( __FILE__, 'ta_activation_hook' );
 
