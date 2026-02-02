@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
- * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.3.10
+ * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
+ * Version: 3.4.0
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,14 +27,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.3.10' );
+define( 'TA_VERSION', '3.4.0' );
 
 /**
  * Database version for migrations.
  *
  * @since 1.1.0
  */
-define( 'TA_DB_VERSION', '3.3.10' );
+define( 'TA_DB_VERSION', '3.4.0' );
 
 /**
  * Minimum PHP version required.
@@ -422,9 +422,10 @@ function ta_init() {
 add_action( 'plugins_loaded', 'ta_init' );
 
 /**
- * Activation hook.
+ * Activation hook with auto-configuration.
  *
  * @since 1.0.0
+ * @since 3.4.0 Added auto-detection and configuration
  * @return void
  */
 function ta_activate() {
@@ -433,13 +434,51 @@ function ta_activate() {
 	require_once TA_PLUGIN_DIR . 'includes/class-ta-security.php';
 	require_once TA_PLUGIN_DIR . 'includes/class-ta-logger.php';
 
+	// Load auto-configuration classes.
+	require_once TA_PLUGIN_DIR . 'includes/class-ta-environment-detector.php';
+	require_once TA_PLUGIN_DIR . 'includes/class-ta-security-bypass.php';
+	require_once TA_PLUGIN_DIR . 'includes/class-ta-database-auto-fixer.php';
+	require_once TA_PLUGIN_DIR . 'includes/class-ta-ajax-fallback.php';
+
 	$security = TA_Security::get_instance();
 	$logger   = TA_Logger::get_instance();
 
 	// Log activation.
 	$logger->info( 'Plugin activated.', array( 'version' => TA_VERSION ) );
 
-	// Flush rewrite rules on activation.
+	// PHASE 1: Detect environment.
+	$detector    = new TA_Environment_Detector();
+	$environment = $detector->detect_full_environment();
+
+	// Store environment detection results.
+	update_option( 'ta_environment_detection', $environment );
+	$logger->info( 'Environment detected', $environment );
+
+	// PHASE 2: Auto-configure security plugins.
+	$security_bypass = new TA_Security_Bypass();
+	$security_results = $security_bypass->auto_configure_on_activation();
+	$logger->info( 'Security plugins configured', $security_results );
+
+	// PHASE 3: Fix database automatically.
+	$db_fixer = new TA_Database_Auto_Fixer();
+	$db_results = $db_fixer->fix_all_issues();
+	$logger->info( 'Database auto-fix completed', $db_results );
+
+	// PHASE 4: Configure REST API fallback if needed.
+	if ( ! $environment['rest_api']['accessible'] ) {
+		update_option( 'ta_use_ajax_fallback', true );
+		$logger->warning( 'REST API not accessible, enabled AJAX fallback', array(
+			'blocker' => $environment['rest_api']['blocker'] ?? 'unknown',
+		) );
+
+		// Show admin notice about fallback mode.
+		set_transient( 'ta_show_activation_notice', true, HOUR_IN_SECONDS );
+	} else {
+		update_option( 'ta_use_ajax_fallback', false );
+		set_transient( 'ta_show_activation_notice', true, HOUR_IN_SECONDS );
+	}
+
+	// PHASE 5: Standard activation tasks.
 	flush_rewrite_rules();
 
 	// Set default options if not exists (non-autoload for performance).
@@ -472,10 +511,18 @@ function ta_activate() {
 		update_option( 'ta_activated_at', current_time( 'mysql' ), false );
 	}
 
+	// PHASE 6: Schedule crons.
 	// Schedule cache warming.
 	if ( ! wp_next_scheduled( 'ta_cache_warm_cron' ) ) {
 		wp_schedule_event( time() + 3600, 'twicedaily', 'ta_cache_warm_cron' );
 	}
+
+	// Schedule daily health check.
+	if ( ! wp_next_scheduled( 'ta_daily_health_check' ) ) {
+		wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'ta_daily_health_check' );
+	}
+
+	$logger->info( 'Plugin activation completed successfully' );
 }
 register_activation_hook( __FILE__, 'ta_activate' );
 
@@ -653,12 +700,36 @@ function ta_plugin_row_meta( $links, $file ) {
 add_filter( 'plugin_row_meta', 'ta_plugin_row_meta', 10, 2 );
 
 /**
- * Register REST API endpoints.
+ * Register REST API endpoints with smart fallback detection.
  *
  * @since 1.1.0
+ * @since 3.4.0 Added smart fallback system
  * @return void
  */
 function ta_register_rest_routes() {
+	// Check if REST API is accessible.
+	$env_detection = get_option( 'ta_environment_detection', array() );
+	$use_fallback  = ! empty( $env_detection['rest_api'] ) && ! $env_detection['rest_api']['accessible'];
+
+	if ( $use_fallback ) {
+		// Don't register REST routes, use AJAX fallback instead.
+		// Initialize AJAX fallback system.
+		if ( class_exists( 'TA_AJAX_Fallback' ) ) {
+			$ajax_fallback = new TA_AJAX_Fallback();
+			$ajax_fallback->init();
+		}
+
+		// Still register health check for testing.
+		register_rest_route( 'third-audience/v1', '/health', array(
+			'methods'             => 'GET',
+			'callback'            => 'ta_health_check_callback',
+			'permission_callback' => '__return_true',
+		) );
+
+		return; // Skip other REST API registrations.
+	}
+
+	// Standard REST API registration (existing code).
 	// Health check endpoint (public).
 	register_rest_route( 'third-audience/v1', '/health', array(
 		'methods'             => 'GET',
@@ -1163,6 +1234,92 @@ function ta_ajax_get_cache_stats() {
 	wp_send_json_success( $stats );
 }
 add_action( 'wp_ajax_ta_get_cache_stats', 'ta_ajax_get_cache_stats' );
+
+/**
+ * Daily health check and auto-repair.
+ *
+ * Runs daily to detect environment changes and auto-fix issues.
+ *
+ * @since 3.4.0
+ * @return void
+ */
+function ta_daily_health_check() {
+	// Re-detect environment (things may have changed).
+	if ( class_exists( 'TA_Environment_Detector' ) ) {
+		$detector    = new TA_Environment_Detector();
+		$current_env = $detector->detect_full_environment();
+
+		// Compare with stored environment.
+		$stored_env = get_option( 'ta_environment_detection', array() );
+
+		// If REST API became accessible, switch from fallback.
+		if ( isset( $stored_env['rest_api'] ) && ! $stored_env['rest_api']['accessible'] &&
+		     isset( $current_env['rest_api'] ) && $current_env['rest_api']['accessible'] ) {
+			update_option( 'ta_use_ajax_fallback', false );
+
+			// Notify admin.
+			set_transient( 'ta_rest_api_now_available', true, WEEK_IN_SECONDS );
+
+			if ( class_exists( 'TA_Logger' ) ) {
+				$logger = TA_Logger::get_instance();
+				$logger->info( 'REST API now available, switched from AJAX fallback' );
+			}
+		}
+
+		// Update environment detection.
+		update_option( 'ta_environment_detection', $current_env );
+	}
+
+	// Auto-fix any database issues.
+	if ( class_exists( 'TA_Database_Auto_Fixer' ) ) {
+		$db_fixer     = new TA_Database_Auto_Fixer();
+		$fixes_needed = $db_fixer->verify_fixes();
+
+		if ( in_array( false, $fixes_needed, true ) ) {
+			// Some fixes needed.
+			$results = $db_fixer->fix_all_issues();
+
+			if ( class_exists( 'TA_Logger' ) ) {
+				$logger = TA_Logger::get_instance();
+				$logger->info( 'Daily health check: database issues fixed', $results );
+			}
+		}
+	}
+}
+add_action( 'ta_daily_health_check', 'ta_daily_health_check' );
+
+/**
+ * Initialize admin notices system.
+ *
+ * @since 3.4.0
+ * @return void
+ */
+function ta_init_admin_notices() {
+	if ( is_admin() && class_exists( 'TA_Admin_Notices' ) ) {
+		$admin_notices = new TA_Admin_Notices();
+		$admin_notices->init();
+
+		// Register AJAX handler for dismissing notices.
+		add_action( 'wp_ajax_ta_dismiss_fallback_notice', array( $admin_notices, 'handle_dismiss_fallback_notice' ) );
+	}
+}
+add_action( 'admin_init', 'ta_init_admin_notices' );
+
+/**
+ * Initialize AJAX fallback if REST API is not accessible.
+ *
+ * @since 3.4.0
+ * @return void
+ */
+function ta_init_ajax_fallback() {
+	$use_fallback = get_option( 'ta_use_ajax_fallback', false );
+
+	if ( $use_fallback && class_exists( 'TA_AJAX_Fallback' ) ) {
+		$ajax_fallback = new TA_AJAX_Fallback();
+		$ajax_fallback->init();
+	}
+}
+add_action( 'init', 'ta_init_ajax_fallback' );
 
 /**
  * AJAX handler to dismiss update notice.
