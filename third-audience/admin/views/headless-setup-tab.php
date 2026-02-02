@@ -25,7 +25,7 @@ $api_key  = $wizard->get_api_key();
 	</p>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<?php wp_nonce_field( 'save_headless_settings', 'ta_nonce' ); ?>
+		<?php wp_nonce_field( 'ta_save_headless_settings', 'ta_nonce' ); ?>
 		<input type="hidden" name="action" value="ta_save_headless_settings" />
 
 		<table class="form-table" role="presentation">
