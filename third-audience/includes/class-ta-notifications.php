@@ -516,6 +516,12 @@ class TA_Notifications {
 			return;
 		}
 
+		// Rate limit: only one notification per hour for high error rate.
+		$cache_key = 'ta_high_error_rate_notified';
+		if ( get_transient( $cache_key ) ) {
+			return;
+		}
+
 		$threshold = $settings['error_rate_threshold'] ?? 10;
 
 		$subject = __( 'High Error Rate Alert', 'third-audience' );
@@ -541,7 +547,9 @@ class TA_Notifications {
 			esc_html( $stats['last_error'] )
 		);
 
-		$this->send_email( $subject, $message );
+		if ( $this->send_email( $subject, $message ) ) {
+			set_transient( $cache_key, true, HOUR_IN_SECONDS );
+		}
 	}
 
 	/**

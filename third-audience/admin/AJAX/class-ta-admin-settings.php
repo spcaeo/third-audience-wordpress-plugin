@@ -287,7 +287,7 @@ class TA_Admin_Settings {
 	 */
 	public function handle_save_headless_settings() {
 		$this->security->verify_admin_capability();
-		$this->security->verify_nonce_or_die( 'save_headless_settings', 'ta_nonce' );
+		$this->security->verify_nonce_or_die( 'save_headless_settings', 'ta_nonce', 'POST' );
 
 		// Get wizard instance.
 		$wizard = new TA_Headless_Wizard();

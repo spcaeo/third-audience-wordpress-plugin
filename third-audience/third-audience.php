@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.3.9
+ * Version: 3.3.10
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,14 +27,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.3.9' );
+define( 'TA_VERSION', '3.3.10' );
 
 /**
  * Database version for migrations.
  *
  * @since 1.1.0
  */
-define( 'TA_DB_VERSION', '3.2.0' );
+define( 'TA_DB_VERSION', '3.3.10' );
 
 /**
  * Minimum PHP version required.
@@ -175,6 +175,29 @@ require_once TA_PLUGIN_DIR . 'includes/autoload.php';
 
 // Load Composer autoloader for third-party libraries.
 require_once TA_PLUGIN_DIR . 'vendor/autoload.php';
+
+/**
+ * Run database migrations.
+ *
+ * @since 3.3.10
+ * @return void
+ */
+function ta_run_migrations() {
+	$current_db_version = get_option( 'ta_db_version', '0' );
+
+	// Only run if database version is outdated.
+	if ( version_compare( $current_db_version, TA_DB_VERSION, '<' ) ) {
+		// Run migration for 3.3.10 (add content_type column).
+		if ( version_compare( $current_db_version, '3.3.10', '<' ) ) {
+			require_once TA_PLUGIN_DIR . 'includes/migrations/class-ta-migration-3-3-10.php';
+			TA_Migration_3_3_10::migrate();
+		}
+
+		// Update database version to current.
+		update_option( 'ta_db_version', TA_DB_VERSION, false );
+	}
+}
+add_action( 'plugins_loaded', 'ta_run_migrations', 1 );
 
 /**
  * Initialize the plugin.

@@ -180,7 +180,7 @@ class TA_Bot_Detector {
 				'name'             => $bot_name,
 				'color'            => $color,
 				'priority'         => $priority,
-				'detection_method' => $detection_result->get_detection_method(),
+				'detection_method' => $detection_result->get_method(),
 				'confidence'       => $detection_result->get_confidence(),
 			);
 		}
