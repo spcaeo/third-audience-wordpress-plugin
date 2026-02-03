@@ -259,15 +259,30 @@ class TA_Database_Auto_Fixer {
 		// Get existing columns.
 		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-		// Check and add missing columns.
+		// IMPORTANT: Add base columns FIRST (without AFTER clause), then dependent columns.
+		// This ensures proper order even if table schema is incomplete.
 		$required_columns = array(
+			// Phase 1: Base columns (no dependencies - add at end of table).
+			'page_url'     => "ALTER TABLE {$table} ADD COLUMN page_url varchar(500) NOT NULL AFTER user_agent",
+			'cache_hit'    => "ALTER TABLE {$table} ADD COLUMN cache_hit tinyint(1) DEFAULT 0 AFTER response_time",
 			'content_type' => "ALTER TABLE {$table} ADD COLUMN content_type varchar(50) DEFAULT 'html' AFTER traffic_type",
-			'is_citation'  => "ALTER TABLE {$table} ADD COLUMN is_citation tinyint(1) DEFAULT 0 AFTER cache_hit",
+			// Phase 2: Dependent columns (require base columns to exist).
 			'page_title'   => "ALTER TABLE {$table} ADD COLUMN page_title text DEFAULT NULL AFTER page_url",
+			'is_citation'  => "ALTER TABLE {$table} ADD COLUMN is_citation tinyint(1) DEFAULT 0 AFTER cache_hit",
 		);
 
 		foreach ( $required_columns as $column => $sql ) {
 			if ( ! in_array( $column, $columns, true ) ) {
+				// For dependent columns, check if the base column exists first.
+				if ( 'page_title' === $column && ! in_array( 'page_url', $columns, true ) ) {
+					// Skip page_title if page_url doesn't exist yet (will be added next loop).
+					continue;
+				}
+				if ( 'is_citation' === $column && ! in_array( 'cache_hit', $columns, true ) ) {
+					// Skip is_citation if cache_hit doesn't exist yet (will be added next loop).
+					continue;
+				}
+
 				$result = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 				if ( false !== $result ) {
@@ -279,6 +294,28 @@ class TA_Database_Auto_Fixer {
 				} else {
 					if ( $this->logger ) {
 						$this->logger->error( "Failed to add column: {$column}", array( 'error' => $wpdb->last_error ) );
+					}
+				}
+			}
+		}
+
+		// Second pass: Try again for dependent columns in case base columns were just added.
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$dependent_columns = array(
+			'page_title'   => "ALTER TABLE {$table} ADD COLUMN page_title text DEFAULT NULL AFTER page_url",
+			'is_citation'  => "ALTER TABLE {$table} ADD COLUMN is_citation tinyint(1) DEFAULT 0 AFTER cache_hit",
+		);
+
+		foreach ( $dependent_columns as $column => $sql ) {
+			if ( ! in_array( $column, $columns, true ) ) {
+				$result = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+
+				if ( false !== $result ) {
+					$added[] = $column;
+
+					if ( $this->logger ) {
+						$this->logger->info( "Added missing dependent column: {$column} to {$table}" );
 					}
 				}
 			}

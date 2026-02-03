@@ -137,8 +137,13 @@ class TA_Security_Bypass {
 			}
 
 			// Set method to default if it's restricted.
+			// This ensures REST API is accessible for environment detection.
 			if ( ! isset( $settings['rest-api']['method'] ) || 'default' !== $settings['rest-api']['method'] ) {
 				$settings['rest-api']['method'] = 'default';
+
+				if ( $this->logger ) {
+					$this->logger->info( 'iThemes Security: Set REST API method to default' );
+				}
 			}
 
 			// Add Third Audience to whitelist.
@@ -146,14 +151,29 @@ class TA_Security_Bypass {
 				$settings['rest-api']['whitelist'] = array();
 			}
 
-			if ( ! in_array( 'third-audience/v1', $settings['rest-api']['whitelist'], true ) ) {
-				$settings['rest-api']['whitelist'][] = 'third-audience/v1';
+			// Add both Third Audience namespace and WordPress core (for environment tests).
+			$required_namespaces = array(
+				'third-audience/v1',  // Third Audience endpoints.
+				'wp/v2',               // WordPress core REST API (used for environment detection).
+			);
+
+			$added = false;
+			foreach ( $required_namespaces as $namespace ) {
+				if ( ! in_array( $namespace, $settings['rest-api']['whitelist'], true ) ) {
+					$settings['rest-api']['whitelist'][] = $namespace;
+					$added = true;
+				}
 			}
 
-			update_site_option( 'itsec-storage', $settings );
+			if ( $added || ! isset( $settings['rest-api']['method'] ) || 'default' !== $settings['rest-api']['method'] ) {
+				update_site_option( 'itsec-storage', $settings );
+			}
 
 			if ( $this->logger ) {
-				$this->logger->info( 'iThemes Security whitelist updated' );
+				$this->logger->info( 'iThemes Security whitelist updated', array(
+					'namespaces' => $required_namespaces,
+					'method'     => 'default',
+				) );
 			}
 
 			return true;
