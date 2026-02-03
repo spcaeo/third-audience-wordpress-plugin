@@ -1227,6 +1227,16 @@ class TA_Admin {
 		// Delete the old environment detection setting.
 		delete_option( 'ta_environment_detection' );
 
+		// IMPORTANT: Run security bypass BEFORE detection to ensure REST API is whitelisted.
+		if ( class_exists( 'TA_Security_Bypass' ) ) {
+			$security_bypass  = new TA_Security_Bypass();
+			$security_results = $security_bypass->auto_configure_on_activation();
+
+			if ( $this->logger ) {
+				$this->logger->info( 'Security plugins reconfigured before re-detection', $security_results );
+			}
+		}
+
 		// Force re-detection using the Environment Detector class.
 		if ( class_exists( 'TA_Environment_Detector' ) ) {
 			$detector = new TA_Environment_Detector();

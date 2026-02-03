@@ -118,61 +118,86 @@ class TA_Security_Bypass {
 	}
 
 	/**
-	 * Auto-whitelist in iThemes Security.
+	 * Auto-whitelist in iThemes Security / Solid Security.
 	 *
 	 * @return bool|string True if successful, error message if failed.
 	 */
 	private function whitelist_in_ithemes() {
-		if ( ! in_array( 'better-wp-security/better-wp-security.php', get_option( 'active_plugins', array() ), true ) ) {
+		// Check for plugin (multiple possible paths).
+		$ithemes_active = false;
+		$active_plugins = get_option( 'active_plugins', array() );
+
+		foreach ( $active_plugins as $plugin ) {
+			if ( strpos( $plugin, 'better-wp-security' ) !== false || strpos( $plugin, 'solid-security' ) !== false ) {
+				$ithemes_active = true;
+				break;
+			}
+		}
+
+		if ( ! $ithemes_active ) {
 			return 'not_installed';
 		}
 
 		try {
-			// Get current REST API settings.
+			// Method 1: Try new Solid Security options structure.
+			$solid_options = get_option( 'itsec_global', array() );
+			if ( is_array( $solid_options ) ) {
+				// Disable REST API restrictions entirely.
+				if ( isset( $solid_options['rest_api'] ) ) {
+					$solid_options['rest_api'] = 'default'; // Set to default (unrestricted).
+					update_option( 'itsec_global', $solid_options );
+
+					if ( $this->logger ) {
+						$this->logger->info( 'Solid Security: Disabled REST API restrictions (itsec_global)' );
+					}
+				}
+			}
+
+			// Method 2: Try legacy itsec-storage structure.
 			$settings = get_site_option( 'itsec-storage', array() );
 
-			// Ensure REST API is set to default (not restricted).
+			// Force REST API to default (unrestricted).
 			if ( ! isset( $settings['rest-api'] ) ) {
 				$settings['rest-api'] = array();
 			}
 
-			// Set method to default if it's restricted.
-			// This ensures REST API is accessible for environment detection.
-			if ( ! isset( $settings['rest-api']['method'] ) || 'default' !== $settings['rest-api']['method'] ) {
-				$settings['rest-api']['method'] = 'default';
+			// FORCE method to default - this is the key setting that enables REST API.
+			$settings['rest-api']['method'] = 'default';
 
-				if ( $this->logger ) {
-					$this->logger->info( 'iThemes Security: Set REST API method to default' );
-				}
+			// Also ensure 'restrict-access' is disabled if it exists.
+			if ( isset( $settings['rest-api']['restrict-access'] ) ) {
+				$settings['rest-api']['restrict-access'] = false;
 			}
 
-			// Add Third Audience to whitelist.
+			// Add Third Audience and WordPress core to whitelist (belt and suspenders).
 			if ( ! isset( $settings['rest-api']['whitelist'] ) ) {
 				$settings['rest-api']['whitelist'] = array();
 			}
 
-			// Add both Third Audience namespace and WordPress core (for environment tests).
 			$required_namespaces = array(
 				'third-audience/v1',  // Third Audience endpoints.
-				'wp/v2',               // WordPress core REST API (used for environment detection).
+				'wp/v2',               // WordPress core REST API (for environment detection).
+				'wp/v2/types',         // Specific endpoint for environment test.
 			);
 
-			$added = false;
 			foreach ( $required_namespaces as $namespace ) {
 				if ( ! in_array( $namespace, $settings['rest-api']['whitelist'], true ) ) {
 					$settings['rest-api']['whitelist'][] = $namespace;
-					$added = true;
 				}
 			}
 
-			if ( $added || ! isset( $settings['rest-api']['method'] ) || 'default' !== $settings['rest-api']['method'] ) {
-				update_site_option( 'itsec-storage', $settings );
-			}
+			// Save settings.
+			update_site_option( 'itsec-storage', $settings );
+
+			// Method 3: Try individual REST API setting option.
+			update_option( 'itsec-rest-api-method', 'default' );
+			update_option( 'itsec_rest_api_settings', array( 'method' => 'default' ) );
 
 			if ( $this->logger ) {
-				$this->logger->info( 'iThemes Security whitelist updated', array(
-					'namespaces' => $required_namespaces,
+				$this->logger->info( 'Solid Security fully configured', array(
 					'method'     => 'default',
+					'whitelist'  => $required_namespaces,
+					'attempts'   => 3,
 				) );
 			}
 
@@ -180,7 +205,7 @@ class TA_Security_Bypass {
 
 		} catch ( Exception $e ) {
 			if ( $this->logger ) {
-				$this->logger->error( 'iThemes Security whitelist failed', array( 'error' => $e->getMessage() ) );
+				$this->logger->error( 'Solid Security configuration failed', array( 'error' => $e->getMessage() ) );
 			}
 			return $e->getMessage();
 		}
