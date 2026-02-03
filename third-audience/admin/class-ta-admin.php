@@ -102,6 +102,7 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_recalculate_ai_score', array( $this, 'ajax_recalculate_ai_score' ) );
 		add_action( 'wp_ajax_ta_test_ga4_connection', array( $this, 'ajax_test_ga4_connection' ) );
 		add_action( 'wp_ajax_ta_send_test_digest', array( $this, 'ajax_send_test_digest' ) );
+		add_action( 'wp_ajax_ta_redetect_environment', array( $this, 'ajax_redetect_environment' ) );
 	}
 
 	/**
@@ -1201,5 +1202,57 @@ class TA_Admin {
 			'message' => __( 'Score recalculated successfully.', 'third-audience' ),
 			'score'   => $score_data['score'],
 		) );
+	}
+
+	/**
+	 * AJAX handler to re-detect environment.
+	 *
+	 * Clears the stored environment detection and forces a fresh detection.
+	 * This is useful when REST API status changes or needs to be rechecked.
+	 *
+	 * @since 3.4.1
+	 * @return void
+	 */
+	public function ajax_redetect_environment() {
+		// Verify nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'ta-redetect-env' ) ) {
+			wp_send_json_error( __( 'Security check failed.', 'third-audience' ) );
+		}
+
+		// Verify user capability.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'You do not have permission to perform this action.', 'third-audience' ) );
+		}
+
+		// Delete the old environment detection setting.
+		delete_option( 'ta_environment_detection' );
+
+		// Force re-detection using the Environment Detector class.
+		if ( class_exists( 'TA_Environment_Detector' ) ) {
+			$detector = new TA_Environment_Detector();
+			$new_env  = $detector->detect_full_environment();
+			update_option( 'ta_environment_detection', $new_env );
+
+			$rest_api_accessible = ! empty( $new_env['rest_api']['accessible'] );
+
+			// Log the action.
+			if ( $this->logger ) {
+				$this->logger->info(
+					'Environment re-detected',
+					array(
+						'rest_api_accessible' => $rest_api_accessible,
+						'user_id'             => get_current_user_id(),
+					)
+				);
+			}
+
+			wp_send_json_success( array(
+				'message'              => __( 'Environment re-detected successfully! Page will reload to show updated status.', 'third-audience' ),
+				'rest_api_accessible'  => $rest_api_accessible,
+				'detection_time'       => $new_env['detection_time'],
+			) );
+		} else {
+			wp_send_json_error( __( 'Environment Detector class not found. Please ensure the plugin is properly installed.', 'third-audience' ) );
+		}
 	}
 }

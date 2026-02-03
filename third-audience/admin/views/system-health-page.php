@@ -17,6 +17,11 @@ $requirements = TA_Local_Converter::check_system_requirements();
 $update_checker = new TA_Update_Checker();
 $version_info   = $update_checker->get_version_info();
 
+// Get environment detection info.
+$env_detection = get_option( 'ta_environment_detection', array() );
+$rest_api_accessible = ! empty( $env_detection['rest_api']['accessible'] );
+$rest_api_status = $rest_api_accessible ? 'accessible' : 'not_accessible';
+
 // Calculate overall health.
 $has_errors   = false;
 $has_warnings = false;
@@ -212,6 +217,89 @@ $library_version = TA_Local_Converter::get_library_version();
 			</div>
 		</div>
 
+		<!-- Environment Detection -->
+		<div class="ta-card">
+			<div class="ta-card-header">
+				<h2><?php esc_html_e( 'Environment Detection', 'third-audience' ); ?></h2>
+			</div>
+			<div class="ta-card-body">
+				<div class="ta-info-grid">
+					<div class="ta-info-item">
+						<span class="ta-info-label"><?php esc_html_e( 'REST API Status', 'third-audience' ); ?></span>
+						<span class="ta-info-value" id="ta-rest-api-status">
+							<?php if ( $rest_api_accessible ) : ?>
+								<span class="ta-status-badge ta-status-success">
+									<span class="dashicons dashicons-yes-alt"></span>
+									<?php esc_html_e( 'Accessible', 'third-audience' ); ?>
+								</span>
+							<?php else : ?>
+								<span class="ta-status-badge ta-status-error">
+									<span class="dashicons dashicons-dismiss"></span>
+									<?php esc_html_e( 'Not Accessible (Fallback Mode)', 'third-audience' ); ?>
+								</span>
+							<?php endif; ?>
+						</span>
+					</div>
+					<div class="ta-info-item">
+						<span class="ta-info-label"><?php esc_html_e( 'Registered Endpoints', 'third-audience' ); ?></span>
+						<span class="ta-info-value">
+							<?php if ( $rest_api_accessible ) : ?>
+								<span class="ta-status-badge ta-status-success">
+									<?php esc_html_e( 'All endpoints (including /track-citation)', 'third-audience' ); ?>
+								</span>
+							<?php else : ?>
+								<span class="ta-status-badge ta-status-warning">
+									<?php esc_html_e( 'Limited (only /health endpoint)', 'third-audience' ); ?>
+								</span>
+							<?php endif; ?>
+						</span>
+					</div>
+					<div class="ta-info-item">
+						<span class="ta-info-label"><?php esc_html_e( 'Headless Mode', 'third-audience' ); ?></span>
+						<span class="ta-info-value">
+							<?php if ( $rest_api_accessible ) : ?>
+								<span class="ta-status-badge ta-status-success">
+									<span class="dashicons dashicons-yes-alt"></span>
+									<?php esc_html_e( 'Fully Functional', 'third-audience' ); ?>
+								</span>
+							<?php else : ?>
+								<span class="ta-status-badge ta-status-error">
+									<span class="dashicons dashicons-warning"></span>
+									<?php esc_html_e( 'Citation Tracking Disabled', 'third-audience' ); ?>
+								</span>
+							<?php endif; ?>
+						</span>
+					</div>
+					<div class="ta-info-item">
+						<span class="ta-info-label"><?php esc_html_e( 'Detection Time', 'third-audience' ); ?></span>
+						<span class="ta-info-value">
+							<code><?php echo esc_html( ! empty( $env_detection['detection_time'] ) ? $env_detection['detection_time'] : 'Not yet detected' ); ?></code>
+						</span>
+					</div>
+				</div>
+
+				<div class="ta-card-actions" style="margin-top: 20px;">
+					<button type="button" id="ta-redetect-environment" class="button button-primary">
+						<span class="dashicons dashicons-update" style="margin-top: 3px;"></span>
+						<?php esc_html_e( 'Re-detect Environment', 'third-audience' ); ?>
+					</button>
+					<span id="ta-redetect-message" style="margin-left: 10px;"></span>
+				</div>
+
+				<?php if ( ! $rest_api_accessible ) : ?>
+					<div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 3px;">
+						<p style="margin: 0; color: #856404;">
+							<strong><?php esc_html_e( 'Action Required:', 'third-audience' ); ?></strong>
+							<?php esc_html_e( 'REST API is detected as not accessible. This may be incorrect. Click "Re-detect Environment" to force a fresh detection.', 'third-audience' ); ?>
+						</p>
+						<p style="margin: 10px 0 0 0; color: #856404; font-size: 13px;">
+							<?php esc_html_e( 'If the issue persists after re-detection, check your hosting environment for security plugins or firewall rules that may be blocking REST API access.', 'third-audience' ); ?>
+						</p>
+					</div>
+				<?php endif; ?>
+			</div>
+		</div>
+
 		<!-- Key Features -->
 		<div class="ta-card ta-features-card">
 			<div class="ta-card-header">
@@ -304,3 +392,53 @@ composer install --no-dev --optimize-autoloader</pre>
 		</div>
 	<?php endif; ?>
 </div>
+
+<!-- Re-detect Environment Script -->
+<script type="text/javascript">
+jQuery(document).ready(function($) {
+	$('#ta-redetect-environment').on('click', function() {
+		var $button = $(this);
+		var $message = $('#ta-redetect-message');
+		var $statusDisplay = $('#ta-rest-api-status');
+
+		// Disable button and show loading
+		$button.prop('disabled', true).text('Re-detecting...');
+		$message.html('<span style="color: #666;">Please wait...</span>');
+
+		$.ajax({
+			url: ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'ta_redetect_environment',
+				nonce: '<?php echo esc_js( wp_create_nonce( 'ta-redetect-env' ) ); ?>'
+			},
+			success: function(response) {
+				if (response.success) {
+					$message.html('<span style="color: #46b450;"><span class="dashicons dashicons-yes-alt"></span> ' + response.data.message + '</span>');
+
+					// Update the status display
+					if (response.data.rest_api_accessible) {
+						$statusDisplay.html('<span class="ta-status-badge ta-status-success"><span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'Accessible', 'third-audience' ); ?></span>');
+					} else {
+						$statusDisplay.html('<span class="ta-status-badge ta-status-error"><span class="dashicons dashicons-dismiss"></span> <?php esc_html_e( 'Not Accessible (Fallback Mode)', 'third-audience' ); ?></span>');
+					}
+
+					// Reload page after 2 seconds to show all updated info
+					setTimeout(function() {
+						location.reload();
+					}, 2000);
+				} else {
+					$message.html('<span style="color: #dc3232;"><span class="dashicons dashicons-dismiss"></span> ' + response.data + '</span>');
+				}
+			},
+			error: function() {
+				$message.html('<span style="color: #dc3232;"><span class="dashicons dashicons-dismiss"></span> <?php esc_html_e( 'Failed to re-detect. Please try again.', 'third-audience' ); ?></span>');
+			},
+			complete: function() {
+				// Re-enable button
+				$button.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> <?php esc_html_e( 'Re-detect Environment', 'third-audience' ); ?>');
+			}
+		});
+	});
+});
+</script>
