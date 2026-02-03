@@ -446,18 +446,20 @@ function ta_activate() {
 	// Log activation.
 	$logger->info( 'Plugin activated.', array( 'version' => TA_VERSION ) );
 
-	// PHASE 1: Detect environment.
+	// PHASE 1: Auto-configure security plugins FIRST (before environment detection).
+	// This ensures REST API is whitelisted before we test if it's accessible.
+	$security_bypass  = new TA_Security_Bypass();
+	$security_results = $security_bypass->auto_configure_on_activation();
+	$logger->info( 'Security plugins configured', $security_results );
+
+	// PHASE 2: Detect environment AFTER security plugins are whitelisted.
+	// This ensures accurate REST API accessibility detection.
 	$detector    = new TA_Environment_Detector();
 	$environment = $detector->detect_full_environment();
 
 	// Store environment detection results.
 	update_option( 'ta_environment_detection', $environment );
 	$logger->info( 'Environment detected', $environment );
-
-	// PHASE 2: Auto-configure security plugins.
-	$security_bypass = new TA_Security_Bypass();
-	$security_results = $security_bypass->auto_configure_on_activation();
-	$logger->info( 'Security plugins configured', $security_results );
 
 	// PHASE 3: Fix database automatically.
 	$db_fixer = new TA_Database_Auto_Fixer();
