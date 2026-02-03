@@ -138,23 +138,26 @@ class TA_AJAX_Fallback {
 		$result = $wpdb->insert(
 			$table,
 			array(
-				'page_url'      => $url,
-				'page_title'    => $page_title,
-				'bot_name'      => $platform,
-				'bot_type'      => 'ai_citation',
-				'user_agent'    => 'AJAX Fallback',
-				'ip_address'    => $ip,
-				'referer'       => $referer,
-				'search_query'  => $search_query,
-				'traffic_type'  => 'citation_click',
-				'content_type'  => 'ajax',
-				'status_code'   => 200,
-				'response_time' => 0,
-				'cache_hit'     => 0,
-				'is_citation'   => 1,
-				'visited_at'    => current_time( 'mysql' ),
+				'url'              => $url,
+				'post_id'          => $post_id,
+				'post_title'       => $page_title,
+				'bot_name'         => $platform,
+				'bot_type'         => 'AI_Citation',
+				'user_agent'       => 'AJAX Fallback',
+				'ip_address'       => $ip,
+				'referer'          => $referer,
+				'search_query'     => $search_query,
+				'traffic_type'     => 'citation_click',
+				'content_type'     => 'ajax',
+				'request_method'   => 'ajax_fallback',
+				'cache_status'     => 'N/A',
+				'response_time'    => 0,
+				'ai_platform'      => $platform,
+				'referer_source'   => $platform,
+				'referer_medium'   => 'ai_citation',
+				'visit_timestamp'  => current_time( 'mysql' ),
 			),
-			array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%s' )
+			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' )
 		);
 
 		if ( $result ) {
