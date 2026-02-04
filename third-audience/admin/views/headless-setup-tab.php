@@ -408,7 +408,7 @@ export default function RootLayout({ children }) {
 								<?php esc_html_e( 'Add these to your .env.local file in your Next.js project root:', 'third-audience' ); ?>
 							</p>
 							<div style="background: #1e1e1e; border-radius: 6px; padding: 15px; position: relative;">
-								<pre style="margin: 0; color: #d4d4d4; font-size: 13px; overflow-x: auto;"><code id="env-vars-code">TA_CITATION_API_URL=<?php echo esc_html( $citation_endpoint_modal ); ?>
+								<pre style="margin: 0; color: #d4d4d4; font-size: 13px; overflow-x: auto;"><code id="env-vars-code">WORDPRESS_URL=<?php echo esc_html( rtrim( home_url(), '/' ) ); ?>
 
 TA_CITATION_API_KEY=<?php echo esc_html( $citation_api_key_modal ); ?></code></pre>
 								<button type="button" class="button ta-copy-btn" data-target="env-vars-code" style="position: absolute; top: 10px; right: 10px; padding: 5px 12px; font-size: 12px;">
@@ -478,27 +478,60 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
 }
 
 /**
- * Track citation to WordPress (fire and forget)
+ * Track citation using AJAX-FIRST architecture
+ *
+ * Why AJAX first?
+ * - Works with ALL security plugins (Solid Security, Wordfence, etc.)
+ * - Standard WordPress API method since WP 2.8
+ * - No REST API conflicts or blocks
  */
 async function trackCitation(request: NextRequest, citation: { platform: string; query?: string }) {
+  const wordpressUrl = process.env.WORDPRESS_URL || 'https://your-site.com';
+  const apiKey = process.env.TA_CITATION_API_KEY || '';
+
+  const data = {
+    url: request.nextUrl.pathname,
+    platform: citation.platform,
+    referer: request.headers.get('referer') || '',
+    search_query: citation.query || '',
+    ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+  };
+
   try {
-    await fetch(process.env.TA_CITATION_API_URL!, {
+    // METHOD 1: AJAX (primary - works with ALL security plugins)
+    const ajaxResponse = await fetch(`${wordpressUrl}/wp-admin/admin-ajax.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        action: 'ta_track_citation',
+        api_key: apiKey,
+        ...data,
+      }),
+    });
+
+    if (ajaxResponse.ok) {
+      console.log('[Citation] ✅ Tracked via AJAX');
+      return;
+    }
+
+    // METHOD 2: REST API (fallback - may be blocked by security plugins)
+    const restResponse = await fetch(`${wordpressUrl}/wp-json/third-audience/v1/track-citation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-TA-Api-Key': process.env.TA_CITATION_API_KEY!,
+        'X-TA-Api-Key': apiKey,
       },
-      body: JSON.stringify({
-        url: request.nextUrl.pathname,
-        platform: citation.platform,
-        referer: request.headers.get('referer') || '',
-        search_query: citation.query || '',
-        ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
-      }),
+      body: JSON.stringify(data),
     });
+
+    if (restResponse.ok) {
+      console.log('[Citation] ✅ Tracked via REST API');
+      return;
+    }
+
+    console.error('[Citation] ❌ All methods failed');
   } catch (error) {
-    // Silently fail - don't block user request
-    console.error('Citation tracking failed:', error);
+    console.error('[Citation] ❌ Error:', error);
   }
 }
 
@@ -561,21 +594,29 @@ export const config = {
 					</h3>
 					<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
 						<tr>
-							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600; width: 140px;"><?php esc_html_e( 'API Endpoint', 'third-audience' ); ?></td>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600; width: 140px;"><?php esc_html_e( 'WordPress URL', 'third-audience' ); ?></td>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
+								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;"><?php echo esc_html( rtrim( home_url(), '/' ) ); ?></code>
+							</td>
+						</tr>
+						<tr>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600;"><?php esc_html_e( 'AJAX Endpoint', 'third-audience' ); ?></td>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
+								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;">/wp-admin/admin-ajax.php</code>
+								<span style="background: #46b450; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-left: 8px;">Primary</span>
+							</td>
+						</tr>
+						<tr>
+							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600;"><?php esc_html_e( 'REST Endpoint', 'third-audience' ); ?></td>
 							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
 								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;"><?php echo esc_html( $citation_endpoint_modal ); ?></code>
+								<span style="background: #f0f0f1; color: #666; padding: 2px 6px; border-radius: 3px; font-size: 11px; margin-left: 8px;">Fallback</span>
 							</td>
 						</tr>
 						<tr>
 							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600;"><?php esc_html_e( 'API Key', 'third-audience' ); ?></td>
 							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
 								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;"><?php echo esc_html( $citation_api_key_modal ); ?></code>
-							</td>
-						</tr>
-						<tr>
-							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff; font-weight: 600;"><?php esc_html_e( 'Auth Header', 'third-audience' ); ?></td>
-							<td style="padding: 8px 0; border-bottom: 1px solid #b8daff;">
-								<code style="background: white; padding: 3px 8px; border-radius: 3px; font-size: 12px;">X-TA-Api-Key: [your-key]</code>
 							</td>
 						</tr>
 						<tr>
@@ -824,20 +865,22 @@ export const config = {
 		</table>
 
 		<div style="margin-top: 15px;">
-			<h3><?php esc_html_e( 'Next.js Middleware for Citation Tracking', 'third-audience' ); ?></h3>
-			<p class="description"><?php esc_html_e( 'Add this to your middleware.ts to track AI citations:', 'third-audience' ); ?></p>
+			<h3><?php esc_html_e( 'Next.js Middleware for Citation Tracking (AJAX-First)', 'third-audience' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'Add this to your middleware.ts to track AI citations. Uses AJAX first (works with ALL security plugins):', 'third-audience' ); ?></p>
 			<pre style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 13px;"><code>// .env.local
-TA_CITATION_API_URL=<?php echo esc_html( $citation_endpoint ); ?>
+WORDPRESS_URL=<?php echo esc_html( rtrim( home_url(), '/' ) ); ?>
 
 TA_CITATION_API_KEY=<?php echo esc_html( $citation_api_key ); ?>
 
 
-// middleware.ts - Add this detection code
+// middleware.ts - AJAX-first approach
 const AI_CITATION_SOURCES = [
   { pattern: /chatgpt/i, name: 'ChatGPT' },
   { pattern: /perplexity/i, name: 'Perplexity' },
   { pattern: /claude/i, name: 'Claude' },
   { pattern: /gemini/i, name: 'Gemini' },
+  { pattern: /copilot/i, name: 'Copilot' },
+  { pattern: /bing/i, name: 'Bing AI' },
 ];
 
 function detectAICitation(request: NextRequest): { platform: string; query?: string } | null {
@@ -857,7 +900,6 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
   // Check referer
   for (const source of AI_CITATION_SOURCES) {
     if (source.pattern.test(referer)) {
-      // Extract query from Perplexity referer
       if (source.name === 'Perplexity' && referer.includes('?q=')) {
         const match = referer.match(/[?&]q=([^&]+)/);
         return { platform: source.name, query: match ? decodeURIComponent(match[1]) : undefined };
@@ -869,25 +911,50 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
   return null;
 }
 
-// In your middleware function:
-export async function middleware(request: NextRequest) {
-  const citation = detectAICitation(request);
-  if (citation) {
-    // Fire and forget - non-blocking
-    fetch(process.env.TA_CITATION_API_URL!, {
+async function trackCitation(request: NextRequest, citation: { platform: string; query?: string }) {
+  const wordpressUrl = process.env.WORDPRESS_URL;
+  const apiKey = process.env.TA_CITATION_API_KEY;
+
+  const data = {
+    url: request.nextUrl.pathname,
+    platform: citation.platform,
+    referer: request.headers.get('referer') || '',
+    search_query: citation.query || '',
+    ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+  };
+
+  try {
+    // AJAX first (works with ALL security plugins)
+    const ajaxResponse = await fetch(`${wordpressUrl}/wp-admin/admin-ajax.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        action: 'ta_track_citation',
+        api_key: apiKey,
+        ...data,
+      }),
+    });
+
+    if (ajaxResponse.ok) return;
+
+    // Fallback to REST API if AJAX fails
+    await fetch(`${wordpressUrl}/wp-json/third-audience/v1/track-citation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-TA-Api-Key': process.env.TA_CITATION_API_KEY!,
+        'X-TA-Api-Key': apiKey,
       },
-      body: JSON.stringify({
-        url: request.nextUrl.pathname,
-        platform: citation.platform,
-        referer: request.headers.get('referer') || '',
-        search_query: citation.query || '',
-        ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
-      }),
-    }).catch(() => {}); // Ignore errors
+      body: JSON.stringify(data),
+    });
+  } catch (error) {
+    console.error('[Citation] Error:', error);
+  }
+}
+
+export async function middleware(request: NextRequest) {
+  const citation = detectAICitation(request);
+  if (citation) {
+    trackCitation(request, citation); // Fire and forget
   }
 
   return NextResponse.next();
