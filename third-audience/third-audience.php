@@ -1356,12 +1356,12 @@ function ta_track_citation_callback( $request ) {
 	// Log the citation.
 	if ( class_exists( 'TA_Logger' ) ) {
 		$logger = TA_Logger::get_instance();
-		$logger->log( sprintf(
+		$logger->info( sprintf(
 			'Citation tracked via API: %s from %s (query: %s)',
 			$url,
 			$platform,
 			$search_query ?: 'none'
-		), 'info' );
+		) );
 	}
 
 	return new WP_REST_Response( array(
