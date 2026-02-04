@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.4.2
+ * Version: 3.4.3
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.4.2' );
+define( 'TA_VERSION', '3.4.3' );
 
 /**
  * Database version for migrations.
@@ -486,6 +486,9 @@ function ta_activate() {
 	}
 
 	// PHASE 5: Standard activation tasks.
+	// Force-register REST API routes before flushing rewrite rules.
+	// This ensures REST routes are available even after plugin reactivation.
+	ta_register_rest_routes();
 	flush_rewrite_rules();
 
 	// Set default options if not exists (non-autoload for performance).
@@ -806,6 +809,192 @@ function ta_register_rest_routes() {
 	) );
 }
 add_action( 'rest_api_init', 'ta_register_rest_routes' );
+
+/**
+ * Register GraphQL mutation for citation tracking (headless WordPress support).
+ *
+ * Provides alternative to REST API for headless sites using WPGraphQL.
+ * Works even when REST API is blocked by security plugins.
+ *
+ * @since 3.4.2
+ * @return void
+ */
+function ta_register_graphql_mutation() {
+	// Only register if WPGraphQL is active.
+	if ( ! function_exists( 'register_graphql_mutation' ) ) {
+		return;
+	}
+
+	register_graphql_mutation(
+		'trackCitation',
+		array(
+			'inputFields' => array(
+				'url'         => array(
+					'type'        => 'String',
+					'description' => 'The page URL that was cited',
+				),
+				'platform'    => array(
+					'type'        => 'String',
+					'description' => 'The AI platform name (ChatGPT, Perplexity, etc.)',
+				),
+				'referer'     => array(
+					'type'        => 'String',
+					'description' => 'The HTTP referer URL',
+				),
+				'searchQuery' => array(
+					'type'        => 'String',
+					'description' => 'The search query if available',
+				),
+				'apiKey'      => array(
+					'type'        => 'String',
+					'description' => 'The API key for authentication',
+				),
+			),
+			'outputFields' => array(
+				'success'  => array(
+					'type'        => 'Boolean',
+					'description' => 'Whether the citation was tracked successfully',
+				),
+				'message'  => array(
+					'type'        => 'String',
+					'description' => 'Response message',
+				),
+				'platform' => array(
+					'type'        => 'String',
+					'description' => 'The normalized platform name',
+				),
+				'url'      => array(
+					'type'        => 'String',
+					'description' => 'The URL that was tracked',
+				),
+			),
+			'mutateAndGetPayload' => function( $input ) {
+				// Verify API key.
+				$configured_key = get_option( 'ta_headless_api_key', '' );
+				if ( empty( $configured_key ) ) {
+					$configured_key = wp_generate_password( 32, false );
+					update_option( 'ta_headless_api_key', $configured_key );
+				}
+
+				$provided_key = $input['apiKey'] ?? '';
+				if ( empty( $provided_key ) || ! hash_equals( $configured_key, $provided_key ) ) {
+					return array(
+						'success' => false,
+						'message' => 'Invalid or missing API key',
+					);
+				}
+
+				// Rate limiting (reuse existing function).
+				$client_ip     = ta_get_client_ip_for_rate_limit();
+				$transient_key = 'ta_citation_rate_' . md5( $client_ip );
+				$request_count = (int) get_transient( $transient_key );
+
+				if ( $request_count >= 30 ) {
+					return array(
+						'success' => false,
+						'message' => 'Too many requests. Please try again later.',
+					);
+				}
+				set_transient( $transient_key, $request_count + 1, MINUTE_IN_SECONDS );
+
+				// Validate platform.
+				$platform = ucfirst( strtolower( sanitize_text_field( $input['platform'] ) ) );
+				$url      = sanitize_text_field( $input['url'] ?? '/' );
+				$referer  = esc_url_raw( $input['referer'] ?? '' );
+				$query    = sanitize_text_field( $input['searchQuery'] ?? '' );
+
+				// Get page data.
+				$post_id    = url_to_postid( $url );
+				$post_type  = null;
+				$page_title = '';
+				if ( $post_id ) {
+					$page_title = get_the_title( $post_id );
+					$post       = get_post( $post_id );
+					$post_type  = $post ? $post->post_type : null;
+				}
+
+				// Geolocation lookup.
+				$country_code = null;
+				if ( class_exists( 'TA_Geolocation' ) ) {
+					$geolocation  = TA_Geolocation::get_instance();
+					$country_code = $geolocation->get_geolocation( $client_ip );
+				}
+
+				// IP verification.
+				$ip_verified = null;
+				$ip_verification_method = null;
+				if ( class_exists( 'TA_IP_Verifier' ) ) {
+					$ip_verifier = TA_IP_Verifier::get_instance();
+					$verification_result = $ip_verifier->verify_bot_ip( 'AI_Citation', $client_ip );
+					$ip_verified = $verification_result['verified'];
+					$ip_verification_method = $verification_result['method'];
+				}
+
+				// Duplicate prevention.
+				$dedup_key = 'ta_citation_' . md5( $url . $platform . $client_ip );
+				if ( get_transient( $dedup_key ) ) {
+					return array(
+						'success'  => true,
+						'message'  => 'Citation already tracked recently',
+						'platform' => $platform,
+						'url'      => $url,
+					);
+				}
+				set_transient( $dedup_key, true, 5 * MINUTE_IN_SECONDS );
+
+				// Insert into database.
+				global $wpdb;
+				$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+				$result = $wpdb->insert(
+					$table_name,
+					array(
+						'url'                    => $url,
+						'post_id'                => $post_id,
+						'post_type'              => $post_type,
+						'post_title'             => $page_title,
+						'bot_name'               => $platform,
+						'bot_type'               => 'AI_Citation',
+						'user_agent'             => 'GraphQL API',
+						'ip_address'             => $client_ip,
+						'country_code'           => $country_code,
+						'referer'                => $referer,
+						'search_query'           => $query,
+						'traffic_type'           => 'citation_click',
+						'content_type'           => 'graphql',
+						'request_method'         => 'graphql',
+						'cache_status'           => 'N/A',
+						'response_time'          => 0,
+						'ai_platform'            => $platform,
+						'referer_source'         => $platform,
+						'referer_medium'         => 'ai_citation',
+						'detection_method'       => 'graphql_api',
+						'confidence_score'       => 1.0,
+						'ip_verified'            => $ip_verified,
+						'ip_verification_method' => $ip_verification_method,
+						'visit_timestamp'        => current_time( 'mysql' ),
+					),
+					array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s' )
+				);
+
+				if ( $result ) {
+					return array(
+						'success'  => true,
+						'message'  => 'Citation tracked successfully via GraphQL',
+						'platform' => $platform,
+						'url'      => $url,
+					);
+				} else {
+					return array(
+						'success' => false,
+						'message' => 'Database error',
+					);
+				}
+			},
+		)
+	);
+}
+add_action( 'graphql_register_types', 'ta_register_graphql_mutation' );
 
 /**
  * Health check callback.
@@ -1323,8 +1512,77 @@ function ta_daily_health_check() {
 			}
 		}
 	}
+
+	// Verify REST API routes are registered.
+	// This fixes the issue where routes disappear after plugin reactivation.
+	ta_verify_rest_routes();
 }
 add_action( 'ta_daily_health_check', 'ta_daily_health_check' );
+
+/**
+ * Verify and fix REST API routes if missing.
+ *
+ * This fixes the common issue where REST API routes don't get registered
+ * after plugin reactivation. Happens because rest_api_init fires before
+ * activation hook completes.
+ *
+ * @since 3.4.2
+ * @return void
+ */
+function ta_verify_rest_routes() {
+	// Check if our routes are registered.
+	$server = rest_get_server();
+	$routes = $server->get_routes();
+
+	// Check for our main routes.
+	$required_routes = array(
+		'/third-audience/v1/health',
+		'/third-audience/v1/track-citation',
+	);
+
+	$missing_routes = array();
+	foreach ( $required_routes as $route ) {
+		if ( ! isset( $routes[ $route ] ) ) {
+			$missing_routes[] = $route;
+		}
+	}
+
+	// If routes are missing, re-register and flush.
+	if ( ! empty( $missing_routes ) ) {
+		ta_register_rest_routes();
+		flush_rewrite_rules();
+
+		if ( class_exists( 'TA_Logger' ) ) {
+			$logger = TA_Logger::get_instance();
+			$logger->info( 'REST API routes were missing and have been re-registered', array(
+				'missing_routes' => $missing_routes,
+			) );
+		}
+
+		// Show admin notice.
+		set_transient( 'ta_routes_fixed', true, HOUR_IN_SECONDS );
+	}
+}
+
+/**
+ * Check REST API routes on admin pages.
+ *
+ * Runs verification whenever admin accesses WordPress admin area.
+ * Fixes routes immediately if they're missing.
+ *
+ * @since 3.4.2
+ * @return void
+ */
+function ta_check_routes_on_admin_init() {
+	// Only check once per hour to avoid performance impact.
+	if ( get_transient( 'ta_routes_checked' ) ) {
+		return;
+	}
+
+	ta_verify_rest_routes();
+	set_transient( 'ta_routes_checked', true, HOUR_IN_SECONDS );
+}
+add_action( 'admin_init', 'ta_check_routes_on_admin_init' );
 
 /**
  * Initialize admin notices system.
