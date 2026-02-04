@@ -124,11 +124,32 @@ class TA_AJAX_Fallback {
 		// Normalize platform name.
 		$platform = ucfirst( strtolower( $platform ) );
 
-		// Get page title from URL if possible.
+		// Get page title and post data from URL.
 		$page_title = '';
 		$post_id    = url_to_postid( $url );
+		$post_type  = null;
 		if ( $post_id ) {
 			$page_title = get_the_title( $post_id );
+			$post       = get_post( $post_id );
+			$post_type  = $post ? $post->post_type : null;
+		}
+
+		// Geolocation lookup.
+		$country_code = null;
+		if ( class_exists( 'TA_Geolocation' ) ) {
+			$geolocation  = TA_Geolocation::get_instance();
+			$country_code = $geolocation->get_geolocation( $ip );
+		}
+
+		// IP verification.
+		$ip_verified = null;
+		$ip_verification_method = null;
+		if ( class_exists( 'TA_IP_Verifier' ) ) {
+			$ip_verifier = TA_IP_Verifier::get_instance();
+			// For citations, we don't have a specific bot_type, so use generic verification
+			$verification_result = $ip_verifier->verify_bot_ip( 'AI_Citation', $ip );
+			$ip_verified = $verification_result['verified'];
+			$ip_verification_method = $verification_result['method'];
 		}
 
 		// Insert into database.
@@ -138,26 +159,32 @@ class TA_AJAX_Fallback {
 		$result = $wpdb->insert(
 			$table,
 			array(
-				'url'              => $url,
-				'post_id'          => $post_id,
-				'post_title'       => $page_title,
-				'bot_name'         => $platform,
-				'bot_type'         => 'AI_Citation',
-				'user_agent'       => 'AJAX Fallback',
-				'ip_address'       => $ip,
-				'referer'          => $referer,
-				'search_query'     => $search_query,
-				'traffic_type'     => 'citation_click',
-				'content_type'     => 'ajax',
-				'request_method'   => 'ajax_fallback',
-				'cache_status'     => 'N/A',
-				'response_time'    => 0,
-				'ai_platform'      => $platform,
-				'referer_source'   => $platform,
-				'referer_medium'   => 'ai_citation',
-				'visit_timestamp'  => current_time( 'mysql' ),
+				'url'                    => $url,
+				'post_id'                => $post_id,
+				'post_type'              => $post_type,
+				'post_title'             => $page_title,
+				'bot_name'               => $platform,
+				'bot_type'               => 'AI_Citation',
+				'user_agent'             => 'AJAX Fallback',
+				'ip_address'             => $ip,
+				'country_code'           => $country_code,
+				'referer'                => $referer,
+				'search_query'           => $search_query,
+				'traffic_type'           => 'citation_click',
+				'content_type'           => 'ajax',
+				'request_method'         => 'ajax_fallback',
+				'cache_status'           => 'N/A',
+				'response_time'          => 0,
+				'ai_platform'            => $platform,
+				'referer_source'         => $platform,
+				'referer_medium'         => 'ai_citation',
+				'detection_method'       => 'ajax_api',
+				'confidence_score'       => 1.0,
+				'ip_verified'            => $ip_verified,
+				'ip_verification_method' => $ip_verification_method,
+				'visit_timestamp'        => current_time( 'mysql' ),
 			),
-			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s' )
+			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s' )
 		);
 
 		if ( $result ) {

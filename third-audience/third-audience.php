@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.4.1
+ * Version: 3.4.2
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.4.1' );
+define( 'TA_VERSION', '3.4.2' );
 
 /**
  * Database version for migrations.
@@ -1097,11 +1097,31 @@ function ta_track_citation_callback( $request ) {
 	);
 	$platform_color = isset( $platform_colors[ $platform ] ) ? $platform_colors[ $platform ] : '#8B5CF6';
 
-	// Get page title from URL if possible.
+	// Get page title and post data from URL.
 	$page_title = '';
 	$post_id    = url_to_postid( $url );
+	$post_type  = null;
 	if ( $post_id ) {
 		$page_title = get_the_title( $post_id );
+		$post       = get_post( $post_id );
+		$post_type  = $post ? $post->post_type : null;
+	}
+
+	// Geolocation lookup.
+	$country_code = null;
+	if ( class_exists( 'TA_Geolocation' ) ) {
+		$geolocation  = TA_Geolocation::get_instance();
+		$country_code = $geolocation->get_geolocation( $ip );
+	}
+
+	// IP verification.
+	$ip_verified = null;
+	$ip_verification_method = null;
+	if ( class_exists( 'TA_IP_Verifier' ) ) {
+		$ip_verifier = TA_IP_Verifier::get_instance();
+		$verification_result = $ip_verifier->verify_bot_ip( 'AI_Citation', $ip );
+		$ip_verified = $verification_result['verified'];
+		$ip_verification_method = $verification_result['method'];
 	}
 
 	// Insert into bot analytics table.
@@ -1109,21 +1129,32 @@ function ta_track_citation_callback( $request ) {
 	$result     = $wpdb->insert(
 		$table_name,
 		array(
-			'page_url'      => $url,
-			'page_title'    => $page_title,
-			'bot_name'      => $platform,
-			'bot_type'      => 'ai_citation',
-			'user_agent'    => 'Headless Frontend',
-			'ip_address'    => $ip,
-			'referer'       => $referer,
-			'status_code'   => 200,
-			'response_time' => 0,
-			'cache_hit'     => 0,
-			'is_citation'   => 1,
-			'search_query'  => $search_query,
-			'visited_at'    => current_time( 'mysql' ),
+			'url'                    => $url,
+			'post_id'                => $post_id,
+			'post_type'              => $post_type,
+			'post_title'             => $page_title,
+			'bot_name'               => $platform,
+			'bot_type'               => 'AI_Citation',
+			'user_agent'             => 'Headless Frontend',
+			'ip_address'             => $ip,
+			'country_code'           => $country_code,
+			'referer'                => $referer,
+			'search_query'           => $search_query,
+			'traffic_type'           => 'citation_click',
+			'content_type'           => 'rest_api',
+			'request_method'         => 'rest_api',
+			'cache_status'           => 'N/A',
+			'response_time'          => 0,
+			'ai_platform'            => $platform,
+			'referer_source'         => $platform,
+			'referer_medium'         => 'ai_citation',
+			'detection_method'       => 'rest_api',
+			'confidence_score'       => 1.0,
+			'ip_verified'            => $ip_verified,
+			'ip_verification_method' => $ip_verification_method,
+			'visit_timestamp'        => current_time( 'mysql' ),
 		),
-		array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%s', '%s' )
+		array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s' )
 	);
 
 	if ( false === $result ) {

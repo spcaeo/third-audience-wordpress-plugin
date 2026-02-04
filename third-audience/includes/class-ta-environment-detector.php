@@ -75,8 +75,8 @@ class TA_Environment_Detector {
 	 * @return array Detection result with status and method.
 	 */
 	public function detect_rest_api_access() {
-		// Test 1: Try internal WordPress REST API call.
-		$test_url = rest_url( 'wp/v2/types/post' );
+		// Test 1: Try our own health check endpoint (more reliable than WP core endpoints).
+		$test_url = rest_url( 'third-audience/v1/health' );
 		$response = wp_remote_get(
 			$test_url,
 			array(
@@ -86,16 +86,45 @@ class TA_Environment_Detector {
 			)
 		);
 
+		// Check if our endpoint is accessible.
 		if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
+			$body = wp_remote_retrieve_body( $response );
+			$data = json_decode( $body, true );
+
+			// Verify it's actually our endpoint responding.
+			if ( isset( $data['status'] ) ) {
+				return array(
+					'accessible' => true,
+					'method'     => 'standard',
+					'message'    => 'REST API fully accessible',
+					'blocker'    => null,
+				);
+			}
+		}
+
+		// Test 2: Fallback - try WordPress core endpoint.
+		$core_test_url = rest_url( 'wp/v2/types/post' );
+		$core_response = wp_remote_get(
+			$core_test_url,
+			array(
+				'timeout'     => 5,
+				'sslverify'   => false,
+				'httpversion' => '1.1',
+			)
+		);
+
+		if ( ! is_wp_error( $core_response ) && 200 === wp_remote_retrieve_response_code( $core_response ) ) {
+			// Core REST works but our plugin endpoint doesn't - might be plugin-specific block.
 			return array(
-				'accessible' => true,
-				'method'     => 'standard',
-				'message'    => 'REST API fully accessible',
-				'blocker'    => null,
+				'accessible' => false,
+				'method'     => 'blocked_selective',
+				'message'    => 'REST API blocked for Third Audience endpoints',
+				'blocker'    => 'selective_block',
+				'fallback'   => 'use_admin_ajax',
 			);
 		}
 
-		// Test 2: Check if blocked by security plugin.
+		// Test 3: Check if blocked by security plugin.
 		$security_block = $this->detect_security_plugin_blocks();
 		if ( $security_block ) {
 			return array(
@@ -107,7 +136,7 @@ class TA_Environment_Detector {
 			);
 		}
 
-		// Test 3: Check if blocked by server config.
+		// Test 4: Check if blocked by server config.
 		if ( $this->is_blocked_by_server() ) {
 			return array(
 				'accessible' => false,
