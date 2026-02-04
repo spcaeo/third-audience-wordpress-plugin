@@ -201,6 +201,10 @@ class TA_Security_Bypass {
 				) );
 			}
 
+			// Clear Solid Security cache to force immediate reload of settings.
+			// This ensures REST API test sees the updated whitelist immediately.
+			$this->clear_solid_security_cache();
+
 			return true;
 
 		} catch ( Exception $e ) {
@@ -408,5 +412,36 @@ class TA_Security_Bypass {
 		);
 
 		return isset( $instructions[ $plugin_name ] ) ? $instructions[ $plugin_name ] : '<p>No manual instructions available for this plugin.</p>';
+	}
+
+	/**
+	 * Clear Solid Security cache to force immediate settings reload.
+	 *
+	 * Solid Security caches its settings, which can cause REST API whitelist
+	 * changes to not take effect immediately. This method clears all caches.
+	 *
+	 * @since 3.4.1
+	 * @return void
+	 */
+	private function clear_solid_security_cache() {
+		// Method 1: Call Solid Security reload function if available.
+		if ( function_exists( 'itsec_reload' ) ) {
+			itsec_reload();
+		}
+
+		// Method 2: Clear all Solid Security transients from database.
+		global $wpdb;
+		$wpdb->query(
+			"DELETE FROM {$wpdb->options}
+			WHERE option_name LIKE '_transient_itsec_%'
+			OR option_name LIKE '_transient_timeout_itsec_%'"
+		);
+
+		// Method 3: Clear WordPress object cache (if using persistent cache).
+		wp_cache_flush();
+
+		if ( $this->logger ) {
+			$this->logger->info( 'Solid Security cache cleared' );
+		}
 	}
 }

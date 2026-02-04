@@ -264,17 +264,25 @@ class TA_Analytics_Query {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$results = $wpdb->get_results(
-			"SELECT bot_type, bot_name, COUNT(*) as count
+			"SELECT
+				bot_type,
+				bot_name,
+				COUNT(*) as visit_count,
+				MAX(visit_timestamp) as last_visit,
+				SUM(CASE WHEN ip_verified = 1 THEN 1 ELSE 0 END) as verified_count
 			FROM {$table_name}
 			{$where}
 			GROUP BY bot_type, bot_name
-			ORDER BY count DESC",
+			ORDER BY visit_count DESC",
 			ARRAY_A
 		);
 
-		// Add color information.
+		// Add color information and human-readable time.
 		foreach ( $results as &$result ) {
 			$result['color'] = $this->detector->get_bot_color( $result['bot_type'] );
+			if ( ! empty( $result['last_visit'] ) ) {
+				$result['last_visit_human'] = human_time_diff( strtotime( $result['last_visit'] ), current_time( 'timestamp' ) ) . ' ago';
+			}
 		}
 
 		return $results;
@@ -295,7 +303,7 @@ class TA_Analytics_Query {
 		$where = $this->build_where_clause( $filters );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		return $wpdb->get_results(
+		$results = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT url, post_title, post_type, COUNT(*) as visits,
 				COUNT(DISTINCT bot_type) as unique_bots,
@@ -309,6 +317,15 @@ class TA_Analytics_Query {
 			),
 			ARRAY_A
 		);
+
+		// Add aliases for backward compatibility with display code.
+		foreach ( $results as &$result ) {
+			$result['page_url']     = $result['url'];
+			$result['page_title']   = $result['post_title'];
+			$result['visit_count']  = $result['visits'];
+		}
+
+		return $results;
 	}
 
 	/**

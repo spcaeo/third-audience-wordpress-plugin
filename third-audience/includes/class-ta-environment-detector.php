@@ -155,7 +155,8 @@ class TA_Environment_Detector {
 			if ( isset( $ithemes_settings['rest-api']['method'] ) && 'default' !== $ithemes_settings['rest-api']['method'] ) {
 				return 'ithemes-security';
 			}
-			return 'ithemes-security';
+			// If method is 'default', it's not blocking - return false.
+			return false;
 		}
 
 		// Sucuri detection.

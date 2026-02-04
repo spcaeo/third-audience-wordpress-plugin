@@ -283,6 +283,12 @@ $library_version = TA_Local_Converter::get_library_version();
 						<span class="dashicons dashicons-update" style="margin-top: 3px;"></span>
 						<?php esc_html_e( 'Re-detect Environment', 'third-audience' ); ?>
 					</button>
+					<?php if ( ! $rest_api_accessible ) : ?>
+						<button type="button" id="ta-force-rest-api-mode" class="button button-secondary" style="margin-left: 10px;">
+							<span class="dashicons dashicons-admin-network" style="margin-top: 3px;"></span>
+							<?php esc_html_e( 'Force REST API Mode', 'third-audience' ); ?>
+						</button>
+					<?php endif; ?>
 					<span id="ta-redetect-message" style="margin-left: 10px;"></span>
 				</div>
 
@@ -437,6 +443,50 @@ jQuery(document).ready(function($) {
 			complete: function() {
 				// Re-enable button
 				$button.prop('disabled', false).html('<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> <?php esc_html_e( 'Re-detect Environment', 'third-audience' ); ?>');
+			}
+		});
+	});
+
+	// Force REST API Mode button handler
+	$('#ta-force-rest-api-mode').on('click', function() {
+		if (!confirm('<?php esc_html_e( 'This will:\n• Configure Solid Security to allow REST API\n• Force REST API as accessible\n• Disable fallback mode\n• Flush rewrite rules\n\nProceed?', 'third-audience' ); ?>')) {
+			return;
+		}
+
+		var $button = $(this);
+		var $message = $('#ta-redetect-message');
+		var $statusDisplay = $('#ta-rest-api-status');
+
+		$button.prop('disabled', true).html('<span class="dashicons dashicons-update" style="margin-top: 3px;"></span> <?php esc_html_e( 'Forcing...', 'third-audience' ); ?>');
+		$message.html('<span style="color: #666;"><?php esc_html_e( 'Applying fix...', 'third-audience' ); ?></span>');
+
+		$.ajax({
+			url: ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'ta_force_rest_api_mode',
+				nonce: '<?php echo esc_js( wp_create_nonce( 'ta-force-rest-api' ) ); ?>'
+			},
+			success: function(response) {
+				if (response.success) {
+					$message.html('<span style="color: #46b450;"><span class="dashicons dashicons-yes-alt"></span> ' + response.data.message + '</span>');
+
+					// Update the status display
+					$statusDisplay.html('<span class="ta-status-badge ta-status-success"><span class="dashicons dashicons-yes-alt"></span> <?php esc_html_e( 'Accessible', 'third-audience' ); ?></span>');
+
+					// Reload page after 2 seconds
+					setTimeout(function() {
+						location.reload();
+					}, 2000);
+				} else {
+					$message.html('<span style="color: #dc3232;"><span class="dashicons dashicons-dismiss"></span> ' + response.data + '</span>');
+				}
+			},
+			error: function() {
+				$message.html('<span style="color: #dc3232;"><span class="dashicons dashicons-dismiss"></span> <?php esc_html_e( 'Failed. Please try again.', 'third-audience' ); ?></span>');
+			},
+			complete: function() {
+				$button.prop('disabled', false).html('<span class="dashicons dashicons-admin-network" style="margin-top: 3px;"></span> <?php esc_html_e( 'Force REST API Mode', 'third-audience' ); ?>');
 			}
 		});
 	});

@@ -452,6 +452,11 @@ function ta_activate() {
 	$security_results = $security_bypass->auto_configure_on_activation();
 	$logger->info( 'Security plugins configured', $security_results );
 
+	// IMPORTANT: Give security plugins time to apply changes.
+	// Some security plugins (like Solid Security) cache their settings.
+	// This delay ensures settings are propagated before REST API test.
+	sleep( 2 );
+
 	// PHASE 2: Detect environment AFTER security plugins are whitelisted.
 	// This ensures accurate REST API accessibility detection.
 	$detector    = new TA_Environment_Detector();

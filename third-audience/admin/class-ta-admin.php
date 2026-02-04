@@ -103,6 +103,7 @@ class TA_Admin {
 		add_action( 'wp_ajax_ta_test_ga4_connection', array( $this, 'ajax_test_ga4_connection' ) );
 		add_action( 'wp_ajax_ta_send_test_digest', array( $this, 'ajax_send_test_digest' ) );
 		add_action( 'wp_ajax_ta_redetect_environment', array( $this, 'ajax_redetect_environment' ) );
+		add_action( 'wp_ajax_ta_force_rest_api_mode', array( $this, 'ajax_force_rest_api_mode' ) );
 	}
 
 	/**
@@ -1237,6 +1238,10 @@ class TA_Admin {
 			}
 		}
 
+		// IMPORTANT: Give security plugins time to apply changes.
+		// Same 2-second delay as activation hook to ensure cache is cleared.
+		sleep( 2 );
+
 		// Force re-detection using the Environment Detector class.
 		if ( class_exists( 'TA_Environment_Detector' ) ) {
 			$detector = new TA_Environment_Detector();
@@ -1264,5 +1269,94 @@ class TA_Admin {
 		} else {
 			wp_send_json_error( __( 'Environment Detector class not found. Please ensure the plugin is properly installed.', 'third-audience' ) );
 		}
+	}
+
+	/**
+	 * AJAX handler: Force REST API mode (bypass detection).
+	 *
+	 * This forcefully configures Solid Security and marks REST API as accessible
+	 * without running the detection test. Use when automatic detection fails.
+	 *
+	 * @since 3.4.1
+	 * @return void
+	 */
+	public function ajax_force_rest_api_mode() {
+		// Verify nonce.
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'ta-force-rest-api' ) ) {
+			wp_send_json_error( __( 'Security check failed.', 'third-audience' ) );
+		}
+
+		// Verify user capability.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( __( 'You do not have permission to perform this action.', 'third-audience' ) );
+		}
+
+		// Step 1: Configure Solid Security to allow REST API (all 3 methods).
+		$settings = get_site_option( 'itsec-storage', array() );
+		if ( ! isset( $settings['rest-api'] ) ) {
+			$settings['rest-api'] = array();
+		}
+		$settings['rest-api']['method']          = 'default';
+		$settings['rest-api']['restrict-access'] = false;
+		$settings['rest-api']['whitelist']       = array( 'third-audience/v1', 'wp/v2', 'wp/v2/types' );
+		update_site_option( 'itsec-storage', $settings );
+
+		$solid_options = get_option( 'itsec_global', array() );
+		if ( is_array( $solid_options ) ) {
+			$solid_options['rest_api'] = 'default';
+			update_option( 'itsec_global', $solid_options );
+		}
+
+		update_option( 'itsec-rest-api-method', 'default' );
+		update_option( 'itsec_rest_api_settings', array( 'method' => 'default' ) );
+
+		// Clear Solid Security cache.
+		if ( function_exists( 'itsec_reload' ) ) {
+			itsec_reload();
+		}
+		global $wpdb;
+		$wpdb->query(
+			"DELETE FROM {$wpdb->options}
+			WHERE option_name LIKE '_transient_itsec_%'
+			OR option_name LIKE '_transient_timeout_itsec_%'"
+		);
+		wp_cache_flush();
+
+		// Give security plugins time to fully reload settings.
+		sleep( 1 );
+
+		// Step 2: Force environment detection to show REST API as accessible (bypass test).
+		$env_detection = array(
+			'detection_time' => current_time( 'mysql' ),
+			'rest_api'       => array(
+				'accessible'    => true,
+				'blocker'       => null,
+				'test_endpoint' => home_url( '/wp-json/wp/v2/types' ),
+				'test_result'   => 'forced (bypass)',
+				'forced'        => true,
+			),
+		);
+		update_option( 'ta_environment_detection', $env_detection );
+
+		// Step 3: Disable fallback mode.
+		update_option( 'ta_use_ajax_fallback', false );
+
+		// Step 4: Flush rewrite rules to re-register all REST routes.
+		flush_rewrite_rules( true );
+
+		// Log the action.
+		if ( $this->logger ) {
+			$this->logger->info(
+				'REST API mode forced (bypassed detection)',
+				array(
+					'user_id' => get_current_user_id(),
+					'method'  => 'admin_ajax',
+				)
+			);
+		}
+
+		wp_send_json_success( array(
+			'message' => __( 'REST API mode forced successfully! All endpoints are now registered. Page will reload.', 'third-audience' ),
+		) );
 	}
 }
