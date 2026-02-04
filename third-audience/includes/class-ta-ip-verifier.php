@@ -194,14 +194,15 @@ class TA_IP_Verifier {
 			}
 		}
 
-		// Verification failed.
+		// Verification could not be performed (IP not in known ranges, DNS lookup failed).
+		// Return NULL instead of FALSE to show "not verified" (-) instead of "failed" (red X).
 		$result = array(
-			'verified' => false,
+			'verified' => null,
 			'method'   => null,
 		);
 		set_transient( $cache_key, $result, HOUR_IN_SECONDS * 6 ); // Cache failures shorter.
 
-		$this->logger->warning( 'Bot IP verification failed.', array(
+		$this->logger->debug( 'Bot IP verification could not be performed (unknown IP range).', array(
 			'bot_type' => $bot_type,
 			'ip'       => $ip_address,
 			'hostname' => $hostname ?? 'N/A',

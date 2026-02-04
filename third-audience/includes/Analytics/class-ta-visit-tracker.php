@@ -270,6 +270,35 @@ class TA_Visit_Tracker {
 			return false;
 		}
 
+		// Deduplication: Check if this citation was already tracked in the last 60 seconds.
+		// Prevents double-tracking from both server-side and client-side JavaScript.
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+		$current_url = esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' );
+		$platform = $citation_data['platform'];
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$recent_duplicate = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$table_name}
+				WHERE traffic_type = 'citation_click'
+				AND ai_platform = %s
+				AND url = %s
+				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+				LIMIT 1",
+				$platform,
+				$current_url
+			)
+		);
+
+		if ( $recent_duplicate ) {
+			$this->logger->debug( 'Duplicate citation detected, skipping.', array(
+				'platform' => $platform,
+				'url' => $current_url,
+			) );
+			return false;
+		}
+
 		// Get current page info.
 		$post_id    = get_queried_object_id();
 		$post       = $post_id ? get_post( $post_id ) : null;

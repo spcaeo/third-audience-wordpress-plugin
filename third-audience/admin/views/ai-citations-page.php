@@ -225,9 +225,12 @@ foreach ( $citations_by_platform as $index => $platform ) {
 // Weekly comparison data (last 4 weeks).
 $weekly_data = array();
 for ( $week = 3; $week >= 0; $week-- ) {
-	$week_start = gmdate( 'Y-m-d', strtotime( "-{$week} weeks monday" ) );
-	$week_end   = gmdate( 'Y-m-d', strtotime( "-{$week} weeks sunday" ) );
+	// Calculate Monday of X weeks ago.
+	$week_start = gmdate( 'Y-m-d', strtotime( "monday -{$week} weeks" ) );
+	// Calculate Sunday of that same week (Monday + 6 days).
+	$week_end   = gmdate( 'Y-m-d', strtotime( $week_start . ' +6 days' ) );
 
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$week_citations = $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM {$table_name}
@@ -238,6 +241,7 @@ for ( $week = 3; $week >= 0; $week-- ) {
 		)
 	);
 
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	$week_crawls = $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM {$table_name}
