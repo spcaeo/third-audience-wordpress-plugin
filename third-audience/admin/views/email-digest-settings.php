@@ -264,10 +264,10 @@ if ( $wp_mail_smtp_installed && $is_smtp_configured ) {
 		<h2><?php esc_html_e( 'Download Report Now', 'third-audience' ); ?></h2>
 		<p><?php esc_html_e( 'Generate and download a bot activity report immediately.', 'third-audience' ); ?></p>
 		<p>
-			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=third-audience-email-digest&action=download_md&period=24' ), 'ta_download_report' ) ); ?>" class="button">
+			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=third-audience-email-digest&action=download_report&period=24' ), 'ta_download_digest_report' ) ); ?>" class="button">
 				<?php esc_html_e( 'Download Last 24 Hours (.md)', 'third-audience' ); ?>
 			</a>
-			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=third-audience-email-digest&action=download_md&period=168' ), 'ta_download_report' ) ); ?>" class="button">
+			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=third-audience-email-digest&action=download_report&period=168' ), 'ta_download_digest_report' ) ); ?>" class="button">
 				<?php esc_html_e( 'Download Last 7 Days (.md)', 'third-audience' ); ?>
 			</a>
 		</p>

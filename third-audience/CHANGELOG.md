@@ -6,6 +6,12 @@ All notable changes to Third Audience plugin will be documented in this file.
 
 ### Fixed
 - **Email Digest Settings Page Blank:** Fixed filename mismatch causing email digest settings page to be completely blank (`email-digest-page.php` → `email-digest-settings.php`)
+- **Download Report Not Working:** Fixed 5 bugs preventing report download:
+  - Action name mismatch (`download_md` → `download_report`)
+  - Nonce name mismatch (`ta_download_report` → `ta_download_digest_report`)
+  - Wrong method called (`generate_markdown_report()` → `generate_md_report()`)
+  - Missing data gathering step (now calls `gather_digest_data()`)
+  - Period parameter now properly used (24 hours vs 7 days)
 
 ## [3.4.4] - 2026-02-05
 

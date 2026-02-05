@@ -615,10 +615,17 @@ class TA_Admin {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'third-audience' ) );
 		}
 
-		$digest  = TA_Email_Digest::get_instance();
-		$content = $digest->generate_markdown_report();
+		// Get period from URL parameter (default: 24 hours).
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$period = isset( $_GET['period'] ) ? absint( $_GET['period'] ) : 24;
 
-		$filename = 'third-audience-report-' . gmdate( 'Y-m-d-H-i' ) . '.md';
+		// Generate report with specified period.
+		$digest  = TA_Email_Digest::get_instance();
+		$data    = $digest->gather_digest_data( $period );
+		$content = $digest->generate_md_report( $data );
+
+		$period_label = $period >= 168 ? '7days' : '24hours';
+		$filename     = 'third-audience-report-' . $period_label . '-' . gmdate( 'Y-m-d-H-i' ) . '.md';
 		header( 'Content-Type: text/markdown; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
 		header( 'Content-Length: ' . strlen( $content ) );
