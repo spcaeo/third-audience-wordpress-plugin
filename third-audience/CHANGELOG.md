@@ -2,6 +2,19 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.4.6] - 2026-02-05
+
+### Removed
+- **Crawl Budget Recommendations:** Removed entire section from Bot Analytics page (advisory feature, not essential)
+- **Download Report Now Buttons:** Removed manual download buttons from Email Digest Settings page (scheduled digests work independently)
+- **Content Performance Insights Export:** Removed CSV export button (exported per-post data instead of summary, causing confusion)
+- **Activity Timeline Period Selector:** Removed hourly/daily/weekly/monthly dropdown (weekly/monthly not functioning correctly, now defaults to daily view)
+- **Top Bots by Session Activity Export:** Removed CSV export button (not functioning properly)
+
+### Changed
+- **Bot Analytics UI Cleanup:** Streamlined interface by removing non-essential export buttons and problematic filtering options
+- **Email Digest Settings:** Simplified page by removing redundant manual download options
+
 ## [3.4.5] - 2026-02-05
 
 ### Fixed

@@ -412,7 +412,7 @@ class TA_Analytics_Query {
 				$group_by    = 'DATE_FORMAT(visit_timestamp, "%Y-%m-%d %H:00:00")';
 				break;
 			case 'week':
-				$date_format = '%Y-%U';
+				$date_format = 'Week %U, %Y';
 				$group_by    = 'YEARWEEK(visit_timestamp)';
 				break;
 			case 'month':
