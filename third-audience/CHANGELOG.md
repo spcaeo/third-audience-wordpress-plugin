@@ -13,6 +13,11 @@ All notable changes to Third Audience plugin will be documented in this file.
   - Missing data gathering step (now calls `gather_digest_data()`)
   - Period parameter now properly used (24 hours vs 7 days)
 
+### Changed
+- **Notifications Tab Cleanup:** Removed duplicate "Daily digest summary" checkbox from Settings → Notifications tab
+- **Email Digest Redirect:** Added prominent redirect card in Notifications tab directing users to Email Digest page for bot activity reports
+- **Clearer Separation:** Notifications tab now focused on system/error alerts only, Email Digest page handles all bot report settings
+
 ## [3.4.4] - 2026-02-05
 
 ### Fixed

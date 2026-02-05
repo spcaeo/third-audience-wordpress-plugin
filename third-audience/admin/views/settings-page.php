@@ -923,12 +923,10 @@ $security = TA_Security::get_instance();
 														   <?php checked( ! empty( $notification_settings['on_cache_issues'] ) ); ?> />
 													<?php esc_html_e( 'Cache issues', 'third-audience' ); ?>
 												</label>
-												<label class="ta-checkbox-label">
-													<input type="checkbox" name="ta_notifications[on_daily_digest]" value="1"
-														   <?php checked( ! empty( $notification_settings['daily_digest'] ) ); ?> />
-													<?php esc_html_e( 'Daily digest summary', 'third-audience' ); ?>
-												</label>
 											</fieldset>
+											<p class="description" style="margin-top: 8px;">
+												<?php esc_html_e( 'These are technical system alerts. For bot activity reports, see Email Digest page below.', 'third-audience' ); ?>
+											</p>
 										</td>
 									</tr>
 									<tr>
@@ -947,6 +945,30 @@ $security = TA_Security::get_instance();
 								<?php submit_button( __( 'Save Notification Settings', 'third-audience' ) ); ?>
 							</div>
 						</form>
+
+						<!-- Bot Activity Reports - Redirect to Email Digest -->
+						<div class="ta-card" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-left: 4px solid #0284c7;">
+							<div style="display: flex; align-items: center; gap: 20px; padding: 8px 0;">
+								<div style="flex-shrink: 0;">
+									<span class="dashicons dashicons-email-alt" style="font-size: 48px; width: 48px; height: 48px; color: #0284c7;"></span>
+								</div>
+								<div style="flex: 1;">
+									<h2 style="margin: 0 0 8px 0; color: #0c4a6e;">
+										<?php esc_html_e( 'Bot Activity Reports', 'third-audience' ); ?>
+									</h2>
+									<p style="margin: 0 0 12px 0; color: #075985;">
+										<?php esc_html_e( 'Looking for scheduled bot activity reports? Configure email digests, report frequency, and content options in the Email Digest page.', 'third-audience' ); ?>
+									</p>
+									<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-email-digest' ) ); ?>" class="button button-primary">
+										<span class="dashicons dashicons-arrow-right-alt" style="margin-top: 3px;"></span>
+										<?php esc_html_e( 'Go to Email Digest Settings', 'third-audience' ); ?>
+									</a>
+									<p style="margin: 12px 0 0 0; font-size: 12px; color: #64748b;">
+										<?php esc_html_e( 'Email Digest includes: scheduled reports, frequency settings, report content, real-time alerts, and instant report downloads.', 'third-audience' ); ?>
+									</p>
+								</div>
+							</div>
+						</div>
 					</div>
 
 					<div class="ta-settings-sidebar">
