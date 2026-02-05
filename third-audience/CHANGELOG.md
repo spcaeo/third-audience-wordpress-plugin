@@ -2,6 +2,11 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.4.5] - 2026-02-05
+
+### Fixed
+- **Email Digest Settings Page Blank:** Fixed filename mismatch causing email digest settings page to be completely blank (`email-digest-page.php` → `email-digest-settings.php`)
+
 ## [3.4.4] - 2026-02-05
 
 ### Fixed

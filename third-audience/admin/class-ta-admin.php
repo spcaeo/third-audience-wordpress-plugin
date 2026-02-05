@@ -636,7 +636,7 @@ class TA_Admin {
 	 */
 	public function render_email_digest_page() {
 		$this->security->verify_admin_capability();
-		include TA_PLUGIN_DIR . 'admin/views/email-digest-page.php';
+		include TA_PLUGIN_DIR . 'admin/views/email-digest-settings.php';
 	}
 
 	/**
