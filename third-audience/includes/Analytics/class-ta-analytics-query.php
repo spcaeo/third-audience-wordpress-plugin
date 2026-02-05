@@ -267,13 +267,13 @@ class TA_Analytics_Query {
 			"SELECT
 				bot_type,
 				bot_name,
-				COUNT(*) as visit_count,
+				COUNT(*) as count,
 				MAX(visit_timestamp) as last_visit,
 				SUM(CASE WHEN ip_verified = 1 THEN 1 ELSE 0 END) as verified_count
 			FROM {$table_name}
 			{$where}
 			GROUP BY bot_type, bot_name
-			ORDER BY visit_count DESC",
+			ORDER BY count DESC",
 			ARRAY_A
 		);
 
@@ -681,8 +681,9 @@ class TA_Analytics_Query {
 		$cited_posts = $wpdb->get_results(
 			"SELECT
 				AVG(content_word_count) as avg_word_count,
-				AVG(content_heading_count) as avg_headings,
-				AVG(content_image_count) as avg_images,
+				AVG(content_heading_count) as avg_heading_count,
+				AVG(content_image_count) as avg_image_count,
+				AVG(content_freshness_days) as avg_freshness_days,
 				SUM(CASE WHEN content_has_schema = 1 THEN 1 ELSE 0 END) as with_schema,
 				COUNT(*) as total
 			FROM {$table_name}
@@ -694,8 +695,9 @@ class TA_Analytics_Query {
 		$crawled_posts = $wpdb->get_results(
 			"SELECT
 				AVG(content_word_count) as avg_word_count,
-				AVG(content_heading_count) as avg_headings,
-				AVG(content_image_count) as avg_images,
+				AVG(content_heading_count) as avg_heading_count,
+				AVG(content_image_count) as avg_image_count,
+				AVG(content_freshness_days) as avg_freshness_days,
 				SUM(CASE WHEN content_has_schema = 1 THEN 1 ELSE 0 END) as with_schema,
 				COUNT(*) as total
 			FROM {$table_name}
@@ -706,25 +708,37 @@ class TA_Analytics_Query {
 		$cited   = $cited_posts[0] ?? array();
 		$crawled = $crawled_posts[0] ?? array();
 
+		$cited_schema_pct = absint( $cited['total'] ?? 0 ) > 0
+			? round( ( absint( $cited['with_schema'] ?? 0 ) / absint( $cited['total'] ) ) * 100, 1 )
+			: 0;
+		$crawled_schema_pct = absint( $crawled['total'] ?? 0 ) > 0
+			? round( ( absint( $crawled['with_schema'] ?? 0 ) / absint( $crawled['total'] ) ) * 100, 1 )
+			: 0;
+
+		// Calculate schema multiplier (how much better schema posts perform)
+		$schema_multiplier = 1.0;
+		if ( $crawled_schema_pct > 0 ) {
+			$schema_multiplier = $cited_schema_pct / $crawled_schema_pct;
+		}
+
 		return array(
-			'cited'   => array(
-				'avg_word_count'   => round( floatval( $cited['avg_word_count'] ?? 0 ) ),
-				'avg_headings'     => round( floatval( $cited['avg_headings'] ?? 0 ), 1 ),
-				'avg_images'       => round( floatval( $cited['avg_images'] ?? 0 ), 1 ),
-				'schema_rate'      => absint( $cited['total'] ?? 0 ) > 0
-					? round( ( absint( $cited['with_schema'] ?? 0 ) / absint( $cited['total'] ) ) * 100, 1 )
-					: 0,
-				'sample_size'      => absint( $cited['total'] ?? 0 ),
+			'cited_posts'      => array(
+				'avg_word_count'     => round( floatval( $cited['avg_word_count'] ?? 0 ) ),
+				'avg_heading_count'  => round( floatval( $cited['avg_heading_count'] ?? 0 ), 1 ),
+				'avg_image_count'    => round( floatval( $cited['avg_image_count'] ?? 0 ), 1 ),
+				'avg_freshness_days' => round( floatval( $cited['avg_freshness_days'] ?? 0 ) ),
+				'schema_percentage'  => $cited_schema_pct,
+				'total_count'        => absint( $cited['total'] ?? 0 ),
 			),
-			'crawled' => array(
-				'avg_word_count'   => round( floatval( $crawled['avg_word_count'] ?? 0 ) ),
-				'avg_headings'     => round( floatval( $crawled['avg_headings'] ?? 0 ), 1 ),
-				'avg_images'       => round( floatval( $crawled['avg_images'] ?? 0 ), 1 ),
-				'schema_rate'      => absint( $crawled['total'] ?? 0 ) > 0
-					? round( ( absint( $crawled['with_schema'] ?? 0 ) / absint( $crawled['total'] ) ) * 100, 1 )
-					: 0,
-				'sample_size'      => absint( $crawled['total'] ?? 0 ),
+			'crawled_posts'    => array(
+				'avg_word_count'     => round( floatval( $crawled['avg_word_count'] ?? 0 ) ),
+				'avg_heading_count'  => round( floatval( $crawled['avg_heading_count'] ?? 0 ), 1 ),
+				'avg_image_count'    => round( floatval( $crawled['avg_image_count'] ?? 0 ), 1 ),
+				'avg_freshness_days' => round( floatval( $crawled['avg_freshness_days'] ?? 0 ) ),
+				'schema_percentage'  => $crawled_schema_pct,
+				'total_count'        => absint( $crawled['total'] ?? 0 ),
 			),
+			'schema_multiplier' => $schema_multiplier,
 		);
 	}
 

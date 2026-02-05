@@ -277,17 +277,25 @@ class TA_Visit_Tracker {
 		$current_url = esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' );
 		$platform = $citation_data['platform'];
 
+		// Strip query parameters from URL for better duplicate detection.
+		// This prevents /page/?utm_source=x and /page/ from being treated as different URLs.
+		$url_path = preg_replace( '/\?.*$/', '', $current_url );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$recent_duplicate = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT id FROM {$table_name}
 				WHERE traffic_type = 'citation_click'
 				AND ai_platform = %s
-				AND url = %s
+				AND (
+					url = %s
+					OR url LIKE %s
+				)
 				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
 				LIMIT 1",
 				$platform,
-				$current_url
+				$current_url,
+				$wpdb->esc_like( $url_path ) . '%'
 			)
 		);
 
@@ -295,6 +303,7 @@ class TA_Visit_Tracker {
 			$this->logger->debug( 'Duplicate citation detected, skipping.', array(
 				'platform' => $platform,
 				'url' => $current_url,
+				'existing_id' => $recent_duplicate,
 			) );
 			return false;
 		}

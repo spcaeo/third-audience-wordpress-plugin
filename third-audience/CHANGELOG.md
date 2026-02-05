@@ -2,6 +2,19 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.4.4] - 2026-02-05
+
+### Fixed
+- **Bot Activity Distribution Display:** Fixed field name mismatch causing all bots to show 0 visits (query returned `visit_count` but display expected `count`)
+- **Content Performance Insights:** Fixed multiple field name mismatches preventing content metrics from displaying (`avg_headings` → `avg_heading_count`, `avg_images` → `avg_image_count`, `schema_rate` → `schema_percentage`, `sample_size` → `total_count`)
+- **Content Performance Insights:** Added missing `avg_freshness_days` field to content analysis queries
+- **Duplicate Citation Tracking:** Improved deduplication logic to prevent same citation from being tracked twice by server-side and client-side tracking systems
+- **Perplexity Search Query Extraction:** Updated to support new Perplexity URL format (`/search/query-slug-id` instead of `?q=query`)
+
+### Changed
+- **Search Query Column:** Added informative tooltip icons explaining that search queries are only available from Perplexity, Google AI Overview, and Bing Copilot
+- **Deduplication Algorithm:** Now strips query parameters from URLs and matches base paths to catch duplicates with/without UTM parameters
+
 ## [3.4.0] - 2026-02-02
 
 ### Added - Zero-Configuration Auto-Deployment System 🎉

@@ -280,18 +280,34 @@ class TA_AI_Citation_Tracker {
 			return null;
 		}
 
-		// No query string in referrer.
-		if ( ! isset( $parsed_url['query'] ) ) {
-			return null;
+		// PERPLEXITY: Handle new slug-based URL format (/search/query-slug-id).
+		if ( 'Perplexity' === $platform_config['name'] && ! empty( $parsed_url['path'] ) ) {
+			// New format: /search/web-development-services-monoc-rdP_eGvpQUaIARh1XyKBvw
+			if ( preg_match( '#^/search/(.+)$#', $parsed_url['path'], $matches ) ) {
+				$slug = $matches[1];
+
+				// Remove the ID part (everything after the last dash that looks like an ID).
+				// IDs are typically: rdP_eGvpQUaIARh1XyKBvw (base64-like strings).
+				$slug = preg_replace( '/-[a-zA-Z0-9_-]{15,}$/', '', $slug );
+
+				// Convert slug to readable query: web-development-services -> web development services.
+				$query = str_replace( array( '-', '_' ), ' ', $slug );
+				$query = trim( $query );
+
+				if ( ! empty( $query ) ) {
+					return sanitize_text_field( $query );
+				}
+			}
 		}
 
-		// Parse query string.
-		parse_str( $parsed_url['query'], $params );
+		// LEGACY: Try standard ?q= parameter (old Perplexity format, Google, Bing).
+		if ( isset( $parsed_url['query'] ) ) {
+			parse_str( $parsed_url['query'], $params );
 
-		// Extract query parameter.
-		$query_param = $platform_config['query_param'];
-		if ( isset( $params[ $query_param ] ) ) {
-			return sanitize_text_field( wp_unslash( $params[ $query_param ] ) );
+			$query_param = $platform_config['query_param'];
+			if ( isset( $params[ $query_param ] ) ) {
+				return sanitize_text_field( wp_unslash( $params[ $query_param ] ) );
+			}
 		}
 
 		return null;

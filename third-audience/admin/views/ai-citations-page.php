@@ -569,7 +569,10 @@ for ( $week = 3; $week >= 0; $week-- ) {
 					<thead>
 						<tr>
 							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
-							<th style="width: 280px;"><?php esc_html_e( 'Search Query', 'third-audience' ); ?></th>
+							<th style="width: 280px;">
+								<?php esc_html_e( 'Search Query', 'third-audience' ); ?>
+								<span class="dashicons dashicons-info-outline" style="font-size: 14px; color: #999; cursor: help; vertical-align: middle;" title="<?php esc_attr_e( 'Extracted from Perplexity referrer URLs. Other platforms (ChatGPT, Claude, Gemini) do not include search queries.', 'third-audience' ); ?>"></span>
+							</th>
 							<th><?php esc_html_e( 'Landing Page', 'third-audience' ); ?></th>
 							<th style="width: 110px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
 							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
@@ -614,7 +617,10 @@ for ( $week = 3; $week >= 0; $week-- ) {
 							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
 							<th style="width: 60px; text-align: center;"><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
 							<th style="width: 200px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
-							<th style="width: 160px;"><?php esc_html_e( 'Search Query', 'third-audience' ); ?></th>
+							<th style="width: 160px;">
+								<?php esc_html_e( 'Search Query', 'third-audience' ); ?>
+								<span class="dashicons dashicons-info-outline" style="font-size: 14px; color: #999; cursor: help; vertical-align: middle;" title="<?php esc_attr_e( 'Only available from Perplexity, Google AI Overview, and Bing Copilot. ChatGPT and Claude do not provide search queries in referrers.', 'third-audience' ); ?>"></span>
+							</th>
 							<th style="width: 95px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
 							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
 							<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Ago', 'third-audience' ); ?></th>
