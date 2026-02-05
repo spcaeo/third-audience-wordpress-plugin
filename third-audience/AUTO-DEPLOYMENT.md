@@ -99,53 +99,51 @@ Auto-configuration completed:
 
 ## Frontend Integration
 
-### For Headless Sites (Next.js, Gatsby, etc)
+### For Headless Sites (Next.js, Gatsby, Nuxt, etc)
 
-The plugin includes an **auto-detecting JavaScript client** that works regardless of your server configuration.
+The plugin uses an **AJAX-first architecture** that works with ALL security plugins.
 
-#### Install in your frontend:
+#### 📖 Complete Setup Guide
 
-```bash
-# Copy the JS file from the plugin:
-cp wp-content/plugins/third-audience/assets/js/ta-auto-endpoint-detector.js \
-   your-frontend/lib/third-audience.js
-```
+See **[HEADLESS-SETUP.md](HEADLESS-SETUP.md)** for detailed integration instructions including:
 
-#### Usage Example (Next.js):
+- ✅ Next.js middleware (recommended)
+- ✅ Gatsby integration
+- ✅ Nuxt 3 integration
+- ✅ API route examples
+- ✅ Testing and troubleshooting
+- ✅ Complete API reference
 
-```javascript
-import ThirdAudienceTracker from '@/lib/third-audience';
+#### Quick Example (Next.js Middleware):
 
-// Initialize tracker
-const tracker = new ThirdAudienceTracker(
-    process.env.WORDPRESS_URL,
-    process.env.THIRD_AUDIENCE_API_KEY
-);
+```typescript
+// src/middleware.ts
+async function trackCitation(request: NextRequest, citation) {
+  const wordpressUrl = process.env.WORDPRESS_URL;
+  const apiKey = process.env.TA_CITATION_API_KEY;
 
-// Enable debug mode (optional)
-tracker.enableDebug();
+  // AJAX-first approach (works with ALL security plugins)
+  const response = await fetch(`${wordpressUrl}/wp-admin/admin-ajax.php`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      action: 'ta_track_citation',
+      api_key: apiKey,
+      platform: citation.platform,
+      url: request.nextUrl.pathname,
+      referer: request.headers.get('referer') || '',
+    }),
+  });
 
-// Track citation - automatically uses best endpoint
-async function trackCitation() {
-    try {
-        const result = await tracker.trackCitation({
-            url: window.location.pathname,
-            platform: 'ChatGPT',
-            searchQuery: 'optional search query'
-        });
-
-        console.log('Citation tracked:', result);
-    } catch (error) {
-        console.error('Tracking failed:', error);
-    }
+  // Auto-fallback to REST API and GraphQL if AJAX fails
 }
 ```
 
-#### The tracker automatically:
-1. Tests REST API first
-2. Falls back to AJAX if REST is blocked
-3. Handles all security configurations
-4. Retries with fallback on failure
+#### Why AJAX-first?
+1. ✅ Works with ALL security plugins (Solid Security, Wordfence, etc.)
+2. ✅ No REST API blocks or whitelisting needed
+3. ✅ Standard WordPress API since 2.8 (2008)
+4. ✅ Auto-fallback to REST and GraphQL if needed
 
 ## Troubleshooting
 
