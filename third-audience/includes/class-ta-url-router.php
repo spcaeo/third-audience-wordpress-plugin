@@ -170,12 +170,8 @@ class TA_URL_Router {
 				return;
 			}
 
-			// Check if this URL exists as a post/page.
-			$post_id = url_to_postid( $original_url );
-			if ( ! $post_id ) {
-				// Try with trailing slash.
-				$post_id = url_to_postid( trailingslashit( $original_url ) );
-			}
+			// Check if this URL exists as a post/page using enhanced resolution.
+			$post_id = $this->resolve_url_to_post_id( $original_url );
 
 			if ( ! $post_id ) {
 				$this->logger->debug( 'Post not found for markdown request.', array(
@@ -638,5 +634,95 @@ class TA_URL_Router {
 		}
 
 		return $ip ?: '0.0.0.0';
+	}
+
+	/**
+	 * Resolve URL to Post ID with multiple fallback methods.
+	 *
+	 * This function attempts to resolve a URL to a post ID using multiple strategies,
+	 * fixing issues with category-based permalinks and custom post type URLs.
+	 *
+	 * @since 3.4.7
+	 * @param string $url The URL to resolve.
+	 * @return int Post ID or 0 if not found.
+	 */
+	private function resolve_url_to_post_id( $url ) {
+		// Method 1: Standard url_to_postid (fastest, works for simple permalinks).
+		$post_id = url_to_postid( $url );
+		if ( $post_id ) {
+			$this->logger->debug( 'URL resolved via url_to_postid (Method 1).', array(
+				'url'     => $url,
+				'post_id' => $post_id,
+			) );
+			return $post_id;
+		}
+
+		// Method 2: Try with trailing slash.
+		$post_id = url_to_postid( trailingslashit( $url ) );
+		if ( $post_id ) {
+			$this->logger->debug( 'URL resolved via url_to_postid with trailing slash (Method 2).', array(
+				'url'     => $url,
+				'post_id' => $post_id,
+			) );
+			return $post_id;
+		}
+
+		// Method 3: Extract slug and query by post_name (fixes category-based permalinks).
+		$path = wp_parse_url( $url, PHP_URL_PATH );
+		$slug = basename( untrailingslashit( $path ) );
+
+		if ( ! empty( $slug ) ) {
+			// Get enabled post types to search within.
+			$enabled_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
+
+			$posts = get_posts( array(
+				'name'           => $slug,
+				'post_type'      => $enabled_types,
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+			) );
+
+			if ( ! empty( $posts ) ) {
+				$post_id = $posts[0]->ID;
+				$this->logger->debug( 'URL resolved via get_posts with slug (Method 3).', array(
+					'url'       => $url,
+					'slug'      => $slug,
+					'post_id'   => $post_id,
+					'post_type' => $posts[0]->post_type,
+				) );
+				return $post_id;
+			}
+		}
+
+		// Method 4: Try WP_Query for pages (handles hierarchical pages).
+		if ( ! empty( $slug ) ) {
+			$query = new WP_Query( array(
+				'pagename'       => $slug,
+				'post_type'      => 'page',
+				'post_status'    => 'publish',
+				'posts_per_page' => 1,
+			) );
+
+			if ( $query->have_posts() ) {
+				$post_id = $query->posts[0]->ID;
+				$this->logger->debug( 'URL resolved via WP_Query pagename (Method 4).', array(
+					'url'     => $url,
+					'slug'    => $slug,
+					'post_id' => $post_id,
+				) );
+				wp_reset_postdata();
+				return $post_id;
+			}
+
+			wp_reset_postdata();
+		}
+
+		// Not found after all methods.
+		$this->logger->debug( 'URL could not be resolved to post ID after trying all methods.', array(
+			'url'  => $url,
+			'slug' => $slug ?? 'N/A',
+		) );
+
+		return 0;
 	}
 }
