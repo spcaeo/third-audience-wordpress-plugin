@@ -2,6 +2,17 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.4.9] - 2026-02-16
+
+### Fixed
+- **Android OS Detection:** Fixed user agent parser to correctly identify Android devices as "Android" instead of "Linux" by reordering OS detection logic to check for Android before Linux (since Android user agents contain both strings)
+- **CSV Export Parser:** Applied same Android detection fix to CSV export function to ensure consistent OS reporting across both display and export features
+
+### Technical Details
+- Android user agents contain "Linux; Android" pattern, so specific OS checks (Android, iOS) must run before generic OS checks (Linux)
+- Fix applied in two locations: `ta_parse_user_agent()` helper function and CSV export `$parse_ua()` closure
+- No database or query changes required - only parser logic updated
+
 ## [3.4.8] - 2026-02-16
 
 ### Added

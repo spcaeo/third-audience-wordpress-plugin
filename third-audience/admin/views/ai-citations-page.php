@@ -326,23 +326,23 @@ function ta_parse_user_agent( $user_agent ) {
 		$browser = 'Opera';
 	}
 
-	// Detect OS
+	// Detect OS - Check specific OS before generic (Android contains "Linux")
 	if ( strpos( $user_agent, 'Windows NT 10' ) !== false ) {
 		$os = 'Windows 10';
 	} elseif ( strpos( $user_agent, 'Windows NT 11' ) !== false ) {
 		$os = 'Windows 11';
 	} elseif ( strpos( $user_agent, 'Windows' ) !== false ) {
 		$os = 'Windows';
-	} elseif ( strpos( $user_agent, 'Mac OS X' ) !== false || strpos( $user_agent, 'Macintosh' ) !== false ) {
-		$os = 'macOS';
-	} elseif ( strpos( $user_agent, 'Linux' ) !== false ) {
-		$os = 'Linux';
+	} elseif ( strpos( $user_agent, 'Android' ) !== false ) {
+		$os = 'Android';
 	} elseif ( strpos( $user_agent, 'iPhone' ) !== false ) {
 		$os = 'iOS (iPhone)';
 	} elseif ( strpos( $user_agent, 'iPad' ) !== false ) {
 		$os = 'iOS (iPad)';
-	} elseif ( strpos( $user_agent, 'Android' ) !== false ) {
-		$os = 'Android';
+	} elseif ( strpos( $user_agent, 'Mac OS X' ) !== false || strpos( $user_agent, 'Macintosh' ) !== false ) {
+		$os = 'macOS';
+	} elseif ( strpos( $user_agent, 'Linux' ) !== false ) {
+		$os = 'Linux';
 	}
 
 	// Detect Device Type

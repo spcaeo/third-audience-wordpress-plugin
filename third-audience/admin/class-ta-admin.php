@@ -1493,16 +1493,19 @@ class TA_Admin {
 				$browser = 'Safari';
 			}
 
+			// Check specific OS before generic (Android contains "Linux")
 			if ( strpos( $ua, 'Windows' ) !== false ) {
 				$os = 'Windows';
+			} elseif ( strpos( $ua, 'Android' ) !== false ) {
+				$os = 'Android';
+			} elseif ( strpos( $ua, 'iPhone' ) !== false ) {
+				$os = 'iOS';
+			} elseif ( strpos( $ua, 'iPad' ) !== false ) {
+				$os = 'iOS';
 			} elseif ( strpos( $ua, 'Mac' ) !== false ) {
 				$os = 'macOS';
 			} elseif ( strpos( $ua, 'Linux' ) !== false ) {
 				$os = 'Linux';
-			} elseif ( strpos( $ua, 'iPhone' ) !== false ) {
-				$os = 'iOS';
-			} elseif ( strpos( $ua, 'Android' ) !== false ) {
-				$os = 'Android';
 			}
 
 			if ( strpos( $ua, 'Mobile' ) !== false || strpos( $ua, 'iPhone' ) !== false || strpos( $ua, 'Android' ) !== false ) {
