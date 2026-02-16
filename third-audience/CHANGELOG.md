@@ -2,6 +2,33 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.4.8] - 2026-02-16
+
+### Added
+- **Browser & Device Tracking Display:** Added new columns to AI Citations page showing browser name, operating system, and device type (Desktop/Mobile) parsed from user agent data
+- **Location/Country Display:** Added country flag and code column showing visitor geographic location
+- **Advanced Filtering:** Added three new filter dropdowns for Browser, Country, and Device Type to filter citation data
+- **CSV Export with Full Data:** Added comprehensive CSV export button that includes all visible data plus full user agent strings and IP addresses for detailed analysis
+- **User Agent Parser:** Added helper function to parse user agent strings and extract browser, OS, and device information
+- **Country Flag Generator:** Added helper function to convert 2-letter country codes to Unicode flag emojis
+
+### Changed
+- **Filter Layout:** Updated filter section to 3x3 grid layout with better organization
+- **Table Columns:** Expanded Recent Citations table from 8 to 10 columns with new browser and location data
+- **Export Button:** Changed CSV export action name from generic 'export' to 'ta_export_citations_csv' for better specificity
+- **Query Enhancement:** Updated SQL queries to include user_agent, ip_address, and country_code fields
+
+### Technical Details
+- All data was already being captured in database - only display layer was updated
+- No database schema changes required
+- Backward compatible with existing citation data
+- CSV export includes 17 columns with full technical details for analysis
+
+## [3.4.7] - 2026-02-09
+
+### Fixed
+- **Category Permalink Resolution:** Enhanced URL resolution for category-based permalinks
+
 ## [3.4.6] - 2026-02-05
 
 ### Removed

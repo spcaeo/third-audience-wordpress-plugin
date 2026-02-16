@@ -27,6 +27,16 @@ if ( ! empty( $_GET['date_to'] ) ) {
 if ( ! empty( $_GET['search'] ) ) {
 	$filters['search'] = sanitize_text_field( wp_unslash( $_GET['search'] ) );
 }
+// NEW: Browser, Country, Device filters
+if ( ! empty( $_GET['browser'] ) ) {
+	$filters['browser'] = sanitize_text_field( wp_unslash( $_GET['browser'] ) );
+}
+if ( ! empty( $_GET['country'] ) ) {
+	$filters['country'] = sanitize_text_field( wp_unslash( $_GET['country'] ) );
+}
+if ( ! empty( $_GET['device'] ) ) {
+	$filters['device'] = sanitize_text_field( wp_unslash( $_GET['device'] ) );
+}
 
 // Build WHERE clause based on filters.
 $where_clauses = array( "traffic_type = 'citation_click'" );
@@ -46,6 +56,26 @@ if ( ! empty( $filters['date_to'] ) ) {
 if ( ! empty( $filters['search'] ) ) {
 	$search_term = '%' . $wpdb->esc_like( $filters['search'] ) . '%';
 	$where_clauses[] = $wpdb->prepare( '(url LIKE %s OR post_title LIKE %s OR search_query LIKE %s)', $search_term, $search_term, $search_term );
+}
+
+// NEW: Filter by browser (partial match in user_agent)
+if ( ! empty( $filters['browser'] ) ) {
+	$browser_term = '%' . $wpdb->esc_like( $filters['browser'] ) . '%';
+	$where_clauses[] = $wpdb->prepare( 'user_agent LIKE %s', $browser_term );
+}
+
+// NEW: Filter by country code
+if ( ! empty( $filters['country'] ) ) {
+	$where_clauses[] = $wpdb->prepare( 'country_code = %s', $filters['country'] );
+}
+
+// NEW: Filter by device type (Mobile vs Desktop)
+if ( ! empty( $filters['device'] ) ) {
+	if ( 'mobile' === $filters['device'] ) {
+		$where_clauses[] = "(user_agent LIKE '%Mobile%' OR user_agent LIKE '%iPhone%' OR user_agent LIKE '%Android%')";
+	} elseif ( 'desktop' === $filters['device'] ) {
+		$where_clauses[] = "(user_agent NOT LIKE '%Mobile%' AND user_agent NOT LIKE '%iPhone%' AND user_agent NOT LIKE '%Android%')";
+	}
 }
 
 $where_sql = implode( ' AND ', $where_clauses );
@@ -136,7 +166,7 @@ $top_cited_pages = $wpdb->get_results(
 );
 
 // Recent citations (ALL - not just those with queries).
-// Use only core columns that exist in all database versions.
+// UPDATED: Include user_agent, ip_address, country_code for display
 $recent_citations = $wpdb->get_results(
 	"SELECT
 		ai_platform,
@@ -144,6 +174,9 @@ $recent_citations = $wpdb->get_results(
 		post_title,
 		search_query,
 		referer,
+		user_agent,
+		ip_address,
+		country_code,
 		visit_timestamp
 	FROM {$table_name}
 	WHERE {$where_sql}
@@ -258,6 +291,131 @@ for ( $week = 3; $week >= 0; $week-- ) {
 		'crawls'    => (int) $week_crawls,
 	);
 }
+
+/**
+ * Parse user agent string to extract browser, OS, and device type.
+ *
+ * @param string $user_agent Full user agent string.
+ * @return array Parsed data with browser, os, device.
+ */
+function ta_parse_user_agent( $user_agent ) {
+	if ( empty( $user_agent ) ) {
+		return array(
+			'browser' => 'Unknown',
+			'os'      => 'Unknown',
+			'device'  => 'unknown',
+			'icon'    => '❓',
+		);
+	}
+
+	$browser = 'Unknown';
+	$os      = 'Unknown';
+	$device  = 'desktop';
+	$icon    = '🖥️';
+
+	// Detect Browser
+	if ( strpos( $user_agent, 'Edg' ) !== false ) {
+		$browser = 'Edge';
+	} elseif ( strpos( $user_agent, 'Chrome' ) !== false && strpos( $user_agent, 'Edg' ) === false ) {
+		$browser = 'Chrome';
+	} elseif ( strpos( $user_agent, 'Firefox' ) !== false ) {
+		$browser = 'Firefox';
+	} elseif ( strpos( $user_agent, 'Safari' ) !== false && strpos( $user_agent, 'Chrome' ) === false ) {
+		$browser = 'Safari';
+	} elseif ( strpos( $user_agent, 'Opera' ) !== false || strpos( $user_agent, 'OPR' ) !== false ) {
+		$browser = 'Opera';
+	}
+
+	// Detect OS
+	if ( strpos( $user_agent, 'Windows NT 10' ) !== false ) {
+		$os = 'Windows 10';
+	} elseif ( strpos( $user_agent, 'Windows NT 11' ) !== false ) {
+		$os = 'Windows 11';
+	} elseif ( strpos( $user_agent, 'Windows' ) !== false ) {
+		$os = 'Windows';
+	} elseif ( strpos( $user_agent, 'Mac OS X' ) !== false || strpos( $user_agent, 'Macintosh' ) !== false ) {
+		$os = 'macOS';
+	} elseif ( strpos( $user_agent, 'Linux' ) !== false ) {
+		$os = 'Linux';
+	} elseif ( strpos( $user_agent, 'iPhone' ) !== false ) {
+		$os = 'iOS (iPhone)';
+	} elseif ( strpos( $user_agent, 'iPad' ) !== false ) {
+		$os = 'iOS (iPad)';
+	} elseif ( strpos( $user_agent, 'Android' ) !== false ) {
+		$os = 'Android';
+	}
+
+	// Detect Device Type
+	if ( strpos( $user_agent, 'Mobile' ) !== false ||
+	     strpos( $user_agent, 'iPhone' ) !== false ||
+	     strpos( $user_agent, 'Android' ) !== false ) {
+		$device = 'mobile';
+		$icon   = '📱';
+	}
+
+	return array(
+		'browser' => $browser,
+		'os'      => $os,
+		'device'  => $device,
+		'icon'    => $icon,
+	);
+}
+
+/**
+ * Get country flag emoji from country code.
+ *
+ * @param string $country_code 2-letter country code (US, GB, etc).
+ * @return string Flag emoji or empty string.
+ */
+function ta_get_country_flag( $country_code ) {
+	if ( empty( $country_code ) || strlen( $country_code ) !== 2 ) {
+		return '';
+	}
+
+	// Convert country code to flag emoji
+	// Flag emojis use Regional Indicator Symbols (U+1F1E6 to U+1F1FF)
+	$code = strtoupper( $country_code );
+	$flag = '';
+
+	foreach ( str_split( $code ) as $char ) {
+		$flag .= mb_chr( 0x1F1E6 + ord( $char ) - ord( 'A' ), 'UTF-8' );
+	}
+
+	return $flag;
+}
+
+/**
+ * Get available browsers from database for filter dropdown.
+ */
+$available_browsers = $wpdb->get_results(
+	"SELECT
+		CASE
+			WHEN user_agent LIKE '%Edg%' THEN 'Edge'
+			WHEN user_agent LIKE '%Chrome%' AND user_agent NOT LIKE '%Edg%' THEN 'Chrome'
+			WHEN user_agent LIKE '%Firefox%' THEN 'Firefox'
+			WHEN user_agent LIKE '%Safari%' AND user_agent NOT LIKE '%Chrome%' THEN 'Safari'
+			WHEN user_agent LIKE '%Opera%' OR user_agent LIKE '%OPR%' THEN 'Opera'
+			ELSE 'Other'
+		END as browser,
+		COUNT(*) as count
+	FROM {$table_name}
+	WHERE traffic_type = 'citation_click' AND user_agent != ''
+	GROUP BY browser
+	ORDER BY count DESC",
+	ARRAY_A
+);
+
+/**
+ * Get available countries from database for filter dropdown.
+ */
+$available_countries = $wpdb->get_results(
+	"SELECT country_code, COUNT(*) as count
+	FROM {$table_name}
+	WHERE traffic_type = 'citation_click' AND country_code IS NOT NULL
+	GROUP BY country_code
+	ORDER BY count DESC",
+	ARRAY_A
+);
 ?>
 
 <div class="wrap ta-bot-analytics">
@@ -450,18 +608,19 @@ for ( $week = 3; $week >= 0; $week-- ) {
 		<div class="ta-filters-content" style="display: block;">
 			<form method="get" id="ta-citations-filters-form">
 				<input type="hidden" name="page" value="third-audience-ai-citations">
-				<div class="ta-filter-grid">
+				<div class="ta-filter-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
+					<!-- Row 1: Date, Platform, Search -->
 					<div class="ta-filter-item">
 						<label><?php esc_html_e( 'Date Range', 'third-audience' ); ?></label>
-						<div class="ta-date-range">
-							<input type="date" name="date_from" value="<?php echo esc_attr( $filters['date_from'] ?? '' ); ?>">
+						<div class="ta-date-range" style="display: flex; align-items: center; gap: 8px;">
+							<input type="date" name="date_from" value="<?php echo esc_attr( $filters['date_from'] ?? '' ); ?>" style="flex: 1;">
 							<span>—</span>
-							<input type="date" name="date_to" value="<?php echo esc_attr( $filters['date_to'] ?? '' ); ?>">
+							<input type="date" name="date_to" value="<?php echo esc_attr( $filters['date_to'] ?? '' ); ?>" style="flex: 1;">
 						</div>
 					</div>
 					<div class="ta-filter-item">
 						<label><?php esc_html_e( 'AI Platform', 'third-audience' ); ?></label>
-						<select name="platform">
+						<select name="platform" style="width: 100%;">
 							<option value=""><?php esc_html_e( 'All Platforms', 'third-audience' ); ?></option>
 							<?php foreach ( $available_platforms as $platform ) : ?>
 								<option value="<?php echo esc_attr( $platform ); ?>" <?php selected( $filters['platform'] ?? '', $platform ); ?>>
@@ -472,14 +631,63 @@ for ( $week = 3; $week >= 0; $week-- ) {
 					</div>
 					<div class="ta-filter-item">
 						<label><?php esc_html_e( 'Search', 'third-audience' ); ?></label>
-						<input type="text" name="search" placeholder="<?php esc_attr_e( 'URL, title, or query...', 'third-audience' ); ?>" value="<?php echo esc_attr( $filters['search'] ?? '' ); ?>">
+						<input type="text" name="search" placeholder="<?php esc_attr_e( 'URL, title, or query...', 'third-audience' ); ?>" value="<?php echo esc_attr( $filters['search'] ?? '' ); ?>" style="width: 100%;">
 					</div>
-					<div class="ta-filter-item ta-filter-actions">
+
+					<!-- Row 2: NEW - Browser, Country, Device -->
+					<div class="ta-filter-item">
+						<label>🌐 <?php esc_html_e( 'Browser', 'third-audience' ); ?></label>
+						<select name="browser" style="width: 100%;">
+							<option value=""><?php esc_html_e( 'All Browsers', 'third-audience' ); ?></option>
+							<?php foreach ( $available_browsers as $browser_row ) : ?>
+								<option value="<?php echo esc_attr( $browser_row['browser'] ); ?>" <?php selected( $filters['browser'] ?? '', $browser_row['browser'] ); ?>>
+									<?php echo esc_html( $browser_row['browser'] ); ?> (<?php echo esc_html( $browser_row['count'] ); ?>)
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="ta-filter-item">
+						<label>🗺️ <?php esc_html_e( 'Country', 'third-audience' ); ?></label>
+						<select name="country" style="width: 100%;">
+							<option value=""><?php esc_html_e( 'All Countries', 'third-audience' ); ?></option>
+							<?php foreach ( $available_countries as $country_row ) : ?>
+								<option value="<?php echo esc_attr( $country_row['country_code'] ); ?>" <?php selected( $filters['country'] ?? '', $country_row['country_code'] ); ?>>
+									<?php echo ta_get_country_flag( $country_row['country_code'] ); ?> <?php echo esc_html( $country_row['country_code'] ); ?> (<?php echo esc_html( $country_row['count'] ); ?>)
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="ta-filter-item">
+						<label>📱 <?php esc_html_e( 'Device Type', 'third-audience' ); ?></label>
+						<select name="device" style="width: 100%;">
+							<option value=""><?php esc_html_e( 'All Devices', 'third-audience' ); ?></option>
+							<option value="desktop" <?php selected( $filters['device'] ?? '', 'desktop' ); ?>>🖥️ <?php esc_html_e( 'Desktop', 'third-audience' ); ?></option>
+							<option value="mobile" <?php selected( $filters['device'] ?? '', 'mobile' ); ?>>📱 <?php esc_html_e( 'Mobile', 'third-audience' ); ?></option>
+						</select>
+					</div>
+
+					<!-- Row 3: Actions -->
+					<div class="ta-filter-item ta-filter-actions" style="grid-column: 1 / -1;">
 						<label>&nbsp;</label>
-						<div>
-							<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply', 'third-audience' ); ?></button>
-							<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-ai-citations' ) ); ?>" class="button"><?php esc_html_e( 'Reset', 'third-audience' ); ?></a>
-							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'export', 'export_format' => 'csv' ) ) ), 'ta_export_citations' ) ); ?>" class="button"><?php esc_html_e( 'Export CSV', 'third-audience' ); ?></a>
+						<div style="display: flex; gap: 10px; align-items: center;">
+							<button type="submit" class="button button-primary">
+								<span class="dashicons dashicons-filter" style="margin-top: 3px;"></span> <?php esc_html_e( 'Apply Filters', 'third-audience' ); ?>
+							</button>
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-ai-citations' ) ); ?>" class="button">
+								<span class="dashicons dashicons-dismiss" style="margin-top: 3px;"></span> <?php esc_html_e( 'Reset', 'third-audience' ); ?>
+							</a>
+							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'ta_export_citations_csv', 'export_format' => 'csv' ) ) ), 'ta_export_citations' ) ); ?>" class="button button-secondary">
+								<span class="dashicons dashicons-download" style="margin-top: 3px;"></span> <?php esc_html_e( 'Export CSV', 'third-audience' ); ?>
+							</a>
+							<span style="color: #646970; font-size: 12px; margin-left: 10px;">
+								<?php
+								printf(
+									esc_html__( 'Showing %s of %s citations', 'third-audience' ),
+									'<strong>' . number_format( count( $recent_citations ) ) . '</strong>',
+									'<strong>' . number_format( $total_citations ) . '</strong>'
+								);
+								?>
+							</span>
 						</div>
 					</div>
 				</div>
@@ -611,19 +819,21 @@ for ( $week = 3; $week >= 0; $week-- ) {
 				</p>
 			</div>
 			<div class="ta-card-body" style="overflow-x: auto;">
-				<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
+				<table class="wp-list-table widefat fixed striped" style="min-width: 1100px;">
 					<thead>
 						<tr>
 							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
 							<th style="width: 60px; text-align: center;"><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
-							<th style="width: 200px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
-							<th style="width: 160px;">
+							<th style="width: 180px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
+							<th style="width: 140px;">
 								<?php esc_html_e( 'Search Query', 'third-audience' ); ?>
 								<span class="dashicons dashicons-info-outline" style="font-size: 14px; color: #999; cursor: help; vertical-align: middle;" title="<?php esc_attr_e( 'Only available from Perplexity, Google AI Overview, and Bing Copilot. ChatGPT and Claude do not provide search queries in referrers.', 'third-audience' ); ?>"></span>
 							</th>
-							<th style="width: 95px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
-							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
-							<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Ago', 'third-audience' ); ?></th>
+							<th style="width: 180px;">🌐 <?php esc_html_e( 'Browser & Device', 'third-audience' ); ?></th>
+							<th style="width: 70px; text-align: center;">🗺️ <?php esc_html_e( 'Location', 'third-audience' ); ?></th>
+							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
+							<th style="width: 75px; text-align: center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
+							<th style="width: 65px; text-align: center;"><?php esc_html_e( 'Ago', 'third-audience' ); ?></th>
 							<th><?php esc_html_e( 'Referrer', 'third-audience' ); ?></th>
 						</tr>
 					</thead>
@@ -634,10 +844,17 @@ for ( $week = 3; $week >= 0; $week-- ) {
 							$time_ago   = human_time_diff( $ts, current_time( 'timestamp' ) );
 							$short_url  = strlen( $citation['url'] ) > 30 ? substr( $citation['url'], 0, 27 ) . '...' : $citation['url'];
 							$short_ref  = ! empty( $citation['referer'] ) ? ( strlen( $citation['referer'] ) > 35 ? substr( $citation['referer'], 0, 32 ) . '...' : $citation['referer'] ) : '—';
+
 							// Detect method from URL (UTM) or referrer
 							$has_utm = strpos( $citation['url'], 'utm_source=' ) !== false;
 							$method_color = $has_utm ? '#34c759' : '#007aff';
 							$method_label = $has_utm ? 'UTM' : 'Ref';
+
+							// NEW: Parse user agent
+							$ua_data = ta_parse_user_agent( $citation['user_agent'] ?? '' );
+
+							// NEW: Get country flag
+							$country_flag = ta_get_country_flag( $citation['country_code'] ?? '' );
 							?>
 							<tr>
 								<td><span class="ta-bot-badge"><?php echo esc_html( $citation['ai_platform'] ); ?></span></td>
@@ -652,11 +869,32 @@ for ( $week = 3; $week >= 0; $week-- ) {
 								</td>
 								<td style="font-size: 11px;">
 									<?php if ( ! empty( $citation['search_query'] ) ) : ?>
-										<span style="color: #007aff;"><?php echo esc_html( substr( $citation['search_query'], 0, 35 ) ); ?><?php echo strlen( $citation['search_query'] ) > 35 ? '...' : ''; ?></span>
+										<span style="color: #007aff;"><?php echo esc_html( substr( $citation['search_query'], 0, 30 ) ); ?><?php echo strlen( $citation['search_query'] ) > 30 ? '...' : ''; ?></span>
 									<?php else : ?>
 										<span style="color: #d1d1d6;">—</span>
 									<?php endif; ?>
 								</td>
+
+								<!-- NEW: Browser & Device Column -->
+								<td style="font-size: 11px;">
+									<div style="line-height: 1.4;">
+										<strong><?php echo esc_html( $ua_data['browser'] ); ?></strong> on <?php echo esc_html( $ua_data['os'] ); ?>
+										<br>
+										<span style="color: #8e8e93; font-size: 10px;">
+											<?php echo esc_html( $ua_data['icon'] ); ?> <?php echo esc_html( ucfirst( $ua_data['device'] ) ); ?>
+										</span>
+									</div>
+								</td>
+
+								<!-- NEW: Location Column -->
+								<td style="text-align: center; font-size: 14px;" title="<?php echo esc_attr( $citation['country_code'] ?: 'Unknown' ); ?>">
+									<?php if ( ! empty( $country_flag ) ) : ?>
+										<?php echo $country_flag; ?> <span style="font-size: 11px; color: #646970;"><?php echo esc_html( $citation['country_code'] ); ?></span>
+									<?php else : ?>
+										<span style="color: #d1d1d6; font-size: 11px;">—</span>
+									<?php endif; ?>
+								</td>
+
 								<td style="text-align: center; font-size: 11px;"><?php echo esc_html( gmdate( 'M j, Y', $ts ) ); ?></td>
 								<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( gmdate( 'g:i A', $ts ) ); ?></td>
 								<td style="text-align: center; font-size: 10px; color: #8e8e93;"><?php echo esc_html( $time_ago ); ?></td>

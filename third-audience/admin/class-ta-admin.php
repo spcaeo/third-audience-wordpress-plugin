@@ -72,6 +72,7 @@ class TA_Admin {
 	public function init() {
 		add_action( 'admin_init', array( $this, 'handle_export_request' ), 5 );
 		add_action( 'admin_init', array( $this, 'handle_digest_download' ), 5 );
+		add_action( 'admin_init', array( $this, 'handle_citations_export' ), 5 );
 		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -1365,5 +1366,216 @@ class TA_Admin {
 		wp_send_json_success( array(
 			'message' => __( 'REST API mode forced successfully! All endpoints are now registered. Page will reload.', 'third-audience' ),
 		) );
+	}
+
+	/**
+	 * Handle AI Citations CSV export.
+	 *
+	 * @since 3.4.8
+	 * @return void
+	 */
+	public function handle_citations_export() {
+		// Check for export action.
+		if ( empty( $_GET['action'] ) || 'ta_export_citations_csv' !== $_GET['action'] ) {
+			return;
+		}
+
+		// Verify nonce.
+		if ( empty( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'ta_export_citations' ) ) {
+			wp_die( esc_html__( 'Security check failed', 'third-audience' ) );
+		}
+
+		// Check permissions.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to export data.', 'third-audience' ) );
+		}
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+		// Build WHERE clause from filters (same as main page).
+		$filters = array();
+		if ( ! empty( $_GET['platform'] ) ) {
+			$filters['platform'] = sanitize_text_field( wp_unslash( $_GET['platform'] ) );
+		}
+		if ( ! empty( $_GET['date_from'] ) ) {
+			$filters['date_from'] = sanitize_text_field( wp_unslash( $_GET['date_from'] ) );
+		}
+		if ( ! empty( $_GET['date_to'] ) ) {
+			$filters['date_to'] = sanitize_text_field( wp_unslash( $_GET['date_to'] ) );
+		}
+		if ( ! empty( $_GET['search'] ) ) {
+			$filters['search'] = sanitize_text_field( wp_unslash( $_GET['search'] ) );
+		}
+		if ( ! empty( $_GET['browser'] ) ) {
+			$filters['browser'] = sanitize_text_field( wp_unslash( $_GET['browser'] ) );
+		}
+		if ( ! empty( $_GET['country'] ) ) {
+			$filters['country'] = sanitize_text_field( wp_unslash( $_GET['country'] ) );
+		}
+		if ( ! empty( $_GET['device'] ) ) {
+			$filters['device'] = sanitize_text_field( wp_unslash( $_GET['device'] ) );
+		}
+
+		$where_clauses = array( "traffic_type = 'citation_click'" );
+
+		if ( ! empty( $filters['platform'] ) ) {
+			$where_clauses[] = $wpdb->prepare( 'ai_platform = %s', $filters['platform'] );
+		}
+		if ( ! empty( $filters['date_from'] ) ) {
+			$where_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) >= %s', $filters['date_from'] );
+		}
+		if ( ! empty( $filters['date_to'] ) ) {
+			$where_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) <= %s', $filters['date_to'] );
+		}
+		if ( ! empty( $filters['search'] ) ) {
+			$search_term = '%' . $wpdb->esc_like( $filters['search'] ) . '%';
+			$where_clauses[] = $wpdb->prepare( '(url LIKE %s OR post_title LIKE %s OR search_query LIKE %s)', $search_term, $search_term, $search_term );
+		}
+		if ( ! empty( $filters['browser'] ) ) {
+			$browser_term = '%' . $wpdb->esc_like( $filters['browser'] ) . '%';
+			$where_clauses[] = $wpdb->prepare( 'user_agent LIKE %s', $browser_term );
+		}
+		if ( ! empty( $filters['country'] ) ) {
+			$where_clauses[] = $wpdb->prepare( 'country_code = %s', $filters['country'] );
+		}
+		if ( ! empty( $filters['device'] ) ) {
+			if ( 'mobile' === $filters['device'] ) {
+				$where_clauses[] = "(user_agent LIKE '%Mobile%' OR user_agent LIKE '%iPhone%' OR user_agent LIKE '%Android%')";
+			} elseif ( 'desktop' === $filters['device'] ) {
+				$where_clauses[] = "(user_agent NOT LIKE '%Mobile%' AND user_agent NOT LIKE '%iPhone%' AND user_agent NOT LIKE '%Android%')";
+			}
+		}
+
+		$where_sql = implode( ' AND ', $where_clauses );
+
+		// Query all matching citations with ALL fields.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$citations = $wpdb->get_results(
+			"SELECT
+				id,
+				ai_platform,
+				url,
+				post_title,
+				search_query,
+				referer,
+				user_agent,
+				ip_address,
+				country_code,
+				traffic_type,
+				content_type,
+				detection_method,
+				confidence_score,
+				visit_timestamp
+			FROM {$table_name}
+			WHERE {$where_sql}
+			ORDER BY visit_timestamp DESC",
+			ARRAY_A
+		);
+
+		// Helper function for parsing user agent.
+		$parse_ua = function( $ua ) {
+			if ( empty( $ua ) ) {
+				return array( 'browser' => 'Unknown', 'os' => 'Unknown', 'device' => 'Unknown' );
+			}
+
+			$browser = 'Unknown';
+			$os = 'Unknown';
+			$device = 'Desktop';
+
+			if ( strpos( $ua, 'Edg' ) !== false ) {
+				$browser = 'Edge';
+			} elseif ( strpos( $ua, 'Chrome' ) !== false ) {
+				$browser = 'Chrome';
+			} elseif ( strpos( $ua, 'Firefox' ) !== false ) {
+				$browser = 'Firefox';
+			} elseif ( strpos( $ua, 'Safari' ) !== false && strpos( $ua, 'Chrome' ) === false ) {
+				$browser = 'Safari';
+			}
+
+			if ( strpos( $ua, 'Windows' ) !== false ) {
+				$os = 'Windows';
+			} elseif ( strpos( $ua, 'Mac' ) !== false ) {
+				$os = 'macOS';
+			} elseif ( strpos( $ua, 'Linux' ) !== false ) {
+				$os = 'Linux';
+			} elseif ( strpos( $ua, 'iPhone' ) !== false ) {
+				$os = 'iOS';
+			} elseif ( strpos( $ua, 'Android' ) !== false ) {
+				$os = 'Android';
+			}
+
+			if ( strpos( $ua, 'Mobile' ) !== false || strpos( $ua, 'iPhone' ) !== false || strpos( $ua, 'Android' ) !== false ) {
+				$device = 'Mobile';
+			}
+
+			return array( 'browser' => $browser, 'os' => $os, 'device' => $device );
+		};
+
+		// Generate filename with timestamp.
+		$filename = 'ai-citations-export-' . gmdate( 'Y-m-d-His' ) . '.csv';
+
+		// Set headers for CSV download.
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+
+		// Open output stream.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions
+		$output = fopen( 'php://output', 'w' );
+
+		// Add UTF-8 BOM for Excel compatibility.
+		fprintf( $output, chr(0xEF).chr(0xBB).chr(0xBF) );
+
+		// CSV Headers.
+		fputcsv( $output, array(
+			'ID',
+			'Platform',
+			'URL',
+			'Page Title',
+			'Search Query',
+			'Referrer',
+			'Browser',
+			'OS',
+			'Device Type',
+			'User Agent (Full)',
+			'IP Address',
+			'Country Code',
+			'Traffic Type',
+			'Content Type',
+			'Detection Method',
+			'Confidence Score',
+			'Timestamp',
+		) );
+
+		// Add data rows.
+		foreach ( $citations as $citation ) {
+			$ua_parsed = $parse_ua( $citation['user_agent'] );
+
+			fputcsv( $output, array(
+				$citation['id'],
+				$citation['ai_platform'],
+				$citation['url'],
+				$citation['post_title'],
+				$citation['search_query'],
+				$citation['referer'],
+				$ua_parsed['browser'],
+				$ua_parsed['os'],
+				$ua_parsed['device'],
+				$citation['user_agent'], // Full user agent string
+				$citation['ip_address'],
+				$citation['country_code'],
+				$citation['traffic_type'],
+				$citation['content_type'],
+				$citation['detection_method'],
+				$citation['confidence_score'],
+				$citation['visit_timestamp'],
+			) );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions
+		fclose( $output );
+		exit;
 	}
 }
