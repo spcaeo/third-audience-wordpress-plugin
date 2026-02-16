@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.4.9
+ * Version: 3.5.0
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,14 +27,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.4.9' );
+define( 'TA_VERSION', '3.5.0' );
 
 /**
  * Database version for migrations.
  *
  * @since 1.1.0
  */
-define( 'TA_DB_VERSION', '3.4.0' );
+define( 'TA_DB_VERSION', '3.5.0' );
 
 /**
  * Minimum PHP version required.

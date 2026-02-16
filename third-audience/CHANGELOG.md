@@ -2,6 +2,45 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.5.0] - 2026-02-16
+
+### Added
+- **Client User Agent Tracking:** Added separate `client_user_agent` column to capture real browser user agent from JavaScript (Chrome, Safari, Edge, Firefox) instead of server-side "Headless Frontend" UA
+- **HTTP Status Code Tracking:** Added `http_status` column to record HTTP response codes (200, 404, 500, etc.) to identify broken citations and error pages
+- **Request Type Classification:** Added `request_type` column to distinguish between:
+  - `html_page` - Initial HTML page loads (matches Nginx logs)
+  - `rsc_prefetch` - Next.js React Server Component prefetch requests (internal navigation)
+  - `js_fallback` - Client-side JavaScript tracker events (cached pages)
+  - `api_call` - REST API and AJAX requests
+- **Enhanced JavaScript Tracker:** Updated citation-tracker.js to capture and send real browser user agent via `navigator.userAgent`
+- **Request Type Detection:** Added helper methods to automatically detect and classify request types based on URL parameters, request method, and context
+
+### Changed
+- **Database Schema:** Added 3 new nullable columns: `client_user_agent` (TEXT), `http_status` (INT), `request_type` (VARCHAR)
+- **Database Version:** Bumped from 3.2.0 to 3.5.0 to trigger schema migration
+- **Visit Tracking:** Updated `track_visit()` to accept and store new fields with proper format specifiers
+- **AJAX Handler:** Enhanced to accept `client_user_agent` and `request_type` from JavaScript tracker
+- **Bot Crawl Tracking:** Added request type detection to bot crawl tracking
+- **Citation Tracking:** Added request type detection to citation click tracking
+
+### Technical Details
+- **Database Migration:** Uses WordPress `dbDelta()` for automatic column addition - non-breaking, backward compatible
+- **Default Values:** All new columns are nullable with sensible defaults (NULL for UA, 'unknown' for request_type)
+- **Performance:** Added database indexes for `request_type` and `http_status` columns for efficient querying
+- **HTTP Status Capture:** Added `get_http_status()` helper that calls `http_response_code()` during request processing
+- **RSC Detection:** Detects Next.js RSC prefetch via `?_rsc=` URL parameter
+- **Dual UA Storage:** Server UA from `$_SERVER['HTTP_USER_AGENT']`, Client UA from JavaScript `navigator.userAgent`
+
+### Benefits
+- ✅ **Complete Visibility:** Track both initial HTML page loads AND internal Next.js navigation
+- ✅ **Real Browser Data:** See actual Chrome/144, Safari, Edge versions instead of "Headless Frontend"
+- ✅ **Error Detection:** Identify broken citations (404s) and server errors (500s)
+- ✅ **Accurate Device Analytics:** Real client UA enables proper browser/device/OS reporting
+- ✅ **Matches Nginx Logs:** html_page entries now align with access log structure
+
+### Breaking Changes
+- None - all changes are backward compatible with nullable columns and default values
+
 ## [3.4.9] - 2026-02-16
 
 ### Fixed

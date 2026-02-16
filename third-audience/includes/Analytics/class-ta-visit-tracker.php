@@ -132,14 +132,17 @@ class TA_Visit_Tracker {
 			'bot_type'               => sanitize_text_field( $data['bot_type'] ),
 			'bot_name'               => sanitize_text_field( $data['bot_name'] ?? '' ),
 			'user_agent'             => sanitize_text_field( $data['user_agent'] ?? '' ),
+			'client_user_agent'      => isset( $data['client_user_agent'] ) ? sanitize_text_field( $data['client_user_agent'] ) : null,
 			'url'                    => esc_url_raw( $data['url'] ),
 			'post_id'                => isset( $data['post_id'] ) ? absint( $data['post_id'] ) : null,
 			'post_type'              => isset( $data['post_type'] ) ? sanitize_text_field( $data['post_type'] ) : null,
 			'post_title'             => isset( $data['post_title'] ) ? sanitize_text_field( $data['post_title'] ) : null,
 			'request_method'         => sanitize_text_field( $data['request_method'] ?? 'md_url' ),
+			'request_type'           => sanitize_text_field( $data['request_type'] ?? 'unknown' ),
 			'cache_status'           => sanitize_text_field( $data['cache_status'] ?? 'MISS' ),
 			'response_time'          => isset( $data['response_time'] ) ? absint( $data['response_time'] ) : null,
 			'response_size'          => isset( $data['response_size'] ) ? absint( $data['response_size'] ) : null,
+			'http_status'            => isset( $data['http_status'] ) ? absint( $data['http_status'] ) : $this->get_http_status(),
 			'ip_address'             => $ip_address,
 			'referer'                => isset( $data['referer'] ) ? esc_url_raw( $data['referer'] ) : null,
 			'country_code'           => $country_code,
@@ -157,9 +160,9 @@ class TA_Visit_Tracker {
 		);
 
 		$format = array(
-			'%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s',
-			'%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s',
-			'%s', '%s', '%s', '%f', '%d', '%s', '%s',
+			'%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s',
+			'%s', '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s',
+			'%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s',
 		);
 
 		// Analyze content metrics if post_id is available.
@@ -253,6 +256,53 @@ class TA_Visit_Tracker {
 	}
 
 	/**
+	 * Get current HTTP response status code.
+	 *
+	 * @since 3.5.0
+	 * @return int|null HTTP status code or null if not available.
+	 */
+	private function get_http_status() {
+		$status = http_response_code();
+		return $status ? $status : null;
+	}
+
+	/**
+	 * Detect request type to distinguish HTML pages from RSC prefetch and API calls.
+	 *
+	 * @since 3.5.0
+	 * @return string Request type: html_page, rsc_prefetch, api_call, or unknown.
+	 */
+	private function detect_request_type() {
+		// Check if this is an RSC prefetch request (Next.js client-side navigation).
+		if ( isset( $_GET['_rsc'] ) ) {
+			return 'rsc_prefetch';
+		}
+
+		// Check if it's an API or AJAX request.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return 'api_call';
+		}
+
+		if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+			return 'api_call';
+		}
+
+		// Check if it's a REST API endpoint.
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		if ( strpos( $request_uri, '/wp-json/' ) !== false ) {
+			return 'api_call';
+		}
+
+		// Check request method - initial HTML loads are typically GET.
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] !== 'GET' ) {
+			return 'api_call';
+		}
+
+		// If none of the above, this is likely an initial HTML page load.
+		return 'html_page';
+	}
+
+	/**
 	 * Track AI citation click from referrer.
 	 *
 	 * @since 2.2.0
@@ -314,6 +364,9 @@ class TA_Visit_Tracker {
 		$post_type  = $post ? $post->post_type : null;
 		$post_title = $post ? $post->post_title : null;
 
+		// Detect request type.
+		$request_type = $this->detect_request_type();
+
 		// Prepare tracking data.
 		$tracking_data = array(
 			'bot_type'       => 'AI_Citation',
@@ -324,6 +377,7 @@ class TA_Visit_Tracker {
 			'post_type'      => $post_type,
 			'post_title'     => $post_title,
 			'request_method' => 'citation_click',
+			'request_type'   => $request_type,
 			'cache_status'   => 'N/A',
 			'referer'        => $citation_data['referer'],
 			'traffic_type'   => 'citation_click',

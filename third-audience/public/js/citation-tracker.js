@@ -127,7 +127,9 @@
 			utm_source: citationData.utmSource || '',
 			utm_medium: citationData.utmMedium || '',
 			utm_campaign: citationData.utmCampaign || '',
-			page_title: document.title
+			page_title: document.title,
+			client_user_agent: navigator.userAgent || '',
+			request_type: 'js_fallback'
 		};
 
 		// Get AJAX URL

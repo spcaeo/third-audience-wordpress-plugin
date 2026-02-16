@@ -43,7 +43,7 @@ class TA_Bot_Analytics {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '3.2.0';
+	const DB_VERSION = '3.5.0';
 
 	/**
 	 * Option name for database version.
@@ -162,6 +162,42 @@ class TA_Bot_Analytics {
 	// =========================================================================
 
 	/**
+	 * Detect request type to distinguish HTML pages from RSC prefetch and API calls.
+	 *
+	 * @since 3.5.0
+	 * @return string Request type: html_page, rsc_prefetch, api_call, or unknown.
+	 */
+	private function detect_request_type() {
+		// Check if this is an RSC prefetch request (Next.js client-side navigation).
+		if ( isset( $_GET['_rsc'] ) ) {
+			return 'rsc_prefetch';
+		}
+
+		// Check if it's an API or AJAX request.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return 'api_call';
+		}
+
+		if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+			return 'api_call';
+		}
+
+		// Check if it's a REST API endpoint.
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		if ( strpos( $request_uri, '/wp-json/' ) !== false ) {
+			return 'api_call';
+		}
+
+		// Check request method - initial HTML loads are typically GET.
+		if ( isset( $_SERVER['REQUEST_METHOD'] ) && $_SERVER['REQUEST_METHOD'] !== 'GET' ) {
+			return 'api_call';
+		}
+
+		// If none of the above, this is likely an initial HTML page load.
+		return 'html_page';
+	}
+
+	/**
 	 * Maybe track AI citation click on page load.
 	 *
 	 * @since 2.2.0
@@ -224,14 +260,16 @@ class TA_Bot_Analytics {
 		}
 
 		// Get citation data from request.
-		$platform     = isset( $_POST['platform'] ) ? sanitize_text_field( wp_unslash( $_POST['platform'] ) ) : '';
-		$method       = isset( $_POST['method'] ) ? sanitize_text_field( wp_unslash( $_POST['method'] ) ) : '';
-		$url          = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
-		$path         = isset( $_POST['path'] ) ? sanitize_text_field( wp_unslash( $_POST['path'] ) ) : '';
-		$referrer     = isset( $_POST['referrer'] ) ? esc_url_raw( wp_unslash( $_POST['referrer'] ) ) : '';
-		$search_query = isset( $_POST['search_query'] ) ? sanitize_text_field( wp_unslash( $_POST['search_query'] ) ) : '';
-		$page_title   = isset( $_POST['page_title'] ) ? sanitize_text_field( wp_unslash( $_POST['page_title'] ) ) : '';
-		$utm_source   = isset( $_POST['utm_source'] ) ? sanitize_text_field( wp_unslash( $_POST['utm_source'] ) ) : '';
+		$platform          = isset( $_POST['platform'] ) ? sanitize_text_field( wp_unslash( $_POST['platform'] ) ) : '';
+		$method            = isset( $_POST['method'] ) ? sanitize_text_field( wp_unslash( $_POST['method'] ) ) : '';
+		$url               = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
+		$path              = isset( $_POST['path'] ) ? sanitize_text_field( wp_unslash( $_POST['path'] ) ) : '';
+		$referrer          = isset( $_POST['referrer'] ) ? esc_url_raw( wp_unslash( $_POST['referrer'] ) ) : '';
+		$search_query      = isset( $_POST['search_query'] ) ? sanitize_text_field( wp_unslash( $_POST['search_query'] ) ) : '';
+		$page_title        = isset( $_POST['page_title'] ) ? sanitize_text_field( wp_unslash( $_POST['page_title'] ) ) : '';
+		$utm_source        = isset( $_POST['utm_source'] ) ? sanitize_text_field( wp_unslash( $_POST['utm_source'] ) ) : '';
+		$client_user_agent = isset( $_POST['client_user_agent'] ) ? sanitize_text_field( wp_unslash( $_POST['client_user_agent'] ) ) : '';
+		$request_type      = isset( $_POST['request_type'] ) ? sanitize_text_field( wp_unslash( $_POST['request_type'] ) ) : 'js_fallback';
 
 		// Validate required fields.
 		if ( empty( $platform ) || empty( $url ) ) {
@@ -243,21 +281,23 @@ class TA_Bot_Analytics {
 
 		// Prepare tracking data.
 		$tracking_data = array(
-			'bot_type'       => 'AI_Citation',
-			'bot_name'       => $platform,
-			'user_agent'     => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
-			'url'            => $path,
-			'post_id'        => $post_id,
-			'post_type'      => $post_id ? get_post_type( $post_id ) : null,
-			'post_title'     => $post_id ? get_the_title( $post_id ) : $page_title,
-			'request_method' => 'citation_click_js',
-			'cache_status'   => 'N/A',
-			'referer'        => $referrer,
-			'traffic_type'   => 'citation_click',
-			'ai_platform'    => $platform,
-			'search_query'   => $search_query ?: null,
-			'referer_source' => $utm_source ?: $platform,
-			'referer_medium' => 'ai_citation',
+			'bot_type'          => 'AI_Citation',
+			'bot_name'          => $platform,
+			'user_agent'        => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
+			'client_user_agent' => $client_user_agent ?: null,
+			'url'               => $path,
+			'post_id'           => $post_id,
+			'post_type'         => $post_id ? get_post_type( $post_id ) : null,
+			'post_title'        => $post_id ? get_the_title( $post_id ) : $page_title,
+			'request_method'    => 'citation_click_js',
+			'request_type'      => $request_type,
+			'cache_status'      => 'N/A',
+			'referer'           => $referrer,
+			'traffic_type'      => 'citation_click',
+			'ai_platform'       => $platform,
+			'search_query'      => $search_query ?: null,
+			'referer_source'    => $utm_source ?: $platform,
+			'referer_medium'    => 'ai_citation',
 		);
 
 		// Track the visit.
@@ -324,6 +364,7 @@ class TA_Bot_Analytics {
 			'url'              => home_url( $request_uri ),
 			'post_id'          => $post_id ?: null,
 			'post_title'       => $post_title,
+			'request_type'     => $this->detect_request_type(),
 			'ip_address'       => $this->geolocation->get_bot_client_ip(),
 			'cache_status'     => strtoupper( $content_type ),
 			'response_time'    => 0,
@@ -736,14 +777,17 @@ class TA_Bot_Analytics {
 			bot_type varchar(50) NOT NULL,
 			bot_name varchar(100) NOT NULL,
 			user_agent text NOT NULL,
+			client_user_agent text DEFAULT NULL,
 			url varchar(500) NOT NULL,
 			post_id bigint(20) unsigned DEFAULT NULL,
 			post_type varchar(50) DEFAULT NULL,
 			post_title text DEFAULT NULL,
 			request_method varchar(20) NOT NULL DEFAULT 'md_url',
+			request_type varchar(20) DEFAULT 'unknown',
 			cache_status varchar(20) NOT NULL DEFAULT 'MISS',
 			response_time int(11) DEFAULT NULL,
 			response_size int(11) DEFAULT NULL,
+			http_status int(3) DEFAULT NULL,
 			ip_address varchar(45) DEFAULT NULL,
 			referer text DEFAULT NULL,
 			country_code varchar(2) DEFAULT NULL,
@@ -773,7 +817,9 @@ class TA_Bot_Analytics {
 			KEY ai_platform (ai_platform),
 			KEY detection_method (detection_method),
 			KEY ip_verified (ip_verified),
-			KEY content_type (content_type)
+			KEY content_type (content_type),
+			KEY request_type (request_type),
+			KEY http_status (http_status)
 		) {$charset_collate};";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
