@@ -412,7 +412,7 @@ class TA_Admin {
 		add_options_page( __( 'Third Audience Settings', 'third-audience' ), __( 'Third Audience', 'third-audience' ), 'manage_options', 'third-audience', array( $this, 'render_settings_page' ) );
 		add_menu_page( __( 'Bot Analytics', 'third-audience' ), __( 'Bot Analytics', 'third-audience' ), 'manage_options', 'third-audience-bot-analytics', array( $this, 'render_bot_analytics_page' ), 'dashicons-chart-line', 30 );
 		add_submenu_page( 'third-audience-bot-analytics', __( 'Bot Management', 'third-audience' ), __( 'Bot Management', 'third-audience' ), 'manage_options', 'third-audience-bot-management', array( $this, 'render_bot_management_page' ) );
-		add_submenu_page( 'third-audience-bot-analytics', __( 'AI Citations', 'third-audience' ), __( 'AI Citations', 'third-audience' ), 'manage_options', 'third-audience-ai-citations', array( $this, 'render_ai_citations_page' ) );
+		add_submenu_page( 'third-audience-bot-analytics', __( 'LLM Traffic', 'third-audience' ), __( 'LLM Traffic', 'third-audience' ), 'manage_options', 'third-audience-ai-citations', array( $this, 'render_ai_citations_page' ) );
 		add_submenu_page( 'third-audience-bot-analytics', __( 'Cache Browser', 'third-audience' ), __( 'Cache Browser', 'third-audience' ), 'manage_options', 'third-audience-cache-browser', array( $this, 'render_cache_browser_page' ) );
 		add_submenu_page( 'third-audience-bot-analytics', __( 'System Health', 'third-audience' ), __( 'System Health', 'third-audience' ), 'manage_options', 'third-audience-system-health', array( $this, 'render_system_health_page' ) );
 		// Competitor Benchmarking removed from v3.3.2 - feature disabled.

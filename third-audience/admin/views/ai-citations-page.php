@@ -420,7 +420,7 @@ $available_countries = $wpdb->get_results(
 
 <div class="wrap ta-bot-analytics">
 	<h1 class="wp-heading-inline">
-		<?php esc_html_e( 'AI Citations', 'third-audience' ); ?>
+		<?php esc_html_e( 'LLM Traffic', 'third-audience' ); ?>
 		<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
 	</h1>
 	<p class="description"><?php esc_html_e( 'Track citation clicks from ChatGPT, Perplexity, Claude, and other AI platforms', 'third-audience' ); ?></p>
@@ -974,7 +974,7 @@ $available_countries = $wpdb->get_results(
 	<!-- Help Section -->
 	<div class="ta-card" style="margin-top: 20px; background: #f5f5f7;">
 		<div class="ta-card-header">
-			<h2><?php esc_html_e( 'Understanding AI Citations', 'third-audience' ); ?></h2>
+			<h2><?php esc_html_e( 'Understanding LLM Traffic', 'third-audience' ); ?></h2>
 		</div>
 		<div class="ta-card-body">
 			<h3><?php esc_html_e( 'What is Citation Traffic?', 'third-audience' ); ?></h3>

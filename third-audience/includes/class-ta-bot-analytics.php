@@ -279,6 +279,65 @@ class TA_Bot_Analytics {
 		// Get post ID from URL.
 		$post_id = url_to_postid( $url );
 
+		// Check if server-side tracking already created a record in the last 60 seconds.
+		// If so, UPDATE that record with client_user_agent instead of creating duplicate.
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$recent_record = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT id, request_type FROM {$table_name}
+				WHERE traffic_type = 'citation_click'
+				AND ai_platform = %s
+				AND url LIKE %s
+				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+				AND client_user_agent IS NULL
+				ORDER BY visit_timestamp DESC
+				LIMIT 1",
+				$platform,
+				'%' . $wpdb->esc_like( $path ) . '%'
+			)
+		);
+
+		if ( $recent_record ) {
+			// Update existing record with client user agent.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$updated = $wpdb->update(
+				$table_name,
+				array(
+					'client_user_agent' => $client_user_agent ?: null,
+				),
+				array( 'id' => $recent_record->id ),
+				array( '%s' ),
+				array( '%d' )
+			);
+
+			if ( false !== $updated ) {
+				$this->logger->info( 'Updated citation record with client UA', array(
+					'id'       => $recent_record->id,
+					'platform' => $platform,
+					'url'      => $path,
+				) );
+
+				wp_send_json_success( array(
+					'message' => 'Updated existing record with client user agent',
+					'id'      => $recent_record->id,
+					'updated' => true,
+				) );
+			} else {
+				$this->logger->error( 'Failed to update citation record', array(
+					'id'    => $recent_record->id,
+					'error' => $wpdb->last_error,
+				) );
+				wp_send_json_error( array( 'message' => 'Failed to update record' ), 500 );
+			}
+			return;
+		}
+
+		// No recent server-side record found.
+		// This happens when page was served from cache (no server-side tracking).
+		// Create a new record with JS data.
+
 		// Prepare tracking data.
 		$tracking_data = array(
 			'bot_type'          => 'AI_Citation',

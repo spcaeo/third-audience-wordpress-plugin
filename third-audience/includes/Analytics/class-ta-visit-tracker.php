@@ -367,6 +367,9 @@ class TA_Visit_Tracker {
 		// Detect request type.
 		$request_type = $this->detect_request_type();
 
+		// Capture HTTP status code.
+		$http_status = $this->get_http_status();
+
 		// Prepare tracking data.
 		$tracking_data = array(
 			'bot_type'       => 'AI_Citation',
@@ -378,6 +381,7 @@ class TA_Visit_Tracker {
 			'post_title'     => $post_title,
 			'request_method' => 'citation_click',
 			'request_type'   => $request_type,
+			'http_status'    => $http_status,
 			'cache_status'   => 'N/A',
 			'referer'        => $citation_data['referer'],
 			'traffic_type'   => 'citation_click',
