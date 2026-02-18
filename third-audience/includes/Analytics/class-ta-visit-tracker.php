@@ -367,6 +367,18 @@ class TA_Visit_Tracker {
 		// Detect request type.
 		$request_type = $this->detect_request_type();
 
+		// Only track real HTML page visits.
+		// Skip rsc_prefetch (Next.js background fetch), api_call, js_fallback, and any other non-page requests.
+		if ( 'html_page' !== $request_type ) {
+			return false;
+		}
+
+		// Only track real WordPress content pages: posts, pages, homepage, blog listing, archives.
+		// This filters out feeds (/feed/), sitemaps, wp-login, wp-cron, trackbacks etc.
+		if ( ! is_singular() && ! is_front_page() && ! is_home() && ! is_archive() ) {
+			return false;
+		}
+
 		// Capture HTTP status code.
 		$http_status = $this->get_http_status();
 

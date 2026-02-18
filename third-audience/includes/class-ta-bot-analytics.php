@@ -336,6 +336,13 @@ class TA_Bot_Analytics {
 
 		// No recent server-side record found.
 		// This happens when page was served from cache (no server-side tracking).
+		// Only create a new record for real HTML page visits.
+		// Skip rsc_prefetch, api_call, js_fallback - server-side correctly filtered them out.
+		if ( 'html_page' !== $request_type ) {
+			wp_send_json_success( array( 'message' => 'Skipped: not a real HTML page visit', 'skipped' => true ) );
+			return;
+		}
+
 		// Create a new record with JS data.
 
 		// Prepare tracking data.
