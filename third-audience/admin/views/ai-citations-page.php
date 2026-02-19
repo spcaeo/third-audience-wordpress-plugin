@@ -92,12 +92,93 @@ $citations_today = $wpdb->get_var(
 	)
 );
 
+$citations_yesterday = $wpdb->get_var(
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$table_name} WHERE {$where_sql} AND DATE(visit_timestamp) = %s",
+		gmdate( 'Y-m-d', strtotime( '-1 day' ) )
+	)
+);
+
 $unique_platforms = $wpdb->get_var(
 	"SELECT COUNT(DISTINCT ai_platform) FROM {$table_name} WHERE {$where_sql} AND ai_platform IS NOT NULL"
 );
 
 $queries_captured = $wpdb->get_var(
 	"SELECT COUNT(*) FROM {$table_name} WHERE {$where_sql} AND search_query IS NOT NULL"
+);
+
+// Perplexity-specific: count captured search queries (only Perplexity sends query data).
+$perplexity_queries = $wpdb->get_var(
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$table_name} WHERE {$where_sql} AND ai_platform = %s AND search_query IS NOT NULL AND search_query != ''",
+		'Perplexity'
+	)
+);
+
+// Top countries by citation count.
+$top_countries = $wpdb->get_results(
+	"SELECT
+		country_code,
+		COUNT(*) as count
+	FROM {$table_name}
+	WHERE {$where_sql} AND country_code IS NOT NULL AND country_code != ''
+	GROUP BY country_code
+	ORDER BY count DESC
+	LIMIT 10",
+	ARRAY_A
+);
+
+// Perplexity search queries list (actual query text).
+$perplexity_query_list = $wpdb->get_results(
+	$wpdb->prepare(
+		"SELECT
+			search_query,
+			url,
+			post_title,
+			visit_timestamp,
+			COUNT(*) as frequency
+		FROM {$table_name}
+		WHERE {$where_sql} AND ai_platform = %s AND search_query IS NOT NULL AND search_query != ''
+		GROUP BY search_query
+		ORDER BY frequency DESC, visit_timestamp DESC
+		LIMIT 25",
+		'Perplexity'
+	),
+	ARRAY_A
+);
+
+// Browser breakdown.
+$browser_breakdown = $wpdb->get_results(
+	"SELECT
+		CASE
+			WHEN client_user_agent LIKE '%Edg%' THEN 'Edge'
+			WHEN client_user_agent LIKE '%Chrome%' AND client_user_agent NOT LIKE '%Edg%' THEN 'Chrome'
+			WHEN client_user_agent LIKE '%Firefox%' THEN 'Firefox'
+			WHEN client_user_agent LIKE '%Safari%' AND client_user_agent NOT LIKE '%Chrome%' THEN 'Safari'
+			WHEN client_user_agent LIKE '%Opera%' OR client_user_agent LIKE '%OPR%' THEN 'Opera'
+			ELSE 'Other'
+		END as browser,
+		COUNT(*) as count
+	FROM {$table_name}
+	WHERE {$where_sql} AND client_user_agent IS NOT NULL AND client_user_agent != ''
+	GROUP BY browser
+	ORDER BY count DESC",
+	ARRAY_A
+);
+
+// Device breakdown (Mobile vs Desktop).
+$device_breakdown = $wpdb->get_results(
+	"SELECT
+		CASE
+			WHEN client_user_agent LIKE '%Mobile%' OR client_user_agent LIKE '%iPhone%' OR client_user_agent LIKE '%Android%' THEN 'Mobile'
+			ELSE 'Desktop'
+		END as device,
+		COUNT(*) as count
+	FROM {$table_name}
+	WHERE {$where_sql} AND client_user_agent IS NOT NULL AND client_user_agent != ''
+	GROUP BY device
+	ORDER BY count DESC",
+	ARRAY_A
 );
 
 // Overall Citation Rate (v2.7.0) - Citations vs Crawls.
@@ -112,7 +193,11 @@ $crawl_where_sql = empty( $crawl_where_clauses ) ? '1=1' : implode( ' AND ', $cr
 $total_crawls = $wpdb->get_var(
 	"SELECT COUNT(*) FROM {$table_name} WHERE {$crawl_where_sql} AND traffic_type = 'bot_crawl'"
 );
-$overall_citation_rate = $total_crawls > 0 ? round( ( $total_citations / $total_crawls ) * 100, 1 ) : 0;
+// Correct formula: citations as % of all AI interactions (crawls + citations).
+// This is always 0-100%. Old formula (citations/crawls) could exceed 100%.
+$overall_citation_rate = ( $total_citations + $total_crawls ) > 0
+	? round( ( $total_citations / ( $total_citations + $total_crawls ) ) * 100, 1 )
+	: 0;
 
 // Get all available platforms for filter dropdown.
 $available_platforms = $wpdb->get_col(
@@ -175,6 +260,7 @@ $recent_citations = $wpdb->get_results(
 		search_query,
 		referer,
 		user_agent,
+		client_user_agent,
 		ip_address,
 		country_code,
 		visit_timestamp
@@ -213,12 +299,48 @@ $daily_crawls = $wpdb->get_results(
 	ARRAY_A
 );
 
+// Daily traffic by request type (HTML / MD / Other) — last 30 days.
+$daily_by_type_rows = $wpdb->get_results(
+	"SELECT
+		DATE(visit_timestamp) as date,
+		CASE
+			WHEN request_type = 'html_page' OR request_type = 'js_fallback' OR request_type IS NULL THEN 'html'
+			WHEN request_type LIKE '%markdown%' THEN 'md'
+			ELSE 'other'
+		END as req_type,
+		COUNT(*) as count
+	FROM {$table_name}
+	WHERE traffic_type = 'citation_click'
+		AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+	GROUP BY date, req_type
+	ORDER BY date ASC",
+	ARRAY_A
+);
+
 // Build chart data arrays.
 $chart_labels      = array();
 $chart_citations   = array();
 $chart_crawls      = array();
+$chart_html        = array();
+$chart_md          = array();
+$chart_other       = array();
 $citations_by_date = array();
 $crawls_by_date    = array();
+$html_by_date      = array();
+$md_by_date        = array();
+$other_by_date     = array();
+
+foreach ( $daily_by_type_rows as $row ) {
+	if ( 'html' === $row['req_type'] ) {
+		$html_by_date[ $row['date'] ] = (int) $row['count'];
+	} elseif ( 'md' === $row['req_type'] ) {
+		$md_by_date[ $row['date'] ] = (int) $row['count'];
+	} else {
+		$other_by_date[ $row['date'] ] = isset( $other_by_date[ $row['date'] ] )
+			? $other_by_date[ $row['date'] ] + (int) $row['count']
+			: (int) $row['count'];
+	}
+}
 
 // Index by date for easy lookup.
 foreach ( $daily_citations as $row ) {
@@ -230,10 +352,13 @@ foreach ( $daily_crawls as $row ) {
 
 // Generate labels for last 30 days.
 for ( $i = 29; $i >= 0; $i-- ) {
-	$date            = gmdate( 'Y-m-d', strtotime( "-{$i} days" ) );
-	$chart_labels[]  = gmdate( 'M j', strtotime( $date ) );
+	$date              = gmdate( 'Y-m-d', strtotime( "-{$i} days" ) );
+	$chart_labels[]    = gmdate( 'M j', strtotime( $date ) );
 	$chart_citations[] = isset( $citations_by_date[ $date ] ) ? $citations_by_date[ $date ] : 0;
 	$chart_crawls[]    = isset( $crawls_by_date[ $date ] ) ? $crawls_by_date[ $date ] : 0;
+	$chart_html[]      = isset( $html_by_date[ $date ] ) ? $html_by_date[ $date ] : 0;
+	$chart_md[]        = isset( $md_by_date[ $date ] ) ? $md_by_date[ $date ] : 0;
+	$chart_other[]     = isset( $other_by_date[ $date ] ) ? $other_by_date[ $date ] : 0;
 }
 
 // Platform chart data (for pie/doughnut chart).
@@ -255,7 +380,7 @@ foreach ( $citations_by_platform as $index => $platform ) {
 	$platform_data[]   = (int) $platform['count'];
 }
 
-// Weekly comparison data (last 4 weeks).
+// Weekly HTML vs MD traffic (last 4 weeks).
 $weekly_data = array();
 for ( $week = 3; $week >= 0; $week-- ) {
 	// Calculate Monday of X weeks ago.
@@ -264,10 +389,11 @@ for ( $week = 3; $week >= 0; $week-- ) {
 	$week_end   = gmdate( 'Y-m-d', strtotime( $week_start . ' +6 days' ) );
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-	$week_citations = $wpdb->get_var(
+	$week_html = $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM {$table_name}
 			WHERE traffic_type = 'citation_click'
+			AND (request_type = 'html_page' OR request_type = 'js_fallback' OR request_type IS NULL)
 			AND DATE(visit_timestamp) BETWEEN %s AND %s",
 			$week_start,
 			$week_end
@@ -275,20 +401,38 @@ for ( $week = 3; $week >= 0; $week-- ) {
 	);
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-	$week_crawls = $wpdb->get_var(
+	$week_md = $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM {$table_name}
-			WHERE traffic_type = 'bot_crawl'
+			WHERE traffic_type = 'citation_click'
+			AND request_type LIKE %s
 			AND DATE(visit_timestamp) BETWEEN %s AND %s",
+			'%markdown%',
+			$week_start,
+			$week_end
+		)
+	);
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	$week_other = $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT COUNT(*) FROM {$table_name}
+			WHERE traffic_type = 'citation_click'
+			AND request_type IS NOT NULL
+			AND request_type NOT IN ('html_page', 'js_fallback')
+			AND request_type NOT LIKE %s
+			AND DATE(visit_timestamp) BETWEEN %s AND %s",
+			'%markdown%',
 			$week_start,
 			$week_end
 		)
 	);
 
 	$weekly_data[] = array(
-		'label'     => 'Week of ' . gmdate( 'M j', strtotime( $week_start ) ),
-		'citations' => (int) $week_citations,
-		'crawls'    => (int) $week_crawls,
+		'label' => 'Week of ' . gmdate( 'M j', strtotime( $week_start ) ),
+		'html'  => (int) $week_html,
+		'md'    => (int) $week_md,
+		'other' => (int) $week_other,
 	);
 }
 
@@ -466,7 +610,15 @@ $available_countries = $wpdb->get_results(
 				<div class="ta-hero-label"><?php esc_html_e( 'Total Citations', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo number_format( $total_citations ); ?></div>
 				<div class="ta-hero-meta">
-					<?php echo number_format( $citations_today ); ?> today
+					<?php
+					$today_diff = $citations_today - $citations_yesterday;
+					$diff_color = $today_diff >= 0 ? '#34c759' : '#ff3b30';
+					$diff_sign  = $today_diff >= 0 ? '+' : '';
+					echo number_format( $citations_today ) . ' today';
+					if ( $citations_yesterday > 0 || $citations_today > 0 ) {
+						echo ' <span style="color:' . esc_attr( $diff_color ) . ';font-weight:600;font-size:11px;">(' . esc_html( $diff_sign . $today_diff ) . ' vs yesterday)</span>';
+					}
+					?>
 				</div>
 			</div>
 		</div>
@@ -483,77 +635,36 @@ $available_countries = $wpdb->get_results(
 		</div>
 
 		<div class="ta-hero-card">
-			<div class="ta-hero-icon">
+			<div class="ta-hero-icon" style="background: linear-gradient(135deg, #1FB6D0, #00a3bb);">
 				<span class="dashicons dashicons-search"></span>
 			</div>
 			<div class="ta-hero-content">
-				<div class="ta-hero-label"><?php esc_html_e( 'Queries Captured', 'third-audience' ); ?></div>
-				<div class="ta-hero-value"><?php echo number_format( $queries_captured ); ?></div>
-				<div class="ta-hero-meta">From Perplexity searches</div>
+				<div class="ta-hero-label"><?php esc_html_e( 'Perplexity Queries', 'third-audience' ); ?></div>
+				<div class="ta-hero-value"><?php echo number_format( $perplexity_queries ); ?></div>
+				<div class="ta-hero-meta">Captured search queries</div>
 			</div>
 		</div>
 
 		<div class="ta-hero-card">
-			<div class="ta-hero-icon">
-				<span class="dashicons dashicons-chart-area"></span>
+			<div class="ta-hero-icon" style="background: linear-gradient(135deg, #34c759, #28a745);">
+				<span class="dashicons dashicons-chart-pie"></span>
 			</div>
 			<div class="ta-hero-content">
-				<div class="ta-hero-label"><?php esc_html_e( 'Capture Rate', 'third-audience' ); ?></div>
-				<div class="ta-hero-value">
+				<div class="ta-hero-label"><?php esc_html_e( 'Citation Rate', 'third-audience' ); ?></div>
+				<div class="ta-hero-value"><?php echo esc_html( $overall_citation_rate ); ?>%</div>
+				<div class="ta-hero-meta">
 					<?php
-					$capture_rate = $total_citations > 0 ? round( ( $queries_captured / $total_citations ) * 100 ) : 0;
-					echo esc_html( $capture_rate );
-					?>%
+					printf(
+						// translators: %1$s = citation clicks, %2$s = total AI interactions.
+						esc_html__( '%1$s clicks of %2$s AI interactions', 'third-audience' ),
+						'<strong>' . number_format( $total_citations ) . '</strong>',
+						'<strong>' . number_format( $total_citations + $total_crawls ) . '</strong>'
+					);
+					?>
 				</div>
-				<div class="ta-hero-meta">Queries / Citations</div>
 			</div>
 		</div>
-	</div>
 
-	<!-- Overall Citation Rate Summary (v2.7.0) -->
-	<div class="ta-card" style="margin-top: 20px; background: linear-gradient(135deg, #ffffff 0%, #f9f9fb 100%); border-left: 4px solid #007aff;">
-		<div class="ta-card-body" style="padding: 24px;">
-			<div style="display: flex; align-items: center; gap: 20px;">
-				<div style="flex-shrink: 0;">
-					<div style="width: 80px; height: 80px; background: rgba(0, 122, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-						<span class="dashicons dashicons-chart-area" style="font-size: 36px; width: 36px; height: 36px; color: #007aff;"></span>
-					</div>
-				</div>
-				<div style="flex: 1;">
-					<h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">
-						<?php esc_html_e( 'Overall Citation Rate', 'third-audience' ); ?>
-					</h3>
-					<div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px;">
-						<span style="font-size: 42px; font-weight: 700; color: <?php echo $overall_citation_rate >= 50 ? '#34c759' : ( $overall_citation_rate >= 20 ? '#ff9500' : '#ff3b30' ); ?>;">
-							<?php echo esc_html( $overall_citation_rate ); ?>%
-						</span>
-						<span style="font-size: 13px; color: #646970;">
-							<?php
-							printf(
-								/* translators: 1: citations count, 2: crawls count */
-								esc_html__( '%1$s citations from %2$s crawls', 'third-audience' ),
-								'<strong>' . number_format( $total_citations ) . '</strong>',
-								'<strong>' . number_format( $total_crawls ) . '</strong>'
-							);
-							?>
-						</span>
-					</div>
-					<p style="margin: 0; font-size: 13px; color: #646970; line-height: 1.5;">
-						<?php
-						if ( $overall_citation_rate >= 50 ) {
-							esc_html_e( 'Excellent! Your content has strong citation performance. Over half of AI bot crawls result in citations.', 'third-audience' );
-						} elseif ( $overall_citation_rate >= 20 ) {
-							esc_html_e( 'Good citation rate. Consider optimizing content quality and structured data to improve visibility in AI responses.', 'third-audience' );
-						} elseif ( $overall_citation_rate > 0 ) {
-							esc_html_e( 'Low citation rate. Your content is being crawled but not cited. Focus on improving content depth, authority, and relevance.', 'third-audience' );
-						} else {
-							esc_html_e( 'No citations yet. When users click links from AI platforms (ChatGPT, Perplexity, etc.), citations will be tracked here.', 'third-audience' );
-						}
-						?>
-					</p>
-				</div>
-			</div>
-		</div>
 	</div>
 
 	<!-- Charts Section (v3.2.1) -->
@@ -584,18 +695,29 @@ $available_countries = $wpdb->get_results(
 			</div>
 		</div>
 
-		<!-- Weekly Comparison Chart -->
-		<div class="ta-card" style="margin-top: 20px;">
-			<div class="ta-card-header">
-				<h2><?php esc_html_e( 'Citations vs Crawls (Weekly)', 'third-audience' ); ?></h2>
-				<p class="description" style="margin-top: 8px;">
-					<?php esc_html_e( 'Compare how many AI bot crawls resulted in actual citation clicks from users.', 'third-audience' ); ?>
-				</p>
+		<!-- Row 2: Daily type breakdown + Weekly HTML/MD chart -->
+		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
+			<!-- Daily HTML / MD / Other Line Chart -->
+			<div class="ta-card">
+				<div class="ta-card-header">
+					<h2><?php esc_html_e( 'Daily Traffic by Type — HTML / MD / Other (Last 30 Days)', 'third-audience' ); ?></h2>
+				</div>
+				<div class="ta-card-body" style="padding: 20px;">
+					<canvas id="ta-daily-type-chart" height="200"></canvas>
+				</div>
 			</div>
-			<div class="ta-card-body" style="padding: 20px;">
-				<canvas id="ta-weekly-comparison-chart" height="120"></canvas>
+
+			<!-- Weekly HTML vs MD Bar Chart -->
+			<div class="ta-card">
+				<div class="ta-card-header">
+					<h2><?php esc_html_e( 'Weekly Traffic: HTML vs MD (Last 4 Weeks)', 'third-audience' ); ?></h2>
+				</div>
+				<div class="ta-card-body" style="padding: 20px;">
+					<canvas id="ta-weekly-type-chart" height="200"></canvas>
+				</div>
 			</div>
 		</div>
+
 	</div>
 
 	<!-- Filters (Collapsible) -->
@@ -712,8 +834,6 @@ $available_countries = $wpdb->get_results(
 							<th style="width: 120px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
 							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
 							<th style="width: 70px; text-align: center;"><?php esc_html_e( '% Total', 'third-audience' ); ?></th>
-							<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Queries', 'third-audience' ); ?></th>
-							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Capture %', 'third-audience' ); ?></th>
 							<th style="width: 140px; text-align: center;"><?php esc_html_e( 'First Seen', 'third-audience' ); ?></th>
 							<th style="width: 140px; text-align: center;"><?php esc_html_e( 'Last Seen', 'third-audience' ); ?></th>
 							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Days Active', 'third-audience' ); ?></th>
@@ -722,8 +842,7 @@ $available_countries = $wpdb->get_results(
 					<tbody>
 						<?php foreach ( $citations_by_platform as $platform ) : ?>
 							<?php
-							$platform_capture_rate = $platform['count'] > 0 ? round( ( $platform['queries_captured'] / $platform['count'] ) * 100 ) : 0;
-							$percent_of_total = $total_citations > 0 ? round( ( $platform['count'] / $total_citations ) * 100, 1 ) : 0;
+								$percent_of_total = $total_citations > 0 ? round( ( $platform['count'] / $total_citations ) * 100, 1 ) : 0;
 							$first_ts = strtotime( $platform['first_citation'] );
 							$last_ts = strtotime( $platform['last_citation'] );
 							$days_active = max( 1, ceil( ( $last_ts - $first_ts ) / 86400 ) );
@@ -736,12 +855,6 @@ $available_countries = $wpdb->get_results(
 								<td style="text-align: center;">
 									<span style="background: rgba(0,122,255,<?php echo esc_attr( min( 0.5, $percent_of_total / 100 ) ); ?>); padding: 2px 8px; border-radius: 10px; font-size: 11px;">
 										<?php echo esc_html( $percent_of_total ); ?>%
-									</span>
-								</td>
-								<td style="text-align: center;"><?php echo number_format( $platform['queries_captured'] ); ?></td>
-								<td style="text-align: center;">
-									<span style="color: <?php echo $platform_capture_rate >= 50 ? '#34c759' : ( $platform_capture_rate >= 20 ? '#ff9500' : '#8e8e93' ); ?>; font-weight: 600;">
-										<?php echo esc_html( $platform_capture_rate ); ?>%
 									</span>
 								</td>
 								<td style="text-align: center; font-size: 12px; color: #646970;">
@@ -763,53 +876,7 @@ $available_countries = $wpdb->get_results(
 		</div>
 	</div>
 
-	<!-- Recent Search Queries (Column-Dense Layout) -->
-	<?php if ( ! empty( $recent_queries ) ) : ?>
-		<div class="ta-card" style="margin-top: 20px;">
-			<div class="ta-card-header">
-				<h2><?php esc_html_e( 'Recent Search Queries', 'third-audience' ); ?></h2>
-				<p class="description" style="margin-top: 8px;">
-					<?php esc_html_e( 'Search queries extracted from Perplexity referrer URLs. Other platforms don\'t include query data in referrers.', 'third-audience' ); ?>
-				</p>
-			</div>
-			<div class="ta-card-body" style="overflow-x: auto;">
-				<table class="wp-list-table widefat fixed striped" style="min-width: 850px;">
-					<thead>
-						<tr>
-							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
-							<th style="width: 280px;">
-								<?php esc_html_e( 'Search Query', 'third-audience' ); ?>
-								<span class="dashicons dashicons-info-outline" style="font-size: 14px; color: #999; cursor: help; vertical-align: middle;" title="<?php esc_attr_e( 'Extracted from Perplexity referrer URLs. Other platforms (ChatGPT, Claude, Gemini) do not include search queries.', 'third-audience' ); ?>"></span>
-							</th>
-							<th><?php esc_html_e( 'Landing Page', 'third-audience' ); ?></th>
-							<th style="width: 110px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
-							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
-							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Ago', 'third-audience' ); ?></th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $recent_queries as $query ) : ?>
-							<?php
-							$ts = strtotime( $query['visit_timestamp'] );
-							$time_ago   = human_time_diff( $ts, current_time( 'timestamp' ) );
-							$short_url  = strlen( $query['url'] ) > 40 ? substr( $query['url'], 0, 37 ) . '...' : $query['url'];
-							?>
-							<tr>
-								<td><span class="ta-bot-badge"><?php echo esc_html( $query['ai_platform'] ); ?></span></td>
-								<td><strong style="color: #007aff;"><?php echo esc_html( $query['search_query'] ); ?></strong></td>
-								<td><code style="font-size: 11px; color: #646970;"><?php echo esc_html( $short_url ); ?></code></td>
-								<td style="text-align: center; font-size: 12px;"><?php echo esc_html( gmdate( 'M j, Y', $ts ) ); ?></td>
-								<td style="text-align: center; font-size: 12px; color: #646970;"><?php echo esc_html( gmdate( 'g:i A', $ts ) ); ?></td>
-								<td style="text-align: center; font-size: 11px; color: #8e8e93;"><?php echo esc_html( $time_ago ); ?></td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			</div>
-		</div>
-	<?php endif; ?>
-
-	<!-- Recent Citations (Column-Dense Layout) -->
+	<!-- Recent Citations	<!-- Recent Citations (Column-Dense Layout) -->
 	<?php if ( ! empty( $recent_citations ) ) : ?>
 		<div class="ta-card" style="margin-top: 20px;">
 			<div class="ta-card-header">
@@ -825,10 +892,6 @@ $available_countries = $wpdb->get_results(
 							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
 							<th style="width: 60px; text-align: center;"><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
 							<th style="width: 180px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
-							<th style="width: 140px;">
-								<?php esc_html_e( 'Search Query', 'third-audience' ); ?>
-								<span class="dashicons dashicons-info-outline" style="font-size: 14px; color: #999; cursor: help; vertical-align: middle;" title="<?php esc_attr_e( 'Only available from Perplexity, Google AI Overview, and Bing Copilot. ChatGPT and Claude do not provide search queries in referrers.', 'third-audience' ); ?>"></span>
-							</th>
 							<th style="width: 180px;">🌐 <?php esc_html_e( 'Browser & Device', 'third-audience' ); ?></th>
 							<th style="width: 70px; text-align: center;">🗺️ <?php esc_html_e( 'Location', 'third-audience' ); ?></th>
 							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
@@ -850,8 +913,10 @@ $available_countries = $wpdb->get_results(
 							$method_color = $has_utm ? '#34c759' : '#007aff';
 							$method_label = $has_utm ? 'UTM' : 'Ref';
 
-							// NEW: Parse user agent
-							$ua_data = ta_parse_user_agent( $citation['user_agent'] ?? '' );
+							// Prefer client_user_agent (real browser UA from JS navigator.userAgent)
+							// over user_agent (server-side HTTP_USER_AGENT, may be a bot/proxy UA).
+							$ua_string = ! empty( $citation['client_user_agent'] ) ? $citation['client_user_agent'] : ( $citation['user_agent'] ?? '' );
+							$ua_data   = ta_parse_user_agent( $ua_string );
 
 							// NEW: Get country flag
 							$country_flag = ta_get_country_flag( $citation['country_code'] ?? '' );
@@ -867,14 +932,6 @@ $available_countries = $wpdb->get_results(
 									<strong style="font-size: 12px;"><?php echo esc_html( $citation['post_title'] ?: 'Untitled' ); ?></strong>
 									<br><code style="font-size: 9px; color: #8e8e93;"><?php echo esc_html( $short_url ); ?></code>
 								</td>
-								<td style="font-size: 11px;">
-									<?php if ( ! empty( $citation['search_query'] ) ) : ?>
-										<span style="color: #007aff;"><?php echo esc_html( substr( $citation['search_query'], 0, 30 ) ); ?><?php echo strlen( $citation['search_query'] ) > 30 ? '...' : ''; ?></span>
-									<?php else : ?>
-										<span style="color: #d1d1d6;">—</span>
-									<?php endif; ?>
-								</td>
-
 								<!-- NEW: Browser & Device Column -->
 								<td style="font-size: 11px;">
 									<div style="line-height: 1.4;">
@@ -971,6 +1028,198 @@ $available_countries = $wpdb->get_results(
 		</div>
 	<?php endif; ?>
 
+	<!-- Perplexity Search Queries + Top Countries (side by side) -->
+	<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+
+		<!-- Perplexity Search Queries -->
+		<div class="ta-card">
+			<div class="ta-card-header">
+				<h2>🔍 <?php esc_html_e( 'Perplexity Search Queries', 'third-audience' ); ?></h2>
+				<p class="description" style="margin-top: 6px;"><?php esc_html_e( 'Actual search queries users typed in Perplexity before clicking your link.', 'third-audience' ); ?></p>
+			</div>
+			<div class="ta-card-body" style="overflow-x: auto;">
+				<?php if ( empty( $perplexity_query_list ) ) : ?>
+					<p style="text-align: center; color: #646970; padding: 30px 0;">
+						<?php esc_html_e( 'No Perplexity queries captured yet.', 'third-audience' ); ?>
+					</p>
+				<?php else : ?>
+					<table class="wp-list-table widefat fixed striped">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Search Query', 'third-audience' ); ?></th>
+								<th style="width: 60px; text-align: center;"><?php esc_html_e( 'Times', 'third-audience' ); ?></th>
+								<th style="width: 120px;"><?php esc_html_e( 'Page Visited', 'third-audience' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach ( $perplexity_query_list as $q ) : ?>
+								<tr>
+									<td style="font-size: 12px; font-weight: 500;">
+										"<?php echo esc_html( $q['search_query'] ); ?>"
+									</td>
+									<td style="text-align: center;">
+										<span style="background: #1FB6D0; color: #fff; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 600;">
+											<?php echo esc_html( $q['frequency'] ); ?>
+										</span>
+									</td>
+									<td style="font-size: 11px; color: #646970;" title="<?php echo esc_attr( $q['url'] ); ?>">
+										<?php echo esc_html( $q['post_title'] ?: basename( rtrim( $q['url'], '/' ) ) ?: 'Homepage' ); ?>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				<?php endif; ?>
+			</div>
+		</div>
+
+		<!-- Top Countries -->
+		<div class="ta-card">
+			<div class="ta-card-header">
+				<h2>🗺️ <?php esc_html_e( 'Top Countries', 'third-audience' ); ?></h2>
+				<p class="description" style="margin-top: 6px;"><?php esc_html_e( 'Countries your AI citation traffic is coming from.', 'third-audience' ); ?></p>
+			</div>
+			<div class="ta-card-body" style="overflow-x: auto;">
+				<?php if ( empty( $top_countries ) ) : ?>
+					<p style="text-align: center; color: #646970; padding: 30px 0;">
+						<?php esc_html_e( 'No country data yet.', 'third-audience' ); ?>
+					</p>
+				<?php else : ?>
+					<table class="wp-list-table widefat fixed striped">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Country', 'third-audience' ); ?></th>
+								<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
+								<th style="width: 90px; text-align: center;"><?php esc_html_e( '% Share', 'third-audience' ); ?></th>
+								<th><?php esc_html_e( 'Bar', 'third-audience' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php
+							$max_country_count = ! empty( $top_countries ) ? (int) $top_countries[0]['count'] : 1;
+							foreach ( $top_countries as $country ) :
+								$flag    = ta_get_country_flag( $country['country_code'] );
+								$pct     = $total_citations > 0 ? round( ( $country['count'] / $total_citations ) * 100, 1 ) : 0;
+								$bar_pct = $max_country_count > 0 ? round( ( $country['count'] / $max_country_count ) * 100 ) : 0;
+							?>
+								<tr>
+									<td style="font-size: 14px;">
+										<?php echo $flag; ?> <strong style="font-size: 12px;"><?php echo esc_html( $country['country_code'] ); ?></strong>
+									</td>
+									<td style="text-align: center; font-weight: 600;"><?php echo number_format( $country['count'] ); ?></td>
+									<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( $pct ); ?>%</td>
+									<td>
+										<div style="background: #e5e5ea; border-radius: 3px; height: 8px; overflow: hidden;">
+											<div style="background: #007aff; width: <?php echo esc_attr( $bar_pct ); ?>%; height: 100%; border-radius: 3px;"></div>
+										</div>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				<?php endif; ?>
+			</div>
+		</div>
+	</div>
+
+	<!-- Browser & Device Breakdown -->
+	<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+
+		<!-- Browser Breakdown -->
+		<div class="ta-card">
+			<div class="ta-card-header">
+				<h2>🌐 <?php esc_html_e( 'Browser Breakdown', 'third-audience' ); ?></h2>
+				<p class="description" style="margin-top: 6px;"><?php esc_html_e( 'Browsers used by visitors who came from AI platforms.', 'third-audience' ); ?></p>
+			</div>
+			<div class="ta-card-body" style="overflow-x: auto;">
+				<?php if ( empty( $browser_breakdown ) ) : ?>
+					<p style="text-align: center; color: #646970; padding: 30px 0;">
+						<?php esc_html_e( 'No browser data yet. Browser data is captured via JavaScript.', 'third-audience' ); ?>
+					</p>
+				<?php else : ?>
+					<?php
+					$total_browser = array_sum( array_column( $browser_breakdown, 'count' ) );
+					$max_browser   = ! empty( $browser_breakdown ) ? (int) $browser_breakdown[0]['count'] : 1;
+					$browser_icons = array(
+						'Chrome'  => '🟢',
+						'Firefox' => '🦊',
+						'Safari'  => '🧭',
+						'Edge'    => '🔵',
+						'Opera'   => '🔴',
+						'Other'   => '⚪',
+					);
+					?>
+					<table class="wp-list-table widefat fixed striped">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Browser', 'third-audience' ); ?></th>
+								<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Visits', 'third-audience' ); ?></th>
+								<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Share', 'third-audience' ); ?></th>
+								<th><?php esc_html_e( 'Bar', 'third-audience' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach ( $browser_breakdown as $b ) :
+								$pct     = $total_browser > 0 ? round( ( $b['count'] / $total_browser ) * 100, 1 ) : 0;
+								$bar_pct = $max_browser > 0 ? round( ( $b['count'] / $max_browser ) * 100 ) : 0;
+								$icon    = isset( $browser_icons[ $b['browser'] ] ) ? $browser_icons[ $b['browser'] ] : '⚪';
+							?>
+								<tr>
+									<td><?php echo $icon; ?> <strong style="font-size: 12px;"><?php echo esc_html( $b['browser'] ); ?></strong></td>
+									<td style="text-align: center; font-weight: 600;"><?php echo number_format( $b['count'] ); ?></td>
+									<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( $pct ); ?>%</td>
+									<td>
+										<div style="background: #e5e5ea; border-radius: 3px; height: 8px; overflow: hidden;">
+											<div style="background: #34c759; width: <?php echo esc_attr( $bar_pct ); ?>%; height: 100%; border-radius: 3px;"></div>
+										</div>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				<?php endif; ?>
+			</div>
+		</div>
+
+		<!-- Device Breakdown -->
+		<div class="ta-card">
+			<div class="ta-card-header">
+				<h2>📱 <?php esc_html_e( 'Device Breakdown', 'third-audience' ); ?></h2>
+				<p class="description" style="margin-top: 6px;"><?php esc_html_e( 'Mobile vs Desktop split for AI citation traffic.', 'third-audience' ); ?></p>
+			</div>
+			<div class="ta-card-body">
+				<?php if ( empty( $device_breakdown ) ) : ?>
+					<p style="text-align: center; color: #646970; padding: 30px 0;">
+						<?php esc_html_e( 'No device data yet. Device data is captured via JavaScript.', 'third-audience' ); ?>
+					</p>
+				<?php else : ?>
+					<?php
+					$total_device = array_sum( array_column( $device_breakdown, 'count' ) );
+					$device_icons = array( 'Mobile' => '📱', 'Desktop' => '🖥️' );
+					$device_colors = array( 'Mobile' => '#ff9500', 'Desktop' => '#007aff' );
+					?>
+					<div style="display: flex; flex-direction: column; gap: 16px; padding: 10px 0;">
+						<?php foreach ( $device_breakdown as $d ) :
+							$pct        = $total_device > 0 ? round( ( $d['count'] / $total_device ) * 100, 1 ) : 0;
+							$icon       = isset( $device_icons[ $d['device'] ] ) ? $device_icons[ $d['device'] ] : '💻';
+							$bar_color  = isset( $device_colors[ $d['device'] ] ) ? $device_colors[ $d['device'] ] : '#8e8e93';
+						?>
+							<div>
+								<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+									<span style="font-size: 14px;"><?php echo $icon; ?> <strong><?php echo esc_html( $d['device'] ); ?></strong></span>
+									<span style="font-size: 13px; font-weight: 600;"><?php echo number_format( $d['count'] ); ?> <span style="color: #646970; font-size: 11px; font-weight: 400;">(<?php echo esc_html( $pct ); ?>%)</span></span>
+								</div>
+								<div style="background: #e5e5ea; border-radius: 6px; height: 12px; overflow: hidden;">
+									<div style="background: <?php echo esc_attr( $bar_color ); ?>; width: <?php echo esc_attr( $pct ); ?>%; height: 100%; border-radius: 6px; transition: width 0.3s ease;"></div>
+								</div>
+							</div>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+			</div>
+		</div>
+	</div>
+
 	<!-- Help Section -->
 	<div class="ta-card" style="margin-top: 20px; background: #f5f5f7;">
 		<div class="ta-card-header">
@@ -1006,12 +1255,15 @@ $available_countries = $wpdb->get_results(
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 	// Chart data from PHP
-	var chartLabels = <?php echo wp_json_encode( $chart_labels ); ?>;
+	var chartLabels    = <?php echo wp_json_encode( $chart_labels ); ?>;
 	var chartCitations = <?php echo wp_json_encode( $chart_citations ); ?>;
-	var chartCrawls = <?php echo wp_json_encode( $chart_crawls ); ?>;
+	var chartCrawls    = <?php echo wp_json_encode( $chart_crawls ); ?>;
+	var chartHtml      = <?php echo wp_json_encode( $chart_html ); ?>;
+	var chartMd        = <?php echo wp_json_encode( $chart_md ); ?>;
+	var chartOther     = <?php echo wp_json_encode( $chart_other ); ?>;
 	var platformLabels = <?php echo wp_json_encode( $platform_labels ); ?>;
-	var platformData = <?php echo wp_json_encode( $platform_data ); ?>;
-	var weeklyData = <?php echo wp_json_encode( $weekly_data ); ?>;
+	var platformData   = <?php echo wp_json_encode( $platform_data ); ?>;
+	var weeklyData     = <?php echo wp_json_encode( $weekly_data ); ?>;
 	var platformColors = <?php echo wp_json_encode( array_slice( $platform_colors, 0, count( $platform_labels ) ) ); ?>;
 
 	// Common chart options
@@ -1084,6 +1336,63 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
+	// 1b. Daily Traffic by Type (HTML / MD / Other) Line Chart
+	var dailyTypeCtx = document.getElementById('ta-daily-type-chart');
+	if (dailyTypeCtx) {
+		new Chart(dailyTypeCtx, {
+			type: 'line',
+			data: {
+				labels: chartLabels,
+				datasets: [
+					{
+						label: 'HTML Clicks',
+						data: chartHtml,
+						borderColor: '#007aff',
+						backgroundColor: 'rgba(0, 122, 255, 0.08)',
+						fill: true,
+						tension: 0.4,
+						pointRadius: 2,
+						pointHoverRadius: 5
+					},
+					{
+						label: 'MD Clicks',
+						data: chartMd,
+						borderColor: '#ff9500',
+						backgroundColor: 'rgba(255, 149, 0, 0.08)',
+						fill: true,
+						tension: 0.4,
+						pointRadius: 2,
+						pointHoverRadius: 5
+					},
+					{
+						label: 'Other',
+						data: chartOther,
+						borderColor: '#8e8e93',
+						backgroundColor: 'transparent',
+						borderDash: [4, 4],
+						tension: 0.4,
+						pointRadius: 0,
+						pointHoverRadius: 3
+					}
+				]
+			},
+			options: Object.assign({}, commonOptions, {
+				scales: {
+					y: {
+						beginAtZero: true,
+						grid: { color: 'rgba(0, 0, 0, 0.05)' },
+						ticks: { stepSize: 1 }
+					},
+					x: {
+						grid: { display: false },
+						ticks: { maxTicksLimit: 10, font: { size: 11 } }
+					}
+				},
+				interaction: { intersect: false, mode: 'index' }
+			})
+		});
+	}
+
 	// 2. Platform Distribution Doughnut Chart
 	var platformCtx = document.getElementById('ta-platform-chart');
 	if (platformCtx && platformData.length > 0) {
@@ -1116,27 +1425,29 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
-	// 3. Weekly Comparison Bar Chart
-	var weeklyCtx = document.getElementById('ta-weekly-comparison-chart');
-	if (weeklyCtx) {
-		var weekLabels = weeklyData.map(function(w) { return w.label; });
-		var weekCitations = weeklyData.map(function(w) { return w.citations; });
-		var weekCrawls = weeklyData.map(function(w) { return w.crawls; });
-
-		new Chart(weeklyCtx, {
+	// 3. Weekly HTML vs MD Bar Chart
+	var weeklyTypeCtx = document.getElementById('ta-weekly-type-chart');
+	if (weeklyTypeCtx) {
+		new Chart(weeklyTypeCtx, {
 			type: 'bar',
 			data: {
-				labels: weekLabels,
+				labels: weeklyData.map(function(w) { return w.label; }),
 				datasets: [
 					{
-						label: 'Citations',
-						data: weekCitations,
+						label: 'HTML Clicks',
+						data: weeklyData.map(function(w) { return w.html; }),
 						backgroundColor: '#007aff',
 						borderRadius: 4
 					},
 					{
-						label: 'Crawls',
-						data: weekCrawls,
+						label: 'MD Clicks',
+						data: weeklyData.map(function(w) { return w.md; }),
+						backgroundColor: '#ff9500',
+						borderRadius: 4
+					},
+					{
+						label: 'Other',
+						data: weeklyData.map(function(w) { return w.other; }),
 						backgroundColor: '#e5e5ea',
 						borderRadius: 4
 					}
@@ -1149,14 +1460,13 @@ document.addEventListener('DOMContentLoaded', function() {
 						grid: { color: 'rgba(0, 0, 0, 0.05)' },
 						ticks: { stepSize: 1 }
 					},
-					x: {
-						grid: { display: false }
-					}
+					x: { grid: { display: false } }
 				},
 				barPercentage: 0.7,
 				categoryPercentage: 0.8
 			})
 		});
 	}
+
 });
 </script>

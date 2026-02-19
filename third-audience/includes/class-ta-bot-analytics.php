@@ -279,23 +279,34 @@ class TA_Bot_Analytics {
 		// Get post ID from URL.
 		$post_id = url_to_postid( $url );
 
-		// Check if server-side tracking already created a record in the last 60 seconds.
-		// If so, UPDATE that record with client_user_agent instead of creating duplicate.
+		// Find the session record created by server-side tracking (same IP + platform within 30 min).
+		// UPDATE that record with client_user_agent to confirm it is a real browser visit.
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+		// Get client IP from the incoming AJAX request.
+		$client_ip = '';
+		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$forwarded = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
+			$ips       = explode( ',', $forwarded );
+			$client_ip = trim( $ips[0] );
+		} elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+			$client_ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$recent_record = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT id, request_type FROM {$table_name}
 				WHERE traffic_type = 'citation_click'
 				AND ai_platform = %s
-				AND url LIKE %s
-				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+				AND ip_address = %s
+				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
 				AND client_user_agent IS NULL
 				ORDER BY visit_timestamp DESC
 				LIMIT 1",
 				$platform,
-				'%' . $wpdb->esc_like( $path ) . '%'
+				$client_ip
 			)
 		);
 

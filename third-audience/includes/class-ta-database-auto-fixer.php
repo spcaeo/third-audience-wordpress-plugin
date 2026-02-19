@@ -263,12 +263,15 @@ class TA_Database_Auto_Fixer {
 		// This ensures proper order even if table schema is incomplete.
 		$required_columns = array(
 			// Phase 1: Base columns (no dependencies - add at end of table).
-			'page_url'     => "ALTER TABLE {$table} ADD COLUMN page_url varchar(500) NOT NULL AFTER user_agent",
-			'cache_hit'    => "ALTER TABLE {$table} ADD COLUMN cache_hit tinyint(1) DEFAULT 0 AFTER response_time",
-			'content_type' => "ALTER TABLE {$table} ADD COLUMN content_type varchar(50) DEFAULT 'html' AFTER traffic_type",
+			'page_url'           => "ALTER TABLE {$table} ADD COLUMN page_url varchar(500) NOT NULL AFTER user_agent",
+			'cache_hit'          => "ALTER TABLE {$table} ADD COLUMN cache_hit tinyint(1) DEFAULT 0 AFTER response_time",
+			'content_type'       => "ALTER TABLE {$table} ADD COLUMN content_type varchar(50) DEFAULT 'html' AFTER traffic_type",
 			// Phase 2: Dependent columns (require base columns to exist).
-			'page_title'   => "ALTER TABLE {$table} ADD COLUMN page_title text DEFAULT NULL AFTER page_url",
-			'is_citation'  => "ALTER TABLE {$table} ADD COLUMN is_citation tinyint(1) DEFAULT 0 AFTER cache_hit",
+			'page_title'         => "ALTER TABLE {$table} ADD COLUMN page_title text DEFAULT NULL AFTER page_url",
+			'is_citation'        => "ALTER TABLE {$table} ADD COLUMN is_citation tinyint(1) DEFAULT 0 AFTER cache_hit",
+			// Phase 3: LLM Traffic tracking columns (v3.5.0).
+			'client_user_agent'  => "ALTER TABLE {$table} ADD COLUMN client_user_agent text DEFAULT NULL AFTER user_agent",
+			'request_type'       => "ALTER TABLE {$table} ADD COLUMN request_type varchar(20) DEFAULT 'unknown' AFTER request_method",
 		);
 
 		foreach ( $required_columns as $column => $sql ) {
@@ -438,13 +441,17 @@ class TA_Database_Auto_Fixer {
 			// Check columns.
 			$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-			$status['content_type_exists'] = in_array( 'content_type', $columns, true );
-			$status['is_citation_exists']  = in_array( 'is_citation', $columns, true );
-			$status['page_title_exists']   = in_array( 'page_title', $columns, true );
+			$status['content_type_exists']       = in_array( 'content_type', $columns, true );
+			$status['is_citation_exists']        = in_array( 'is_citation', $columns, true );
+			$status['page_title_exists']         = in_array( 'page_title', $columns, true );
+			$status['client_user_agent_exists']  = in_array( 'client_user_agent', $columns, true );
+			$status['request_type_exists']       = in_array( 'request_type', $columns, true );
 		} else {
-			$status['content_type_exists'] = false;
-			$status['is_citation_exists']  = false;
-			$status['page_title_exists']   = false;
+			$status['content_type_exists']      = false;
+			$status['is_citation_exists']       = false;
+			$status['page_title_exists']        = false;
+			$status['client_user_agent_exists'] = false;
+			$status['request_type_exists']      = false;
 		}
 
 		// Check citation alerts table.
@@ -481,7 +488,11 @@ class TA_Database_Auto_Fixer {
 
 		$sql .= "-- 5. Fix column sizes\n";
 		$sql .= "ALTER TABLE {$table} MODIFY COLUMN content_type varchar(50) DEFAULT 'html';\n";
-		$sql .= "ALTER TABLE {$table} MODIFY COLUMN page_url varchar(500) NOT NULL;\n";
+		$sql .= "ALTER TABLE {$table} MODIFY COLUMN page_url varchar(500) NOT NULL;\n\n";
+
+		$sql .= "-- 6. Add LLM Traffic tracking columns (v3.5.0)\n";
+		$sql .= "ALTER TABLE {$table} ADD COLUMN client_user_agent text DEFAULT NULL AFTER user_agent;\n";
+		$sql .= "ALTER TABLE {$table} ADD COLUMN request_type varchar(20) DEFAULT 'unknown' AFTER request_method;\n";
 
 		return $sql;
 	}

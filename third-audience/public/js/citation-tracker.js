@@ -29,7 +29,9 @@
 			'claude.ai': { name: 'Claude', color: '#D97757' },
 			'gemini.google.com': { name: 'Gemini', color: '#4285F4' },
 			'copilot.microsoft.com': { name: 'Copilot', color: '#00BCF2' },
-			'you.com': { name: 'You.com', color: '#8B5CF6', queryParam: 'q' }
+			'you.com': { name: 'You.com', color: '#8B5CF6', queryParam: 'q' },
+			'www.bing.com': { name: 'Bing AI', color: '#008373' },
+			'bing.com': { name: 'Bing AI', color: '#008373' }
 		}
 	};
 
@@ -105,13 +107,14 @@
 	 * Track citation via AJAX
 	 */
 	function trackCitation(citationData) {
-		// Check if already tracked this session
-		var trackingKey = TRACKED_KEY + '_' + window.location.pathname;
+		// Check if already tracked this session (per platform, not per page)
+		// This matches GA4 session behaviour: one session entry per AI platform per browser session.
+		var trackingKey = TRACKED_KEY + '_' + citationData.platform.toLowerCase().replace(/\s+/g, '_');
 		if (sessionStorage.getItem(trackingKey)) {
 			return;
 		}
 
-		// Mark as tracked
+		// Mark as tracked for this platform for the rest of this browser session
 		sessionStorage.setItem(trackingKey, '1');
 
 		// Prepare tracking data
@@ -129,7 +132,7 @@
 			utm_campaign: citationData.utmCampaign || '',
 			page_title: document.title,
 			client_user_agent: navigator.userAgent || '',
-			request_type: 'js_fallback'
+			request_type: 'html_page'
 		};
 
 		// Get AJAX URL

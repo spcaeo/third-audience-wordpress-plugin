@@ -220,31 +220,31 @@ function ta_auto_fix_database() {
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-	// Check if content_type column exists using SHOW COLUMNS (more reliable).
-	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
+	// Get all existing columns once.
+	$rows            = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$existing_cols   = wp_list_pluck( $rows, 'Field' );
 
-	$column_exists = false;
-	foreach ( $columns as $column ) {
-		if ( 'content_type' === $column->Field ) {
-			$column_exists = true;
-			break;
+	// Columns to ensure exist — add if missing.
+	$missing_columns = array(
+		'content_type'      => "ALTER TABLE {$table_name} ADD COLUMN content_type VARCHAR(50) DEFAULT 'html' AFTER traffic_type",
+		'client_user_agent' => "ALTER TABLE {$table_name} ADD COLUMN client_user_agent text DEFAULT NULL AFTER user_agent",
+		'request_type'      => "ALTER TABLE {$table_name} ADD COLUMN request_type varchar(20) DEFAULT 'unknown' AFTER request_method",
+	);
+
+	$any_fixed = false;
+	foreach ( $missing_columns as $col => $sql ) {
+		if ( ! in_array( $col, $existing_cols, true ) ) {
+			$result = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			if ( false !== $result ) {
+				$any_fixed = true;
+			}
 		}
 	}
 
-	// Add column if it doesn't exist.
-	if ( ! $column_exists ) {
-		$result = $wpdb->query(
-			"ALTER TABLE {$table_name}
-			ADD COLUMN content_type VARCHAR(50) DEFAULT 'html'
-			AFTER traffic_type"
-		);
-
-		// Clear error logs after fixing.
-		if ( false !== $result ) {
-			delete_option( 'ta_error_log' );
-			update_option( 'ta_db_version', TA_DB_VERSION, false );
-			update_option( 'ta_db_auto_fixed', current_time( 'mysql' ), false );
-		}
+	if ( $any_fixed ) {
+		delete_option( 'ta_error_log' );
+		update_option( 'ta_db_version', TA_DB_VERSION, false );
+		update_option( 'ta_db_auto_fixed', current_time( 'mysql' ), false );
 	}
 
 	// Set transient so we don't check again for 1 hour.

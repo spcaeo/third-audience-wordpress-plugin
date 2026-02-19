@@ -320,16 +320,12 @@ class TA_Visit_Tracker {
 			return false;
 		}
 
-		// Deduplication: Check if this citation was already tracked in the last 60 seconds.
-		// Prevents double-tracking from both server-side and client-side JavaScript.
+		// Session deduplication: same IP + same platform within 30 minutes = same session.
+		// Matches GA4 session behaviour — only the landing page of each AI session is counted.
 		global $wpdb;
-		$table_name = $wpdb->prefix . self::TABLE_NAME;
-		$current_url = esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' );
-		$platform = $citation_data['platform'];
-
-		// Strip query parameters from URL for better duplicate detection.
-		// This prevents /page/?utm_source=x and /page/ from being treated as different URLs.
-		$url_path = preg_replace( '/\?.*$/', '', $current_url );
+		$table_name  = $wpdb->prefix . self::TABLE_NAME;
+		$platform    = $citation_data['platform'];
+		$ip_address  = $this->geolocation->get_client_ip();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$recent_duplicate = $wpdb->get_var(
@@ -337,15 +333,11 @@ class TA_Visit_Tracker {
 				"SELECT id FROM {$table_name}
 				WHERE traffic_type = 'citation_click'
 				AND ai_platform = %s
-				AND (
-					url = %s
-					OR url LIKE %s
-				)
-				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+				AND ip_address = %s
+				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
 				LIMIT 1",
 				$platform,
-				$current_url,
-				$wpdb->esc_like( $url_path ) . '%'
+				$ip_address
 			)
 		);
 

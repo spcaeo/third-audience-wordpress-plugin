@@ -36,7 +36,7 @@ class TA_AI_Citation_Tracker {
 			'color'       => '#10A37F',
 		),
 		'chatgpt.com'      => array(
-			'name'        => 'ChatGPT Search',
+			'name'        => 'ChatGPT',
 			'query_param' => null, // Uses UTM parameters instead
 			'color'       => '#10A37F',
 		),
