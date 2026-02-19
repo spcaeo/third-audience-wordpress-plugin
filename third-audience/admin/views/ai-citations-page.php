@@ -39,7 +39,14 @@ if ( ! empty( $_GET['device'] ) ) {
 }
 
 // Build WHERE clause based on filters.
-$where_clauses = array( "traffic_type = 'citation_click'" );
+// Only count real browser visits:
+//   - client_user_agent IS NOT NULL  → JS confirmed a real browser (new records)
+//   - OR user_agent NOT LIKE 'Headless%' → server-side real UA (old direct WP visits)
+// This excludes headless Next.js REST API calls (user_agent = 'Headless Frontend', no JS confirmation).
+$where_clauses = array(
+	"traffic_type = 'citation_click'",
+	"(client_user_agent IS NOT NULL OR user_agent NOT LIKE 'Headless%')",
+);
 
 if ( ! empty( $filters['platform'] ) ) {
 	$where_clauses[] = $wpdb->prepare( 'ai_platform = %s', $filters['platform'] );
