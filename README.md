@@ -74,10 +74,7 @@ Visit recorded in analytics dashboard
 - Weekly and daily trend charts
 
 ### Citation Alerts
-- Get notified on first citation from a new AI platform
-- Alerts for citation spikes (2x in 24h) and drops (50% in 24h)
-- Admin notice integration with dismiss support
-- Alert history page with filters
+- Get notified on citation from a AI platform
 
 ### Multi-tier Caching
 - Memory cache (static variables)
@@ -308,8 +305,6 @@ See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
 
 **Support:** Rahul Tank — Sr. WordPress Headless Engineer
 📧 rahul.tank@spaceo.in
-
-**Dependency:** [league/html-to-markdown](https://github.com/thephpleague/html-to-markdown) — the PHP library powering all local HTML to Markdown conversion.
 
 ---
 
