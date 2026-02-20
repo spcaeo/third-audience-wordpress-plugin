@@ -304,7 +304,10 @@ See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
 
 ## Credits
 
-**Developed by:** [Labs Media](https://labsmedia.com)
+**Author:** [Labs Media](https://labsmedia.com)
+
+**Support:** Rahul Tank — Sr. WordPress Headless Engineer
+📧 rahul.tank@spaceo.in
 
 **Inspired by:** Dries Buytaert's article ["The Third Audience"](https://dri.es/the-third-audience) — which introduced the concept of AI agents as a distinct audience that websites should serve.
 
