@@ -319,6 +319,7 @@ async function trackCitation(request: NextRequest, citation: { platform: string;
     referer: request.headers.get('referer') || '',
     search_query: citation.query || '',
     ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+    client_user_agent: request.headers.get('user-agent') || '',
   };
 
   try {
@@ -745,6 +746,7 @@ async function trackCitation(request: NextRequest, citation: { platform: string;
     referer: request.headers.get('referer') || '',
     search_query: citation.query || '',
     ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
+    client_user_agent: request.headers.get('user-agent') || '',
   };
 
   try {

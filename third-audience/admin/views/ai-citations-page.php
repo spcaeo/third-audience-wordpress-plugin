@@ -37,15 +37,20 @@ if ( ! empty( $_GET['country'] ) ) {
 if ( ! empty( $_GET['device'] ) ) {
 	$filters['device'] = sanitize_text_field( wp_unslash( $_GET['device'] ) );
 }
+// Single-date filter (overrides date_from/date_to when set).
+if ( ! empty( $_GET['date'] ) ) {
+	$filters['date'] = sanitize_text_field( wp_unslash( $_GET['date'] ) );
+}
 
 // Build WHERE clause based on filters.
-// Only count real browser visits:
-//   - client_user_agent IS NOT NULL  → JS confirmed a real browser (new records)
-//   - OR user_agent NOT LIKE 'Headless%' → server-side real UA (old direct WP visits)
-// This excludes headless Next.js REST API calls (user_agent = 'Headless Frontend', no JS confirmation).
+// Include all real citation visits across both direct WordPress and headless setups:
+//   - client_user_agent IS NOT NULL  → browser UA confirmed (direct WP via JS, or headless after fix)
+//   - OR content_type = 'rest_api'   → headless Next.js via REST API (all records, new + old)
+//   - OR content_type = 'ajax'       → headless Next.js via AJAX fallback (all records, new + old)
+//   - OR user_agent NOT LIKE 'Headless%' → old direct WP records without client_user_agent
 $where_clauses = array(
 	"traffic_type = 'citation_click'",
-	"(client_user_agent IS NOT NULL OR user_agent NOT LIKE 'Headless%')",
+	"(client_user_agent IS NOT NULL OR content_type IN ('rest_api', 'ajax') OR user_agent NOT LIKE 'Headless%')",
 );
 
 if ( ! empty( $filters['platform'] ) ) {
@@ -58,6 +63,11 @@ if ( ! empty( $filters['date_from'] ) ) {
 
 if ( ! empty( $filters['date_to'] ) ) {
 	$where_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) <= %s', $filters['date_to'] );
+}
+
+// Single-date filter (exact day match).
+if ( ! empty( $filters['date'] ) ) {
+	$where_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) = %s', $filters['date'] );
 }
 
 if ( ! empty( $filters['search'] ) ) {
@@ -154,40 +164,6 @@ $perplexity_query_list = $wpdb->get_results(
 	ARRAY_A
 );
 
-// Browser breakdown.
-$browser_breakdown = $wpdb->get_results(
-	"SELECT
-		CASE
-			WHEN client_user_agent LIKE '%Edg%' THEN 'Edge'
-			WHEN client_user_agent LIKE '%Chrome%' AND client_user_agent NOT LIKE '%Edg%' THEN 'Chrome'
-			WHEN client_user_agent LIKE '%Firefox%' THEN 'Firefox'
-			WHEN client_user_agent LIKE '%Safari%' AND client_user_agent NOT LIKE '%Chrome%' THEN 'Safari'
-			WHEN client_user_agent LIKE '%Opera%' OR client_user_agent LIKE '%OPR%' THEN 'Opera'
-			ELSE 'Other'
-		END as browser,
-		COUNT(*) as count
-	FROM {$table_name}
-	WHERE {$where_sql} AND client_user_agent IS NOT NULL AND client_user_agent != ''
-	GROUP BY browser
-	ORDER BY count DESC",
-	ARRAY_A
-);
-
-// Device breakdown (Mobile vs Desktop).
-$device_breakdown = $wpdb->get_results(
-	"SELECT
-		CASE
-			WHEN client_user_agent LIKE '%Mobile%' OR client_user_agent LIKE '%iPhone%' OR client_user_agent LIKE '%Android%' THEN 'Mobile'
-			ELSE 'Desktop'
-		END as device,
-		COUNT(*) as count
-	FROM {$table_name}
-	WHERE {$where_sql} AND client_user_agent IS NOT NULL AND client_user_agent != ''
-	GROUP BY device
-	ORDER BY count DESC",
-	ARRAY_A
-);
-
 // Overall Citation Rate (v2.7.0) - Citations vs Crawls.
 // Build WHERE clause without traffic_type filter for counting crawls.
 $crawl_where_clauses = array();
@@ -257,8 +233,7 @@ $top_cited_pages = $wpdb->get_results(
 	ARRAY_A
 );
 
-// Recent citations (ALL - not just those with queries).
-// UPDATED: Include user_agent, ip_address, country_code for display
+// Recent LLMs visits (ALL - not just those with queries).
 $recent_citations = $wpdb->get_results(
 	"SELECT
 		ai_platform,
@@ -270,6 +245,7 @@ $recent_citations = $wpdb->get_results(
 		client_user_agent,
 		ip_address,
 		country_code,
+		content_type,
 		visit_timestamp
 	FROM {$table_name}
 	WHERE {$where_sql}
@@ -307,11 +283,13 @@ $daily_crawls = $wpdb->get_results(
 );
 
 // Daily traffic by request type (HTML / MD / Other) — last 30 days.
+// REST API and AJAX fallback records are real browser HTML page visits.
 $daily_by_type_rows = $wpdb->get_results(
 	"SELECT
 		DATE(visit_timestamp) as date,
 		CASE
-			WHEN request_type = 'html_page' OR request_type = 'js_fallback' OR request_type IS NULL THEN 'html'
+			WHEN request_type = 'html_page' OR request_type = 'js_fallback' OR request_type IS NULL
+				OR content_type IN ('rest_api', 'ajax') THEN 'html'
 			WHEN request_type LIKE '%markdown%' THEN 'md'
 			ELSE 'other'
 		END as req_type,
@@ -396,11 +374,13 @@ for ( $week = 3; $week >= 0; $week-- ) {
 	$week_end   = gmdate( 'Y-m-d', strtotime( $week_start . ' +6 days' ) );
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// HTML: covers direct WP visits, REST API (headless), AJAX fallback, and legacy nulls.
 	$week_html = $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM {$table_name}
 			WHERE traffic_type = 'citation_click'
-			AND (request_type = 'html_page' OR request_type = 'js_fallback' OR request_type IS NULL)
+			AND (request_type = 'html_page' OR request_type = 'js_fallback' OR request_type IS NULL
+				OR content_type IN ('rest_api', 'ajax'))
 			AND DATE(visit_timestamp) BETWEEN %s AND %s",
 			$week_start,
 			$week_end
@@ -413,6 +393,7 @@ for ( $week = 3; $week >= 0; $week-- ) {
 			"SELECT COUNT(*) FROM {$table_name}
 			WHERE traffic_type = 'citation_click'
 			AND request_type LIKE %s
+			AND content_type NOT IN ('rest_api', 'ajax')
 			AND DATE(visit_timestamp) BETWEEN %s AND %s",
 			'%markdown%',
 			$week_start,
@@ -428,6 +409,7 @@ for ( $week = 3; $week >= 0; $week-- ) {
 			AND request_type IS NOT NULL
 			AND request_type NOT IN ('html_page', 'js_fallback')
 			AND request_type NOT LIKE %s
+			AND content_type NOT IN ('rest_api', 'ajax')
 			AND DATE(visit_timestamp) BETWEEN %s AND %s",
 			'%markdown%',
 			$week_start,
@@ -567,6 +549,20 @@ $available_countries = $wpdb->get_results(
 	ORDER BY count DESC",
 	ARRAY_A
 );
+
+/**
+ * Get available dates for the single-date filter dropdown.
+ */
+$available_dates = $wpdb->get_results(
+	"SELECT DATE(visit_timestamp) as date, COUNT(*) as count
+	FROM {$table_name}
+	WHERE traffic_type = 'citation_click'
+		AND (client_user_agent IS NOT NULL OR content_type IN ('rest_api', 'ajax') OR user_agent NOT LIKE 'Headless%')
+	GROUP BY DATE(visit_timestamp)
+	ORDER BY date DESC
+	LIMIT 90",
+	ARRAY_A
+);
 ?>
 
 <div class="wrap ta-bot-analytics">
@@ -607,6 +603,32 @@ $available_countries = $wpdb->get_results(
 	</div>
 	<?php endif; ?>
 
+	<!-- Date Filter (single-date, right-aligned, always visible) -->
+	<div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 12px; margin-bottom: 4px;">
+		<form method="get" style="display: flex; align-items: center; gap: 8px;">
+			<input type="hidden" name="page" value="third-audience-ai-citations">
+			<?php if ( ! empty( $filters['platform'] ) ) : ?>
+				<input type="hidden" name="platform" value="<?php echo esc_attr( $filters['platform'] ); ?>">
+			<?php endif; ?>
+			<label style="font-size: 13px; color: #646970; font-weight: 500; white-space: nowrap;">
+				📅 <?php esc_html_e( 'Filter by Date:', 'third-audience' ); ?>
+			</label>
+			<select name="date" onchange="this.form.submit()" style="font-size: 13px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccd0d4; background: #fff; min-width: 180px;">
+				<option value=""><?php esc_html_e( 'All Time', 'third-audience' ); ?></option>
+				<?php foreach ( $available_dates as $d ) : ?>
+					<option value="<?php echo esc_attr( $d['date'] ); ?>" <?php selected( $filters['date'] ?? '', $d['date'] ); ?>>
+						<?php echo esc_html( gmdate( 'M j, Y', strtotime( $d['date'] ) ) ); ?> (<?php echo esc_html( number_format( $d['count'] ) ); ?>)
+					</option>
+				<?php endforeach; ?>
+			</select>
+			<?php if ( ! empty( $filters['date'] ) ) : ?>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-ai-citations' ) ); ?>" style="font-size: 12px; color: #646970; text-decoration: none; padding: 4px 6px; border: 1px solid #ccd0d4; border-radius: 4px; background: #fff;">
+					✕ <?php esc_html_e( 'Clear', 'third-audience' ); ?>
+				</a>
+			<?php endif; ?>
+		</form>
+	</div>
+
 	<!-- Hero Metrics -->
 	<div class="ta-hero-metrics">
 		<div class="ta-hero-card">
@@ -614,7 +636,7 @@ $available_countries = $wpdb->get_results(
 				<span class="dashicons dashicons-admin-links"></span>
 			</div>
 			<div class="ta-hero-content">
-				<div class="ta-hero-label"><?php esc_html_e( 'Total Citations', 'third-audience' ); ?></div>
+				<div class="ta-hero-label"><?php esc_html_e( 'Total LLMs Traffic', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo number_format( $total_citations ); ?></div>
 				<div class="ta-hero-meta">
 					<?php
@@ -680,7 +702,7 @@ $available_countries = $wpdb->get_results(
 			<!-- Daily Trend Chart -->
 			<div class="ta-card">
 				<div class="ta-card-header">
-					<h2><?php esc_html_e( 'Citation Trend (Last 30 Days)', 'third-audience' ); ?></h2>
+					<h2><?php esc_html_e( 'Traffic Trend (Last 30 Days)', 'third-audience' ); ?></h2>
 				</div>
 				<div class="ta-card-body" style="padding: 20px;">
 					<canvas id="ta-citations-trend-chart" height="200"></canvas>
@@ -827,7 +849,7 @@ $available_countries = $wpdb->get_results(
 	<!-- Citations by Platform (Column-Dense Layout) -->
 	<div class="ta-card" style="margin-top: 20px;">
 		<div class="ta-card-header">
-			<h2><?php esc_html_e( 'Citations by AI Platform', 'third-audience' ); ?></h2>
+			<h2><?php esc_html_e( 'LLMs by Platforms', 'third-audience' ); ?></h2>
 		</div>
 		<div class="ta-card-body" style="overflow-x: auto;">
 			<?php if ( empty( $citations_by_platform ) ) : ?>
@@ -883,13 +905,13 @@ $available_countries = $wpdb->get_results(
 		</div>
 	</div>
 
-	<!-- Recent Citations	<!-- Recent Citations (Column-Dense Layout) -->
+	<!-- Recent LLMs Visits -->
 	<?php if ( ! empty( $recent_citations ) ) : ?>
 		<div class="ta-card" style="margin-top: 20px;">
 			<div class="ta-card-header">
-				<h2><?php esc_html_e( 'Recent Citations', 'third-audience' ); ?></h2>
+				<h2><?php esc_html_e( 'Recent LLMs Visits', 'third-audience' ); ?></h2>
 				<p class="description" style="margin-top: 8px;">
-					<?php esc_html_e( 'All recent citation clicks from AI platforms with timing and referrer details.', 'third-audience' ); ?>
+					<?php esc_html_e( 'All recent LLM visits from AI platforms with timing and referrer details.', 'third-audience' ); ?>
 				</p>
 			</div>
 			<div class="ta-card-body" style="overflow-x: auto;">
@@ -897,6 +919,7 @@ $available_countries = $wpdb->get_results(
 					<thead>
 						<tr>
 							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
+							<th style="width: 75px; text-align: center;"><?php esc_html_e( 'Source', 'third-audience' ); ?></th>
 							<th style="width: 60px; text-align: center;"><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
 							<th style="width: 180px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
 							<th style="width: 180px;">🌐 <?php esc_html_e( 'Browser & Device', 'third-audience' ); ?></th>
@@ -920,6 +943,18 @@ $available_countries = $wpdb->get_results(
 							$method_color = $has_utm ? '#34c759' : '#007aff';
 							$method_label = $has_utm ? 'UTM' : 'Ref';
 
+							// Determine source type: Headless (REST/AJAX) vs Direct WordPress.
+							$content_type = $citation['content_type'] ?? '';
+							if ( in_array( $content_type, array( 'rest_api', 'ajax' ), true ) ) {
+								$source_label = 'Headless';
+								$source_color = '#8b5cf6';
+								$source_title = 'Tracked via headless Next.js middleware';
+							} else {
+								$source_label = 'Direct WP';
+								$source_color = '#0073aa';
+								$source_title = 'Tracked directly in WordPress';
+							}
+
 							// Prefer client_user_agent (real browser UA from JS navigator.userAgent)
 							// over user_agent (server-side HTTP_USER_AGENT, may be a bot/proxy UA).
 							$ua_string = ! empty( $citation['client_user_agent'] ) ? $citation['client_user_agent'] : ( $citation['user_agent'] ?? '' );
@@ -931,6 +966,11 @@ $available_countries = $wpdb->get_results(
 							<tr>
 								<td><span class="ta-bot-badge"><?php echo esc_html( $citation['ai_platform'] ); ?></span></td>
 								<td style="text-align: center;">
+									<span title="<?php echo esc_attr( $source_title ); ?>" style="background: <?php echo esc_attr( $source_color ); ?>; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">
+										<?php echo esc_html( $source_label ); ?>
+									</span>
+								</td>
+								<td style="text-align: center;">
 									<span style="background: <?php echo esc_attr( $method_color ); ?>; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">
 										<?php echo esc_html( $method_label ); ?>
 									</span>
@@ -939,15 +979,23 @@ $available_countries = $wpdb->get_results(
 									<strong style="font-size: 12px;"><?php echo esc_html( $citation['post_title'] ?: 'Untitled' ); ?></strong>
 									<br><code style="font-size: 9px; color: #8e8e93;"><?php echo esc_html( $short_url ); ?></code>
 								</td>
-								<!-- NEW: Browser & Device Column -->
+								<!-- Browser & Device Column -->
 								<td style="font-size: 11px;">
-									<div style="line-height: 1.4;">
-										<strong><?php echo esc_html( $ua_data['browser'] ); ?></strong> on <?php echo esc_html( $ua_data['os'] ); ?>
-										<br>
-										<span style="color: #8e8e93; font-size: 10px;">
-											<?php echo esc_html( $ua_data['icon'] ); ?> <?php echo esc_html( ucfirst( $ua_data['device'] ) ); ?>
-										</span>
-									</div>
+									<?php if ( in_array( $content_type, array( 'rest_api', 'ajax' ), true ) ) : ?>
+										<div style="line-height: 1.4;">
+											<strong style="color: #8b5cf6;">Headless</strong>
+											<br>
+											<span style="color: #8e8e93; font-size: 10px;">&#x1F5A5; Next.js server</span>
+										</div>
+									<?php else : ?>
+										<div style="line-height: 1.4;">
+											<strong><?php echo esc_html( $ua_data['browser'] ); ?></strong> on <?php echo esc_html( $ua_data['os'] ); ?>
+											<br>
+											<span style="color: #8e8e93; font-size: 10px;">
+												<?php echo esc_html( $ua_data['icon'] ); ?> <?php echo esc_html( ucfirst( $ua_data['device'] ) ); ?>
+											</span>
+										</div>
+									<?php endif; ?>
 								</td>
 
 								<!-- NEW: Location Column -->
@@ -1129,103 +1177,6 @@ $available_countries = $wpdb->get_results(
 		</div>
 	</div>
 
-	<!-- Browser & Device Breakdown -->
-	<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-
-		<!-- Browser Breakdown -->
-		<div class="ta-card">
-			<div class="ta-card-header">
-				<h2>🌐 <?php esc_html_e( 'Browser Breakdown', 'third-audience' ); ?></h2>
-				<p class="description" style="margin-top: 6px;"><?php esc_html_e( 'Browsers used by visitors who came from AI platforms.', 'third-audience' ); ?></p>
-			</div>
-			<div class="ta-card-body" style="overflow-x: auto;">
-				<?php if ( empty( $browser_breakdown ) ) : ?>
-					<p style="text-align: center; color: #646970; padding: 30px 0;">
-						<?php esc_html_e( 'No browser data yet. Browser data is captured via JavaScript.', 'third-audience' ); ?>
-					</p>
-				<?php else : ?>
-					<?php
-					$total_browser = array_sum( array_column( $browser_breakdown, 'count' ) );
-					$max_browser   = ! empty( $browser_breakdown ) ? (int) $browser_breakdown[0]['count'] : 1;
-					$browser_icons = array(
-						'Chrome'  => '🟢',
-						'Firefox' => '🦊',
-						'Safari'  => '🧭',
-						'Edge'    => '🔵',
-						'Opera'   => '🔴',
-						'Other'   => '⚪',
-					);
-					?>
-					<table class="wp-list-table widefat fixed striped">
-						<thead>
-							<tr>
-								<th><?php esc_html_e( 'Browser', 'third-audience' ); ?></th>
-								<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Visits', 'third-audience' ); ?></th>
-								<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Share', 'third-audience' ); ?></th>
-								<th><?php esc_html_e( 'Bar', 'third-audience' ); ?></th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php foreach ( $browser_breakdown as $b ) :
-								$pct     = $total_browser > 0 ? round( ( $b['count'] / $total_browser ) * 100, 1 ) : 0;
-								$bar_pct = $max_browser > 0 ? round( ( $b['count'] / $max_browser ) * 100 ) : 0;
-								$icon    = isset( $browser_icons[ $b['browser'] ] ) ? $browser_icons[ $b['browser'] ] : '⚪';
-							?>
-								<tr>
-									<td><?php echo $icon; ?> <strong style="font-size: 12px;"><?php echo esc_html( $b['browser'] ); ?></strong></td>
-									<td style="text-align: center; font-weight: 600;"><?php echo number_format( $b['count'] ); ?></td>
-									<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( $pct ); ?>%</td>
-									<td>
-										<div style="background: #e5e5ea; border-radius: 3px; height: 8px; overflow: hidden;">
-											<div style="background: #34c759; width: <?php echo esc_attr( $bar_pct ); ?>%; height: 100%; border-radius: 3px;"></div>
-										</div>
-									</td>
-								</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
-				<?php endif; ?>
-			</div>
-		</div>
-
-		<!-- Device Breakdown -->
-		<div class="ta-card">
-			<div class="ta-card-header">
-				<h2>📱 <?php esc_html_e( 'Device Breakdown', 'third-audience' ); ?></h2>
-				<p class="description" style="margin-top: 6px;"><?php esc_html_e( 'Mobile vs Desktop split for AI citation traffic.', 'third-audience' ); ?></p>
-			</div>
-			<div class="ta-card-body">
-				<?php if ( empty( $device_breakdown ) ) : ?>
-					<p style="text-align: center; color: #646970; padding: 30px 0;">
-						<?php esc_html_e( 'No device data yet. Device data is captured via JavaScript.', 'third-audience' ); ?>
-					</p>
-				<?php else : ?>
-					<?php
-					$total_device = array_sum( array_column( $device_breakdown, 'count' ) );
-					$device_icons = array( 'Mobile' => '📱', 'Desktop' => '🖥️' );
-					$device_colors = array( 'Mobile' => '#ff9500', 'Desktop' => '#007aff' );
-					?>
-					<div style="display: flex; flex-direction: column; gap: 16px; padding: 10px 0;">
-						<?php foreach ( $device_breakdown as $d ) :
-							$pct        = $total_device > 0 ? round( ( $d['count'] / $total_device ) * 100, 1 ) : 0;
-							$icon       = isset( $device_icons[ $d['device'] ] ) ? $device_icons[ $d['device'] ] : '💻';
-							$bar_color  = isset( $device_colors[ $d['device'] ] ) ? $device_colors[ $d['device'] ] : '#8e8e93';
-						?>
-							<div>
-								<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-									<span style="font-size: 14px;"><?php echo $icon; ?> <strong><?php echo esc_html( $d['device'] ); ?></strong></span>
-									<span style="font-size: 13px; font-weight: 600;"><?php echo number_format( $d['count'] ); ?> <span style="color: #646970; font-size: 11px; font-weight: 400;">(<?php echo esc_html( $pct ); ?>%)</span></span>
-								</div>
-								<div style="background: #e5e5ea; border-radius: 6px; height: 12px; overflow: hidden;">
-									<div style="background: <?php echo esc_attr( $bar_color ); ?>; width: <?php echo esc_attr( $pct ); ?>%; height: 100%; border-radius: 6px; transition: width 0.3s ease;"></div>
-								</div>
-							</div>
-						<?php endforeach; ?>
-					</div>
-				<?php endif; ?>
-			</div>
-		</div>
-	</div>
 
 	<!-- Help Section -->
 	<div class="ta-card" style="margin-top: 20px; background: #f5f5f7;">

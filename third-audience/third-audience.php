@@ -805,6 +805,11 @@ function ta_register_rest_routes() {
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
 			),
+			'client_user_agent' => array(
+				'required'          => false,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
 		),
 	) );
 }
@@ -1245,11 +1250,12 @@ function ta_get_client_ip_for_rate_limit() {
 function ta_track_citation_callback( $request ) {
 	global $wpdb;
 
-	$url          = $request->get_param( 'url' );
-	$platform     = $request->get_param( 'platform' );
-	$referer      = $request->get_param( 'referer' );
-	$search_query = $request->get_param( 'search_query' );
-	$ip           = $request->get_param( 'ip' ) ?: 'unknown';
+	$url               = $request->get_param( 'url' );
+	$platform          = $request->get_param( 'platform' );
+	$referer           = $request->get_param( 'referer' );
+	$search_query      = $request->get_param( 'search_query' );
+	$ip                = $request->get_param( 'ip' ) ?: 'unknown';
+	$client_user_agent = $request->get_param( 'client_user_agent' ) ?: null;
 
 	// Sanitize URL - only allow relative paths or paths from this site.
 	$url = wp_parse_url( $url, PHP_URL_PATH ) ?: $url;
@@ -1258,8 +1264,10 @@ function ta_track_citation_callback( $request ) {
 	// Normalize platform name.
 	$platform = ucfirst( strtolower( sanitize_text_field( $platform ) ) );
 
-	// 5. Duplicate prevention - don't track same URL+platform within 5 minutes.
-	$dedup_key    = 'ta_citation_' . md5( $url . $platform . ta_get_client_ip_for_rate_limit() );
+	// Session-based dedup - treat same IP+platform within 30 minutes as one session.
+	// Matches GA4 session logic (30-min window). URL excluded so browsing multiple
+	// pages in one AI-referred session counts as a single visit.
+	$dedup_key       = 'ta_citation_session_' . md5( $platform . $ip );
 	$already_tracked = get_transient( $dedup_key );
 
 	if ( $already_tracked ) {
@@ -1270,8 +1278,8 @@ function ta_track_citation_callback( $request ) {
 		), 200 );
 	}
 
-	// Mark as tracked for 5 minutes.
-	set_transient( $dedup_key, true, 5 * MINUTE_IN_SECONDS );
+	// Mark session as tracked for 30 minutes.
+	set_transient( $dedup_key, true, 30 * MINUTE_IN_SECONDS );
 
 	// Determine platform color.
 	$platform_colors = array(
@@ -1325,6 +1333,7 @@ function ta_track_citation_callback( $request ) {
 			'bot_name'               => $platform,
 			'bot_type'               => 'AI_Citation',
 			'user_agent'             => 'Headless Frontend',
+			'client_user_agent'      => $client_user_agent,
 			'ip_address'             => $ip,
 			'country_code'           => $country_code,
 			'referer'                => $referer,
@@ -1332,6 +1341,7 @@ function ta_track_citation_callback( $request ) {
 			'traffic_type'           => 'citation_click',
 			'content_type'           => 'rest_api',
 			'request_method'         => 'rest_api',
+			'request_type'           => 'html_page',
 			'cache_status'           => 'N/A',
 			'response_time'          => 0,
 			'ai_platform'            => $platform,
@@ -1343,7 +1353,7 @@ function ta_track_citation_callback( $request ) {
 			'ip_verification_method' => $ip_verification_method,
 			'visit_timestamp'        => current_time( 'mysql' ),
 		),
-		array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s' )
+		array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s' )
 	);
 
 	if ( false === $result ) {

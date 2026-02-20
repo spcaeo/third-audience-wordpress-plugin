@@ -102,10 +102,14 @@ class TA_AJAX_Fallback {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$search_query = isset( $_POST['search_query'] ) ? sanitize_text_field( wp_unslash( $_POST['search_query'] ) ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$ip = isset( $_POST['ip'] ) ? sanitize_text_field( wp_unslash( $_POST['ip'] ) ) : $this->get_client_ip();
+		$ip                = isset( $_POST['ip'] ) ? sanitize_text_field( wp_unslash( $_POST['ip'] ) ) : $this->get_client_ip();
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$client_user_agent = isset( $_POST['client_user_agent'] ) ? sanitize_text_field( wp_unslash( $_POST['client_user_agent'] ) ) : null;
 
-		// Duplicate prevention.
-		$dedup_key = 'ta_citation_' . md5( $url . $platform . $ip );
+		// Session-based dedup - treat same IP+platform within 30 minutes as one session.
+		// Matches GA4 session logic (30-min window). URL excluded so browsing multiple
+		// pages in one AI-referred session counts as a single visit.
+		$dedup_key       = 'ta_citation_session_' . md5( $platform . $ip );
 		$already_tracked = get_transient( $dedup_key );
 
 		if ( $already_tracked ) {
@@ -118,8 +122,8 @@ class TA_AJAX_Fallback {
 			);
 		}
 
-		// Mark as tracked for 5 minutes.
-		set_transient( $dedup_key, true, 5 * MINUTE_IN_SECONDS );
+		// Mark session as tracked for 30 minutes.
+		set_transient( $dedup_key, true, 30 * MINUTE_IN_SECONDS );
 
 		// Normalize platform name.
 		$platform = ucfirst( strtolower( $platform ) );
@@ -166,6 +170,7 @@ class TA_AJAX_Fallback {
 				'bot_name'               => $platform,
 				'bot_type'               => 'AI_Citation',
 				'user_agent'             => 'AJAX Fallback',
+				'client_user_agent'      => $client_user_agent,
 				'ip_address'             => $ip,
 				'country_code'           => $country_code,
 				'referer'                => $referer,
@@ -173,6 +178,7 @@ class TA_AJAX_Fallback {
 				'traffic_type'           => 'citation_click',
 				'content_type'           => 'ajax',
 				'request_method'         => 'ajax_fallback',
+				'request_type'           => 'html_page',
 				'cache_status'           => 'N/A',
 				'response_time'          => 0,
 				'ai_platform'            => $platform,
@@ -184,7 +190,7 @@ class TA_AJAX_Fallback {
 				'ip_verification_method' => $ip_verification_method,
 				'visit_timestamp'        => current_time( 'mysql' ),
 			),
-			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s' )
+			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%f', '%d', '%s', '%s' )
 		);
 
 		if ( $result ) {
