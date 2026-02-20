@@ -987,6 +987,14 @@ $available_dates = $wpdb->get_results(
 											<br>
 											<span style="color: #8e8e93; font-size: 10px;">&#x1F5A5; Next.js server</span>
 										</div>
+									<?php elseif ( 'graphql' === $content_type ) : ?>
+										<div style="line-height: 1.4;">
+											<strong style="color: #059669;">GraphQL</strong>
+											<br>
+											<span style="color: #8e8e93; font-size: 10px;">&#x1F5A5; API call</span>
+										</div>
+									<?php elseif ( 'Unknown' === $ua_data['browser'] && 'Unknown' === $ua_data['os'] ) : ?>
+										<span style="color: #d1d1d6; font-size: 11px;">&#8212;</span>
 									<?php else : ?>
 										<div style="line-height: 1.4;">
 											<strong><?php echo esc_html( $ua_data['browser'] ); ?></strong> on <?php echo esc_html( $ua_data['os'] ); ?>
