@@ -2,6 +2,35 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.5.2] - 2026-02-20
+
+### Changed
+- Renamed "Citations by AI Platform" to "LLMs by Platforms"
+- Renamed "Recent Citations" to "Recent LLM Visits"
+- Fixed Browser & Device column to show "Headless / Next.js server" for REST/AJAX records
+- Fixed weekly and daily charts to correctly classify REST API and AJAX records
+- Fixed session dedup to use 30-min window per IP and platform (matches GA4 logic)
+- Fixed dashboard filter to include headless records via `content_type`
+- Added `client_user_agent` to headless setup code snippets
+
+### Removed
+- Removed Browser Breakdown and Device Breakdown sections (no data available for headless setup)
+
+---
+
+## [3.5.1] - 2026-02-19
+
+### Changed
+- Dashboard now filters to real browser visits only, excluding headless REST API calls
+- LLM Traffic page renamed from "AI Citations" for clarity
+- Improved tracking accuracy for citation clicks — only real HTML page visits recorded
+
+### Fixed
+- Citation click tracking capturing incorrect data in some headless environments
+- REST API calls no longer incorrectly recorded as citation clicks
+
+---
+
 ## [3.5.0] - 2026-02-16
 
 ### Added
