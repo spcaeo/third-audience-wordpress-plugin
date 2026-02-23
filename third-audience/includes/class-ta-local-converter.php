@@ -70,11 +70,11 @@ class TA_Local_Converter {
 			$options = array(
 				'header_style'              => 'atx',     // Use # for headers
 				'bold_style'                => '**',      // Use ** for bold
-				'italic_style'              => '_',       // Use _ for italic
+				'italic_style'              => '*',       // Use * for italic (GFM standard)
 				'strip_tags'                => false,     // Selective stripping with remove_nodes
 				'strip_placeholder_links'   => true,      // Remove # placeholder links
 				'remove_nodes'              => 'script style nav header footer aside form iframe', // Remove UI chrome
-				'hard_break'                => true,      // Preserve line breaks
+				'hard_break'                => false,     // <br> → two trailing spaces (Daring Fireball spec)
 				'list_item_style'           => '-',       // Use - for unordered lists
 				'table_pipe_escape'         => '\\|',     // Proper table escaping
 				'table_caption_side'        => 'top',     // Table captions above
@@ -163,7 +163,7 @@ class TA_Local_Converter {
 
 			// Add title
 			if ( $options['include_title'] ) {
-				$markdown .= '# ' . $this->security->sanitize_text( $post->post_title ) . "\n\n";
+				$markdown .= '# ' . $this->security->sanitize_text( html_entity_decode( $post->post_title, ENT_QUOTES, 'UTF-8' ) ) . "\n\n";
 			}
 
 			// Add post meta
@@ -231,32 +231,35 @@ class TA_Local_Converter {
 	 */
 	private function generate_frontmatter( $post ) {
 		$frontmatter = "---\n";
-		$frontmatter .= 'title: "' . addslashes( $post->post_title ) . "\"\n";
+		$frontmatter .= 'title: "' . addslashes( html_entity_decode( $post->post_title, ENT_QUOTES, 'UTF-8' ) ) . "\"\n";
 		$frontmatter .= 'url: "' . get_permalink( $post->ID ) . "\"\n";
 		$frontmatter .= 'date: "' . get_the_date( 'c', $post->ID ) . "\"\n";
 		$frontmatter .= 'modified: "' . get_the_modified_date( 'c', $post->ID ) . "\"\n";
-		$frontmatter .= 'author: "' . get_the_author_meta( 'display_name', $post->post_author ) . "\"\n";
-
-		// Add categories
-		$categories = get_the_category( $post->ID );
-		if ( ! empty( $categories ) ) {
-			$cat_names = array_map( function( $cat ) {
-				return $cat->name;
-			}, $categories );
-			$frontmatter .= 'categories: [' . implode( ', ', array_map( function( $name ) {
-				return '"' . addslashes( $name ) . '"';
-			}, $cat_names ) ) . "]\n";
+		// Author as object with name and url (matches Dries' format).
+		$author_name = get_the_author_meta( 'display_name', $post->post_author );
+		$author_url  = get_the_author_meta( 'user_url', $post->post_author );
+		$frontmatter .= "author:\n";
+		$frontmatter .= '  name: "' . addslashes( $author_name ) . "\"\n";
+		if ( ! empty( $author_url ) ) {
+			$frontmatter .= '  url: "' . esc_url( $author_url ) . "\"\n";
 		}
 
-		// Add tags
+		// Categories as multi-line YAML array.
+		$categories = get_the_category( $post->ID );
+		if ( ! empty( $categories ) ) {
+			$frontmatter .= "categories:\n";
+			foreach ( $categories as $cat ) {
+				$frontmatter .= '  - "' . addslashes( $cat->name ) . "\"\n";
+			}
+		}
+
+		// Tags as multi-line YAML array.
 		$tags = get_the_tags( $post->ID );
 		if ( ! empty( $tags ) ) {
-			$tag_names = array_map( function( $tag ) {
-				return $tag->name;
-			}, $tags );
-			$frontmatter .= 'tags: [' . implode( ', ', array_map( function( $name ) {
-				return '"' . addslashes( $name ) . '"';
-			}, $tag_names ) ) . "]\n";
+			$frontmatter .= "tags:\n";
+			foreach ( $tags as $tag ) {
+				$frontmatter .= '  - "' . addslashes( $tag->name ) . "\"\n";
+			}
 		}
 
 		// AI-Optimized Metadata (configurable)
@@ -587,6 +590,12 @@ class TA_Local_Converter {
 	 * @return string Cleaned HTML containing only main content.
 	 */
 	private function extract_main_content( $html ) {
+		// DOMDocument is required for content extraction.
+		if ( ! class_exists( 'DOMDocument' ) ) {
+			$this->logger->warning( 'DOMDocument not available, skipping content extraction.' );
+			return $html;
+		}
+
 		// Use DOMDocument to parse HTML
 		$dom = new DOMDocument();
 		libxml_use_internal_errors( true ); // Suppress HTML5 warnings
@@ -705,6 +714,59 @@ class TA_Local_Converter {
 	 * @return string Cleaned markdown.
 	 */
 	private function clean_markdown( $markdown ) {
+		// Convert strikethrough tags to GFM ~~ syntax before stripping HTML.
+		// The library has no built-in <del>/<s>/<strike> converter.
+		$markdown = preg_replace( '/<(del|s|strike)[^>]*>(.*?)<\/\1>/is', '~~$2~~', $markdown );
+
+		// Convert Gutenberg FAQ/accordion blocks to readable Q&A markdown.
+		// Gutenberg renders these as <details><summary>Q</summary></details>Answer
+		// where the answer paragraph sits outside the </details> tag.
+		// Convert <summary> content to a bold question heading.
+		$markdown = preg_replace( '/<summary[^>]*>(.*?)<\/summary>/is', "\n\n**$1**\n\n", $markdown );
+		// Strip <details> opening tag and convert </details> to a blank line separator.
+		$markdown = preg_replace( '/<details[^>]*>/i', '', $markdown );
+		$markdown = preg_replace( '/<\/details>/i', "\n", $markdown );
+
+		// Strip remaining block-level HTML wrapper tags left over after conversion.
+		// The library converts semantic tags (h1-h6, p, a, img, ul, li, etc.) to
+		// Markdown syntax, but leaves structural wrappers (Gutenberg block divs,
+		// figure, section, span, details, summary, etc.) as raw HTML since they
+		// have no Markdown equivalent. Remove those wrappers while keeping their
+		// text content.
+		$markdown = preg_replace(
+			'/<\/?(div|section|article|aside|figure|figcaption|span|header|footer|main|ul|li)[^>]*>\n?/i',
+			'',
+			$markdown
+		);
+
+		// Decode HTML entities left over from Gutenberg block content.
+		$markdown = str_replace(
+			array( '&amp;', '&lt;', '&gt;', '&quot;', '&#039;' ),
+			array( '&',     '<',    '>',    '"',      "'"      ),
+			$markdown
+		);
+
+		// Convert Gutenberg button blocks to plain text list items.
+		// Buttons often render as image-links after conversion:
+		//   [![icon](img_url) Label](#)[![icon2](img_url2)Label2](#)
+		// Strip the icon/link wrapper and output each button on its own line.
+		$markdown = preg_replace_callback(
+			'/\[!\[[^\]]*\]\([^)]*\)\s*([^\]]+)\]\(#\)/u',
+			function ( $m ) {
+				return "\n- " . trim( $m[1] );
+			},
+			$markdown
+		);
+
+		// Fix merged lines: ensure a blank line before headings that run directly
+		// into preceding content (e.g. "some text## Heading" → "some text\n\n## Heading").
+		$markdown = preg_replace( '/([^#\n])(#{1,6} )/m', "$1\n\n$2", $markdown );
+
+		// Strip excess bold markers wrapping entire heading text added by Gutenberg
+		// (e.g. ### **Heading Text** or ### ****Heading Text**** → ### Heading Text).
+		// Uses \s*$ to handle any trailing whitespace before end of line.
+		$markdown = preg_replace( '/^(#{1,6} +)\*{2,}(.*?)\*{2,}\s*$/m', '$1$2', $markdown );
+
 		// Remove excessive blank lines (more than 2 consecutive)
 		$markdown = preg_replace( "/\n{3,}/", "\n\n", $markdown );
 
