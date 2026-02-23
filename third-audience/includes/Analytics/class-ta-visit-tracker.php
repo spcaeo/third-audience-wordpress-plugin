@@ -390,7 +390,7 @@ class TA_Visit_Tracker {
 			'referer'        => $citation_data['referer'],
 			'traffic_type'   => 'citation_click',
 			'ai_platform'    => $citation_data['platform'],
-			'search_query'   => $citation_data['query'] ?? null,
+			'search_query'   => $citation_data['search_query'] ?? null,
 			'referer_source' => $citation_data['source'] ?? null,
 			'referer_medium' => $citation_data['medium'] ?? null,
 		);

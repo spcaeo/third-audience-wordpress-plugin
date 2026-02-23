@@ -156,7 +156,7 @@ Future enhancements planned:
 ## Support
 
 For questions, issues, or feature requests:
-- **Website:** https://labsmedia.com
+- **Website:** https://www.spaceotechnologies.com/
 - **Documentation:** Visit the System Health page in your WordPress admin
 - **GitHub:** [Report issues and contribute](https://github.com/third-audience/wordpress-plugin)
 
@@ -164,7 +164,7 @@ For questions, issues, or feature requests:
 
 ## Credits
 
-**Developed by:** [Labs Media](https://labsmedia.com)
+**Developed by:** [Space-O Technologies](https://www.spaceotechnologies.com/)
 **Inspired by:** Dries Buytaert's article ["The Third Audience"](https://dri.es/the-third-audience)
 
 This plugin was created to make the "third audience" concept accessible to all WordPress users. Special thanks to Dries for introducing this important shift in how we think about web content optimization.
@@ -175,6 +175,6 @@ This plugin was created to make the "third audience" concept accessible to all W
 
 GPL-3.0-or-later
 
-Copyright (c) 2026 Labs Media
+Copyright (c) 2026 Space-O Technologies
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.

@@ -285,11 +285,17 @@ class TA_Bot_Analytics {
 		$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
 		// Get client IP from the incoming AJAX request.
+		// Must match the same priority order used by TA_Geolocation::get_client_ip()
+		// so the lookup finds the server-side record stored with the same IP value.
 		$client_ip = '';
-		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+		if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+			$client_ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+		} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
 			$forwarded = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
 			$ips       = explode( ',', $forwarded );
 			$client_ip = trim( $ips[0] );
+		} elseif ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
+			$client_ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) );
 		} elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
 			$client_ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
 		}

@@ -240,7 +240,7 @@ Accept: text/markdown
 			<div class="ta-credits-grid">
 				<div class="ta-credit-item">
 					<h3><?php esc_html_e( 'Developed by', 'third-audience' ); ?></h3>
-					<a href="https://labsmedia.com" target="_blank" rel="noopener"><?php esc_html_e( 'Labs Media', 'third-audience' ); ?></a>
+					<a href="https://www.spaceotechnologies.com/" target="_blank" rel="noopener"><?php esc_html_e( 'Space-O Technologies', 'third-audience' ); ?></a>
 				</div>
 				<div class="ta-credit-item">
 					<h3><?php esc_html_e( 'Inspired by', 'third-audience' ); ?></h3>

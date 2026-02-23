@@ -301,10 +301,9 @@ See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
 
 ## Credits
 
-**Author:** [Labs Media](https://labsmedia.com)
+**Author:** [Space-O Technologies](https://www.spaceotechnologies.com/)
 
-**Support:** Rahul Tank — Sr. WordPress Headless Engineer
-📧 rahul.tank@spaceo.in
+**Support:** [Open a GitHub Issue](../../issues)
 
 ---
 
@@ -312,6 +311,6 @@ See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
 
 This plugin is licensed under the [GNU General Public License v2.0 or later](https://www.gnu.org/licenses/gpl-2.0.html).
 
-Copyright (c) 2026 [Labs Media](https://labsmedia.com)
+Copyright (c) 2026 [Space-O Technologies](https://www.spaceotechnologies.com/)
 
 You are free to use, modify, and distribute this plugin under the terms of the GPL v2 license.
