@@ -171,13 +171,15 @@ class TA_Geolocation {
 	public function get_client_ip() {
 		$ip = null;
 
-		if ( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
+		if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
 			// Cloudflare.
 			$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
-		} elseif ( isset( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-			$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) );
-			$ip = explode( ',', $ip )[0];
-		} elseif ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
+		} elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+			$ip  = trim( $ips[0] );
+		} elseif ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
+			$ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) );
+		} elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
 			$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
 		}
 

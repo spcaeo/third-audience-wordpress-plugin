@@ -73,6 +73,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		<div class="ta-card-header">
 			<h2><?php esc_html_e( 'Pre-generate Cache', 'third-audience' ); ?></h2>
 			<div class="ta-card-actions">
+				<button id="ta-clear-pregenerated-btn" class="button" style="color: #d63638;"><?php esc_html_e( 'Clear Pre-generated', 'third-audience' ); ?></button>
 				<button id="ta-warmup-all-btn" class="button button-primary"><?php esc_html_e( 'Generate All', 'third-audience' ); ?></button>
 				<button id="ta-warmup-cancel-btn" class="button" style="display:none;"><?php esc_html_e( 'Cancel', 'third-audience' ); ?></button>
 			</div>

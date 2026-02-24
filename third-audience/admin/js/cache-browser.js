@@ -24,6 +24,7 @@
 			$('#ta-select-all').on('click', this.handleSelectAll);
 			$('#ta-bulk-delete-btn').on('click', this.handleBulkDelete.bind(this));
 			$('#ta-clear-expired-btn').on('click', this.handleClearExpired.bind(this));
+			$('#ta-clear-pregenerated-btn').on('click', this.handleClearPregenerated.bind(this));
 			$('.ta-delete-btn').on('click', this.handleDelete.bind(this));
 			$('.ta-view-btn').on('click', this.handleView.bind(this));
 			$('.ta-regen-btn').on('click', this.handleRegenerate.bind(this));
@@ -243,6 +244,35 @@
 					if (response.success) {
 						location.reload();
 					}
+				}
+			});
+		},
+
+		handleClearPregenerated: function() {
+			if (!confirm(taCacheBrowser.i18n.confirmClearPregenerated)) return;
+
+			var $btn = $('#ta-clear-pregenerated-btn');
+			$btn.prop('disabled', true).text('Clearing...');
+
+			$.ajax({
+				url: taCacheBrowser.ajaxUrl,
+				type: 'POST',
+				data: {
+					action: 'ta_regenerate_all_markdown',
+					nonce: taCacheBrowser.nonce
+				},
+				success: function(response) {
+					if (response.success) {
+						alert(response.data.message);
+						location.reload();
+					} else {
+						alert(response.data && response.data.message ? response.data.message : taCacheBrowser.i18n.error);
+						$btn.prop('disabled', false).text('Clear Pre-generated');
+					}
+				},
+				error: function() {
+					alert(taCacheBrowser.i18n.error);
+					$btn.prop('disabled', false).text('Clear Pre-generated');
 				}
 			});
 		},

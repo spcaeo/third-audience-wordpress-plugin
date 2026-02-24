@@ -198,13 +198,14 @@ class TA_Admin {
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => $this->security->create_nonce( 'cache_browser' ),
 				'i18n'    => array(
-					'confirmDelete'       => __( 'Delete this cache entry?', 'third-audience' ),
-					'confirmBulkDelete'   => __( 'Delete selected entries?', 'third-audience' ),
-					'confirmClearExpired' => __( 'Clear all expired entries?', 'third-audience' ),
-					'confirmWarmup'       => __( 'Start warming all cache? This may take a few minutes.', 'third-audience' ),
-					'selectEntries'       => __( 'Select at least one entry.', 'third-audience' ),
-					'success'             => __( 'Success!', 'third-audience' ),
-					'error'               => __( 'Error', 'third-audience' ),
+					'confirmDelete'            => __( 'Delete this cache entry?', 'third-audience' ),
+					'confirmBulkDelete'        => __( 'Delete selected entries?', 'third-audience' ),
+					'confirmClearExpired'      => __( 'Clear all expired entries?', 'third-audience' ),
+					'confirmClearPregenerated' => __( 'Clear all pre-generated markdown? Pages will be regenerated on next access with current plugin settings.', 'third-audience' ),
+					'confirmWarmup'            => __( 'Start warming all cache? This may take a few minutes.', 'third-audience' ),
+					'selectEntries'            => __( 'Select at least one entry.', 'third-audience' ),
+					'success'                  => __( 'Success!', 'third-audience' ),
+					'error'                    => __( 'Error', 'third-audience' ),
 				),
 			) );
 		}

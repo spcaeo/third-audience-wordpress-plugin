@@ -43,7 +43,7 @@ class TA_Bot_Analytics {
 	 *
 	 * @var string
 	 */
-	const DB_VERSION = '3.5.0';
+	const DB_VERSION = '3.5.1';
 
 	/**
 	 * Option name for database version.

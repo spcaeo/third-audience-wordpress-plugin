@@ -1255,7 +1255,10 @@ function ta_track_citation_callback( $request ) {
 	$referer           = $request->get_param( 'referer' );
 	$search_query      = $request->get_param( 'search_query' );
 	$ip                = $request->get_param( 'ip' ) ?: 'unknown';
-	$client_user_agent = $request->get_param( 'client_user_agent' ) ?: null;
+	// Accept client_user_agent from POST param (JS tracker) or X-Client-User-Agent header
+	// (Next.js middleware forwarding req.headers['user-agent'] from the browser request).
+	$client_user_agent = $request->get_param( 'client_user_agent' )
+		?: ( $request->get_header( 'x-client-user-agent' ) ?: null );
 
 	// Sanitize URL - only allow relative paths or paths from this site.
 	$url = wp_parse_url( $url, PHP_URL_PATH ) ?: $url;

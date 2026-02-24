@@ -357,7 +357,7 @@ class TA_Admin_AJAX_Cache {
 	 * @return void
 	 */
 	public function ajax_regenerate_all_markdown() {
-		$this->security->verify_ajax_request( 'admin_ajax' );
+		$this->security->verify_ajax_request( 'cache_browser' );
 
 		$cache_manager = new TA_Cache_Manager();
 		$cleared       = $cache_manager->clear_pregenerated_markdown();

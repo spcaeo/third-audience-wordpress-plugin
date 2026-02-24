@@ -343,8 +343,8 @@ class TA_Visit_Tracker {
 
 		if ( $recent_duplicate ) {
 			$this->logger->debug( 'Duplicate citation detected, skipping.', array(
-				'platform' => $platform,
-				'url' => $current_url,
+				'platform'    => $platform,
+				'url'         => esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' ),
 				'existing_id' => $recent_duplicate,
 			) );
 			return false;
@@ -376,23 +376,25 @@ class TA_Visit_Tracker {
 
 		// Prepare tracking data.
 		$tracking_data = array(
-			'bot_type'       => 'AI_Citation',
-			'bot_name'       => $citation_data['platform'],
-			'user_agent'     => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
-			'url'            => esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' ),
-			'post_id'        => $post_id,
-			'post_type'      => $post_type,
-			'post_title'     => $post_title,
-			'request_method' => 'citation_click',
-			'request_type'   => $request_type,
-			'http_status'    => $http_status,
-			'cache_status'   => 'N/A',
-			'referer'        => $citation_data['referer'],
-			'traffic_type'   => 'citation_click',
-			'ai_platform'    => $citation_data['platform'],
-			'search_query'   => $citation_data['search_query'] ?? null,
-			'referer_source' => $citation_data['source'] ?? null,
-			'referer_medium' => $citation_data['medium'] ?? null,
+			'bot_type'         => 'AI_Citation',
+			'bot_name'         => $citation_data['platform'],
+			'user_agent'       => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
+			'url'              => esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' ),
+			'post_id'          => $post_id,
+			'post_type'        => $post_type,
+			'post_title'       => $post_title,
+			'request_method'   => 'citation_click',
+			'request_type'     => $request_type,
+			'http_status'      => $http_status,
+			'cache_status'     => 'N/A',
+			'referer'          => $citation_data['referer'],
+			'traffic_type'     => 'citation_click',
+			'ai_platform'      => $citation_data['platform'],
+			'search_query'     => $citation_data['search_query'] ?? null,
+			'referer_source'   => $citation_data['source'] ?? null,
+			'referer_medium'   => $citation_data['medium'] ?? null,
+			'detection_method' => $citation_data['detection_method'] ?? null,
+			'confidence_score' => $citation_data['confidence_score'] ?? null,
 		);
 
 		return $this->track_visit( $tracking_data );
