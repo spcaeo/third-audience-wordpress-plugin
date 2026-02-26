@@ -186,6 +186,64 @@ class TA_Visit_Tracker {
 			}
 		}
 
+		// Format map — column name to placeholder, used for defensive filtering below.
+		$format_map = array(
+			'bot_type'               => '%s',
+			'bot_name'               => '%s',
+			'user_agent'             => '%s',
+			'client_user_agent'      => '%s',
+			'url'                    => '%s',
+			'post_id'                => '%d',
+			'post_type'              => '%s',
+			'post_title'             => '%s',
+			'request_method'         => '%s',
+			'request_type'           => '%s',
+			'cache_status'           => '%s',
+			'response_time'          => '%d',
+			'response_size'          => '%d',
+			'http_status'            => '%d',
+			'ip_address'             => '%s',
+			'referer'                => '%s',
+			'country_code'           => '%s',
+			'traffic_type'           => '%s',
+			'content_type'           => '%s',
+			'ai_platform'            => '%s',
+			'search_query'           => '%s',
+			'referer_source'         => '%s',
+			'referer_medium'         => '%s',
+			'detection_method'       => '%s',
+			'confidence_score'       => '%f',
+			'ip_verified'            => '%d',
+			'ip_verification_method' => '%s',
+			'visit_timestamp'        => '%s',
+			'content_word_count'     => '%d',
+			'content_heading_count'  => '%d',
+			'content_image_count'    => '%d',
+			'content_has_schema'     => '%d',
+			'content_freshness_days' => '%d',
+		);
+
+		// Defensive: remove any columns that don't exist in the table yet
+		// (handles incomplete migrations or missing ALTER TABLE permission).
+		// Cached per request with static so SHOW COLUMNS runs only once.
+		static $existing_cols = null;
+		if ( null === $existing_cols ) {
+			$rows          = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$existing_cols = wp_list_pluck( $rows, 'Field' );
+		}
+
+		foreach ( array_keys( $insert_data ) as $col ) {
+			if ( ! in_array( $col, $existing_cols, true ) ) {
+				unset( $insert_data[ $col ] );
+			}
+		}
+
+		// Rebuild format array from remaining columns using format map.
+		$format = array();
+		foreach ( array_keys( $insert_data ) as $col ) {
+			$format[] = isset( $format_map[ $col ] ) ? $format_map[ $col ] : '%s';
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$result = $wpdb->insert( $table_name, $insert_data, $format );
 

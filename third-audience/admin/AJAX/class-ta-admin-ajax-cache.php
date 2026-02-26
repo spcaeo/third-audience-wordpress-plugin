@@ -237,19 +237,23 @@ class TA_Admin_AJAX_Cache {
 		$batch_size = isset( $_POST['batch_size'] ) ? absint( $_POST['batch_size'] ) : 5;
 		$offset     = isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0;
 
+		// Allow more time for batch processing.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@set_time_limit( 120 );
+
+		// Check if markdown library is available before processing.
+		if ( ! class_exists( 'TA_Local_Converter' ) || ! TA_Local_Converter::is_library_available() ) {
+			wp_send_json_error( array(
+				'message' => __( 'Markdown conversion library is not available. Please check System Health for details.', 'third-audience' ),
+			) );
+		}
+
 		try {
 			$cache_manager = new TA_Cache_Manager();
 
-			// Check if TA_Local_Converter is available.
-			if ( ! class_exists( 'TA_Local_Converter' ) ) {
-				wp_send_json_error( array(
-					'message' => __( 'Local Converter class not found. Please ensure the plugin is properly installed.', 'third-audience' ),
-				) );
-			}
-
 			$results = $cache_manager->warm_cache_batch( array(
-				'limit'  => $batch_size,
-				'offset' => $offset,
+				'batch_size' => $batch_size,
+				'offset'     => $offset,
 			) );
 
 			// Get updated stats after warming.
@@ -268,7 +272,7 @@ class TA_Admin_AJAX_Cache {
 				'stats'   => $stats,
 			) );
 
-		} catch ( Exception $e ) {
+		} catch ( \Throwable $e ) {
 			$this->logger->error( 'Cache warmup batch failed', array(
 				'error'   => $e->getMessage(),
 				'offset'  => $offset,

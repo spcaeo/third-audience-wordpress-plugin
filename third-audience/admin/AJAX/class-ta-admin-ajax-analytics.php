@@ -890,13 +890,14 @@ class TA_Admin_AJAX_Analytics {
 		$rows   = array();
 
 		foreach ( $bot_stats as $bot ) {
-			$labels[] = $bot['bot_type'];
-			$values[] = (int) $bot['visit_count'];
-			$pct      = $total > 0 ? round( ( $bot['visit_count'] / $total ) * 100, 1 ) . '%' : '0%';
-			$pcts[]   = $pct;
-			$rows[]   = array(
+			$visit_count = (int) ( $bot['count'] ?? $bot['visit_count'] ?? 0 );
+			$labels[]    = $bot['bot_type'];
+			$values[]    = $visit_count;
+			$pct         = $total > 0 ? round( ( $visit_count / $total ) * 100, 1 ) . '%' : '0%';
+			$pcts[]      = $pct;
+			$rows[]      = array(
 				'<span class="ta-bot-name">' . esc_html( $bot['bot_type'] ) . '</span>',
-				'<strong>' . number_format( $bot['visit_count'] ) . '</strong>',
+				'<strong>' . number_format( $visit_count ) . '</strong>',
 				$pct,
 				esc_html( $bot['last_visit_human'] ?? '-' ),
 			);
@@ -1099,12 +1100,13 @@ class TA_Admin_AJAX_Analytics {
 
 		$rows = array();
 		foreach ( $bot_stats as $bot ) {
-			$rows[] = array(
+			$visit_count = (int) ( $bot['count'] ?? $bot['visit_count'] ?? 0 );
+			$rows[]      = array(
 				'<span class="ta-bot-name">' . esc_html( $bot['bot_type'] ) . '</span>',
-				'<strong>' . number_format( $bot['visit_count'] ) . '</strong>',
+				'<strong>' . number_format( $visit_count ) . '</strong>',
 				isset( $bot['verified_count'] ) ? number_format( $bot['verified_count'] ) : '0',
-				isset( $bot['verified_count'] ) && $bot['visit_count'] > 0
-					? round( ( $bot['verified_count'] / $bot['visit_count'] ) * 100, 1 ) . '%'
+				isset( $bot['verified_count'] ) && $visit_count > 0
+					? round( ( $bot['verified_count'] / $visit_count ) * 100, 1 ) . '%'
 					: '0%',
 			);
 		}

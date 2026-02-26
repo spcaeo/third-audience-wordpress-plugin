@@ -63,6 +63,7 @@ class TA_Cache_Admin {
 		// Cache Warmup AJAX handlers.
 		add_action( 'wp_ajax_ta_get_warmup_stats', array( $this, 'ajax_get_warmup_stats' ) );
 		add_action( 'wp_ajax_ta_start_warmup_batch', array( $this, 'ajax_start_warmup_batch' ) );
+		add_action( 'wp_ajax_ta_regenerate_all_markdown', array( $this, 'ajax_regenerate_all_markdown' ) );
 	}
 
 	/**
@@ -209,6 +210,13 @@ class TA_Cache_Admin {
 	public function ajax_start_warmup_batch() {
 		$this->security->verify_ajax_request( 'cache_browser' );
 
+		// Check markdown library is available before processing.
+		if ( ! class_exists( 'TA_Local_Converter' ) || ! TA_Local_Converter::is_library_available() ) {
+			wp_send_json_error( array(
+				'message' => __( 'Markdown conversion library is not available. Please check System Health for details.', 'third-audience' ),
+			) );
+		}
+
 		$batch_size = isset( $_POST['batch_size'] ) ? absint( $_POST['batch_size'] ) : 10;
 		$offset     = isset( $_POST['offset'] ) ? absint( $_POST['offset'] ) : 0;
 		$post_types = isset( $_POST['post_types'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['post_types'] ) ) : array();
@@ -222,20 +230,57 @@ class TA_Cache_Admin {
 			$args['post_type'] = $post_types;
 		}
 
-		$results = $this->cache_manager->warm_cache_batch( $args );
+		// Allow more time for batch processing.
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@set_time_limit( 120 );
 
-		// Get updated stats.
-		$stats = $this->cache_manager->get_warmup_stats();
+		try {
+			$results = $this->cache_manager->warm_cache_batch( $args );
+
+			// Get updated stats.
+			$stats = $this->cache_manager->get_warmup_stats();
+
+			wp_send_json_success( array(
+				'results' => $results,
+				'stats'   => $stats,
+				'message' => sprintf(
+					/* translators: 1: Warmed count, 2: Total processed */
+					__( 'Warmed %1$d of %2$d entries.', 'third-audience' ),
+					$results['warmed'],
+					$results['processed']
+				),
+			) );
+		} catch ( \Throwable $e ) {
+			wp_send_json_error( array(
+				'message' => sprintf(
+					/* translators: %s: error message */
+					__( 'Cache warmup failed: %s', 'third-audience' ),
+					$e->getMessage()
+				),
+			) );
+		}
+	}
+
+	/**
+	 * AJAX handler: Clear all pre-generated markdown from post meta.
+	 *
+	 * Called by the "Clear Pre-generated" button in the Cache Browser.
+	 *
+	 * @since 3.5.0
+	 * @return void
+	 */
+	public function ajax_regenerate_all_markdown() {
+		$this->security->verify_ajax_request( 'cache_browser' );
+
+		$cleared = $this->cache_manager->clear_pregenerated_markdown();
 
 		wp_send_json_success( array(
-			'results' => $results,
-			'stats'   => $stats,
 			'message' => sprintf(
-				/* translators: 1: Warmed count, 2: Total processed */
-				__( 'Warmed %1$d of %2$d entries.', 'third-audience' ),
-				$results['warmed'],
-				$results['processed']
+				/* translators: %d: Number of posts cleared */
+				__( 'Cleared pre-generated markdown for %d posts. It will be regenerated on next bot visit.', 'third-audience' ),
+				$cleared
 			),
+			'count' => $cleared,
 		) );
 	}
 

@@ -301,6 +301,9 @@ class TA_URL_Router {
 		// Cache the result with priority-based TTL.
 		$this->cache_manager->set( $cache_key, $markdown, $cache_ttl );
 
+		// Register URL for Cache Browser reverse lookup.
+		$this->cache_manager->register_url_for_key( $cache_key, $original_url );
+
 		$conversion_time = ( microtime( true ) - $start_time ) * 1000;
 		$this->logger->debug( 'Markdown conversion successful.', array(
 			'url'       => $original_url,

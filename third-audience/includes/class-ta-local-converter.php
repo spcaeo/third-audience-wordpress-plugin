@@ -100,7 +100,7 @@ class TA_Local_Converter {
 
 			$this->logger->debug( 'Enhanced HTML converter initialized successfully with custom converters.' );
 
-		} catch ( Exception $e ) {
+		} catch ( \Throwable $e ) {
 			$this->logger->error( 'Failed to initialize HTML converter.', array(
 				'error' => $e->getMessage(),
 			) );
@@ -208,7 +208,7 @@ class TA_Local_Converter {
 
 			return $markdown;
 
-		} catch ( Exception $e ) {
+		} catch ( \Throwable $e ) {
 			$this->logger->error( 'Failed to convert post to markdown.', array(
 				'post_id' => $post->ID,
 				'error'   => $e->getMessage(),

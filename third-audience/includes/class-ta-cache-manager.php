@@ -57,6 +57,13 @@ class TA_Cache_Manager implements TA_Cacheable {
 	const TAGS_OPTION = 'ta_cache_tags';
 
 	/**
+	 * URL map option name — stores cache_key → URL mapping for reverse lookup.
+	 *
+	 * @var string
+	 */
+	const URL_MAP_OPTION = 'ta_cache_url_map';
+
+	/**
 	 * Logger instance.
 	 *
 	 * @var TA_Logger
@@ -219,6 +226,13 @@ class TA_Cache_Manager implements TA_Cacheable {
 			wp_cache_delete( $key, self::CACHE_GROUP );
 		}
 
+		// Remove from URL map.
+		$map = get_option( self::URL_MAP_OPTION, array() );
+		if ( isset( $map[ $key ] ) ) {
+			unset( $map[ $key ] );
+			update_option( self::URL_MAP_OPTION, $map, false );
+		}
+
 		// Tier 3: Transient.
 		return delete_transient( $key );
 	}
@@ -369,6 +383,9 @@ class TA_Cache_Manager implements TA_Cacheable {
 		$cache_key = $this->generate_key( $url );
 		$this->set( $cache_key, $markdown );
 
+		// Register URL so Cache Browser can reverse-lookup this entry.
+		$this->register_url_for_key( $cache_key, $url );
+
 		$this->logger->debug( 'Markdown pre-generated.', array(
 			'post_id' => $post_id,
 			'url'     => $url,
@@ -483,6 +500,9 @@ class TA_Cache_Manager implements TA_Cacheable {
 
 		// Clear cache tags.
 		delete_option( self::TAGS_OPTION );
+
+		// Clear URL map.
+		delete_option( self::URL_MAP_OPTION );
 
 		// Reset stats.
 		$this->reset_stats();
@@ -725,15 +745,19 @@ class TA_Cache_Manager implements TA_Cacheable {
 	 * @since 2.0.0
 	 * @param string             $url       The URL to fetch.
 	 * @param TA_Local_Converter $converter Optional. Local converter instance.
+	 * @param int|null           $post_id   Optional. Known post ID — skips url_to_postid() lookup.
 	 * @return string|false The markdown or false on failure.
 	 */
-	private function fetch_and_cache( $url, $converter = null ) {
+	private function fetch_and_cache( $url, $converter = null, $post_id = null ) {
 		if ( null === $converter ) {
 			$converter = new TA_Local_Converter();
 		}
 
-		// Get post ID from URL.
-		$post_id = url_to_postid( $url );
+		// Use provided post ID or resolve from URL.
+		if ( null === $post_id ) {
+			$post_id = url_to_postid( $url );
+		}
+
 		if ( ! $post_id ) {
 			return false;
 		}
@@ -754,6 +778,9 @@ class TA_Cache_Manager implements TA_Cacheable {
 		// Cache the result.
 		$cache_key = $this->generate_key( $url );
 		$this->set( $cache_key, $markdown );
+
+		// Register URL so Cache Browser can reverse-lookup this entry.
+		$this->register_url_for_key( $cache_key, $url );
 
 		// Tag with post ID.
 		$this->tag_cache( $cache_key, array( 'post_' . $post_id ) );
@@ -1087,6 +1114,56 @@ class TA_Cache_Manager implements TA_Cacheable {
 	}
 
 	/**
+	 * Register a URL for a cache key in the persistent URL map.
+	 *
+	 * Called whenever a cache entry is stored so reverse lookup is always accurate
+	 * regardless of domain, trailing slash, or permalink format differences.
+	 *
+	 * @since 3.5.2
+	 * @param string $cache_key The cache key.
+	 * @param string $url       The original URL this key was built from.
+	 * @return void
+	 */
+	public function register_url_for_key( $cache_key, $url ) {
+		$map                = get_option( self::URL_MAP_OPTION, array() );
+		$map[ $cache_key ]  = $url;
+
+		// Cap at 2000 entries to prevent option bloat.
+		if ( count( $map ) > 2000 ) {
+			$map = array_slice( $map, -2000, 2000, true );
+		}
+
+		update_option( self::URL_MAP_OPTION, $map, false );
+	}
+
+	/**
+	 * Normalize a URL from WordPress site_url() domain to home_url() domain.
+	 *
+	 * In headless setups WordPress (site_url) and the frontend (home_url) have
+	 * different domains. Cache keys are built from home_url-based URLs because
+	 * bot requests hit the frontend, but get_permalink() returns site_url-based
+	 * URLs. This normalizes them so lookups and warmup use matching keys.
+	 *
+	 * @since 3.5.0
+	 * @param string $url The URL to normalize.
+	 * @return string URL with site_url domain replaced by home_url domain when they differ.
+	 */
+	private function normalize_url_to_frontend( $url ) {
+		$site_url = untrailingslashit( site_url() );
+		$home_url = untrailingslashit( home_url() );
+
+		if ( $site_url === $home_url || empty( $url ) ) {
+			return $url;
+		}
+
+		if ( strpos( $url, $site_url ) === 0 ) {
+			return $home_url . substr( $url, strlen( $site_url ) );
+		}
+
+		return $url;
+	}
+
+	/**
 	 * Reverse lookup URL from cache key (best effort).
 	 *
 	 * Queries all published posts and matches URL hash to find the original URL.
@@ -1096,7 +1173,59 @@ class TA_Cache_Manager implements TA_Cacheable {
 	 * @return array URL info array with 'url', 'title', 'post_id'.
 	 */
 	private function reverse_lookup_url( $cache_key ) {
-		// Cache the URL map to avoid repeated queries.
+		// Check the persistent URL map first — populated when cache entries are stored.
+		// This is the most reliable method, works regardless of domain or permalink format.
+		$stored_map = get_option( self::URL_MAP_OPTION, array() );
+		if ( isset( $stored_map[ $cache_key ] ) ) {
+			$url     = $stored_map[ $cache_key ];
+			$post_id = url_to_postid( $url );
+
+			if ( $post_id ) {
+				$title = get_the_title( $post_id );
+			} else {
+				$path  = trim( wp_parse_url( $url, PHP_URL_PATH ), '/' );
+				$title = $path
+					? ucwords( str_replace( array( '-', '_' ), ' ', basename( $path ) ) )
+					: get_bloginfo( 'name' ) . ' — Home';
+			}
+
+			return array(
+				'url'     => $url,
+				'title'   => $title,
+				'post_id' => $post_id ?: 0,
+			);
+		}
+
+		// Fallback: read URL from markdown frontmatter (works for all existing entries).
+		// Every cached entry has a YAML block: url: "https://..."
+		$content = $this->get( $cache_key );
+		if ( false !== $content && is_string( $content ) ) {
+			if ( preg_match( '/^url:\s*"([^"]+)"/m', $content, $matches ) ) {
+				$url     = trim( $matches[1] );
+				$post_id = url_to_postid( $url );
+
+				// Build title: use post title, or derive from path, or fall back to site name.
+				if ( $post_id ) {
+					$title = get_the_title( $post_id );
+				} else {
+					$path  = trim( wp_parse_url( $url, PHP_URL_PATH ), '/' );
+					$title = $path
+						? ucwords( str_replace( array( '-', '_' ), ' ', basename( $path ) ) )
+						: get_bloginfo( 'name' ) . ' — Home';
+				}
+
+				// Register in URL map so next lookup is instant.
+				$this->register_url_for_key( $cache_key, $url );
+
+				return array(
+					'url'     => $url,
+					'title'   => $title,
+					'post_id' => $post_id ?: 0,
+				);
+			}
+		}
+
+		// Final fallback: reconstruct from permalink (last resort).
 		static $url_map = null;
 
 		if ( null === $url_map ) {
@@ -1117,7 +1246,7 @@ class TA_Cache_Manager implements TA_Cacheable {
 			);
 
 			foreach ( $posts as $post_id ) {
-				$url = get_permalink( $post_id );
+				$url = $this->normalize_url_to_frontend( get_permalink( $post_id ) );
 
 				// Generate keys for all URL variations to match cache invalidation logic.
 				$urls = array(
@@ -1171,7 +1300,7 @@ class TA_Cache_Manager implements TA_Cacheable {
 		// Filter out posts that already have cache.
 		$uncached = array();
 		foreach ( $all_posts as $post_id ) {
-			$url       = get_permalink( $post_id );
+			$url       = $this->normalize_url_to_frontend( get_permalink( $post_id ) );
 			$cache_key = $this->generate_key( $url );
 
 			if ( ! $this->has( $cache_key ) ) {
@@ -1246,7 +1375,7 @@ class TA_Cache_Manager implements TA_Cacheable {
 		$converter = new TA_Local_Converter();
 
 		foreach ( $uncached_posts as $post_id ) {
-			$url       = get_permalink( $post_id );
+			$url       = $this->normalize_url_to_frontend( get_permalink( $post_id ) );
 			$cache_key = $this->generate_key( $url );
 
 			// Double-check if already cached (race condition protection).
@@ -1256,7 +1385,7 @@ class TA_Cache_Manager implements TA_Cacheable {
 			}
 
 			// Fetch and cache.
-			$markdown = $this->fetch_and_cache( $url, $converter );
+			$markdown = $this->fetch_and_cache( $url, $converter, $post_id );
 
 			if ( false !== $markdown ) {
 				$results['warmed']++;

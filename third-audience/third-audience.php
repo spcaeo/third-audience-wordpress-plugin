@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.5.2
+ * Version: 3.5.3
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.5.2' );
+define( 'TA_VERSION', '3.5.3' );
 
 /**
  * Database version for migrations.
@@ -200,6 +200,28 @@ function ta_run_migrations() {
 add_action( 'plugins_loaded', 'ta_run_migrations', 1 );
 
 /**
+ * Central registry of all required database columns.
+ *
+ * Single source of truth for column migrations. Both the activation hook and
+ * the admin auto-fix reference this function — so adding a new column in a
+ * future release only requires one line here and nothing else.
+ *
+ * @since 3.5.2
+ * @return array Column name => ALTER TABLE SQL.
+ */
+function ta_get_required_columns() {
+	global $wpdb;
+	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+	return array(
+		'content_type'      => "ALTER TABLE {$table_name} ADD COLUMN content_type VARCHAR(50) DEFAULT 'html' AFTER traffic_type",
+		'client_user_agent' => "ALTER TABLE {$table_name} ADD COLUMN client_user_agent text DEFAULT NULL AFTER user_agent",
+		'request_type'      => "ALTER TABLE {$table_name} ADD COLUMN request_type varchar(20) DEFAULT 'unknown' AFTER request_method",
+		'http_status'       => "ALTER TABLE {$table_name} ADD COLUMN http_status int(3) DEFAULT NULL AFTER response_size",
+	);
+}
+
+/**
  * Auto-fix database schema on every admin page load if needed.
  * This ensures migration runs even if activation hook failed.
  *
@@ -221,18 +243,11 @@ function ta_auto_fix_database() {
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
 	// Get all existing columns once.
-	$rows            = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	$existing_cols   = wp_list_pluck( $rows, 'Field' );
-
-	// Columns to ensure exist — add if missing.
-	$missing_columns = array(
-		'content_type'      => "ALTER TABLE {$table_name} ADD COLUMN content_type VARCHAR(50) DEFAULT 'html' AFTER traffic_type",
-		'client_user_agent' => "ALTER TABLE {$table_name} ADD COLUMN client_user_agent text DEFAULT NULL AFTER user_agent",
-		'request_type'      => "ALTER TABLE {$table_name} ADD COLUMN request_type varchar(20) DEFAULT 'unknown' AFTER request_method",
-	);
+	$rows          = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$existing_cols = wp_list_pluck( $rows, 'Field' );
 
 	$any_fixed = false;
-	foreach ( $missing_columns as $col => $sql ) {
+	foreach ( ta_get_required_columns() as $col => $sql ) {
 		if ( ! in_array( $col, $existing_cols, true ) ) {
 			$result = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			if ( false !== $result ) {
@@ -350,24 +365,15 @@ function ta_activation_hook() {
 
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
-	// Check if content_type column exists using SHOW COLUMNS (more reliable).
-	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
+	// Get all existing columns once.
+	$rows          = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	$existing_cols = wp_list_pluck( $rows, 'Field' );
 
-	$column_exists = false;
-	foreach ( $columns as $column ) {
-		if ( 'content_type' === $column->Field ) {
-			$column_exists = true;
-			break;
+	// Add any missing columns using the central registry.
+	foreach ( ta_get_required_columns() as $col => $sql ) {
+		if ( ! in_array( $col, $existing_cols, true ) ) {
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		}
-	}
-
-	// Add column if it doesn't exist.
-	if ( ! $column_exists ) {
-		$wpdb->query(
-			"ALTER TABLE {$table_name}
-			ADD COLUMN content_type VARCHAR(50) DEFAULT 'html'
-			AFTER traffic_type"
-		);
 	}
 
 	// Update database version to current.
@@ -806,6 +812,11 @@ function ta_register_rest_routes() {
 				'sanitize_callback' => 'sanitize_text_field',
 			),
 			'client_user_agent' => array(
+				'required'          => false,
+				'type'              => 'string',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'detection_type'    => array(
 				'required'          => false,
 				'type'              => 'string',
 				'sanitize_callback' => 'sanitize_text_field',
@@ -1259,6 +1270,10 @@ function ta_track_citation_callback( $request ) {
 	// (Next.js middleware forwarding req.headers['user-agent'] from the browser request).
 	$client_user_agent = $request->get_param( 'client_user_agent' )
 		?: ( $request->get_header( 'x-client-user-agent' ) ?: null );
+	// Map middleware detection_type ('utm'|'referer') to consistent detection_method values.
+	$detection_type   = $request->get_param( 'detection_type' ) ?: '';
+	$detection_method = 'utm' === $detection_type ? 'utm_parameter'
+		: ( 'referer' === $detection_type ? 'http_referer' : 'rest_api' );
 
 	// Sanitize URL - only allow relative paths or paths from this site.
 	$url = wp_parse_url( $url, PHP_URL_PATH ) ?: $url;
@@ -1350,7 +1365,7 @@ function ta_track_citation_callback( $request ) {
 			'ai_platform'            => $platform,
 			'referer_source'         => $platform,
 			'referer_medium'         => 'ai_citation',
-			'detection_method'       => 'rest_api',
+			'detection_method'       => $detection_method,
 			'confidence_score'       => 1.0,
 			'ip_verified'            => $ip_verified,
 			'ip_verification_method' => $ip_verification_method,
@@ -1608,8 +1623,9 @@ function ta_init_admin_notices() {
 		$admin_notices = new TA_Admin_Notices();
 		$admin_notices->init();
 
-		// Register AJAX handler for dismissing notices.
+		// Register AJAX handlers for dismissing notices.
 		add_action( 'wp_ajax_ta_dismiss_fallback_notice', array( $admin_notices, 'handle_dismiss_fallback_notice' ) );
+		add_action( 'wp_ajax_ta_dismiss_db_permission_notice', array( $admin_notices, 'handle_dismiss_db_permission_notice' ) );
 	}
 }
 add_action( 'admin_init', 'ta_init_admin_notices' );
