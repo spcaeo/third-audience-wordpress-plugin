@@ -269,7 +269,7 @@ const AI_CITATION_SOURCES = [
 /**
  * Detect if request came from an AI citation
  */
-function detectAICitation(request: NextRequest): { platform: string; query?: string } | null {
+function detectAICitation(request: NextRequest): { platform: string; query?: string; detection_type: string } | null {
   const url = request.nextUrl;
   const referer = request.headers.get('referer') || '';
 
@@ -278,7 +278,7 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
   if (utmSource) {
     for (const source of AI_CITATION_SOURCES) {
       if (source.pattern.test(utmSource)) {
-        return { platform: source.name };
+        return { platform: source.name, detection_type: 'utm' };
       }
     }
   }
@@ -291,10 +291,11 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
         const match = referer.match(/[?&]q=([^&]+)/);
         return {
           platform: source.name,
-          query: match ? decodeURIComponent(match[1]) : undefined
+          query: match ? decodeURIComponent(match[1]) : undefined,
+          detection_type: 'referer',
         };
       }
-      return { platform: source.name };
+      return { platform: source.name, detection_type: 'referer' };
     }
   }
 
@@ -309,13 +310,14 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
  * - Standard WordPress API method since WP 2.8
  * - No REST API conflicts or blocks
  */
-async function trackCitation(request: NextRequest, citation: { platform: string; query?: string }) {
+async function trackCitation(request: NextRequest, citation: { platform: string; query?: string; detection_type: string }) {
   const wordpressUrl = process.env.WORDPRESS_URL || 'https://your-site.com';
   const apiKey = process.env.TA_CITATION_API_KEY || '';
 
   const data = {
     url: request.nextUrl.pathname,
     platform: citation.platform,
+    detection_type: citation.detection_type,
     referer: request.headers.get('referer') || '',
     search_query: citation.query || '',
     ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',
@@ -708,7 +710,7 @@ const AI_CITATION_SOURCES = [
   { pattern: /bing/i, name: 'Bing AI' },
 ];
 
-function detectAICitation(request: NextRequest): { platform: string; query?: string } | null {
+function detectAICitation(request: NextRequest): { platform: string; query?: string; detection_type: string } | null {
   const url = request.nextUrl;
   const referer = request.headers.get('referer') || '';
 
@@ -717,7 +719,7 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
   if (utmSource) {
     for (const source of AI_CITATION_SOURCES) {
       if (source.pattern.test(utmSource)) {
-        return { platform: source.name };
+        return { platform: source.name, detection_type: 'utm' };
       }
     }
   }
@@ -727,22 +729,23 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
     if (source.pattern.test(referer)) {
       if (source.name === 'Perplexity' && referer.includes('?q=')) {
         const match = referer.match(/[?&]q=([^&]+)/);
-        return { platform: source.name, query: match ? decodeURIComponent(match[1]) : undefined };
+        return { platform: source.name, query: match ? decodeURIComponent(match[1]) : undefined, detection_type: 'referer' };
       }
-      return { platform: source.name };
+      return { platform: source.name, detection_type: 'referer' };
     }
   }
 
   return null;
 }
 
-async function trackCitation(request: NextRequest, citation: { platform: string; query?: string }) {
+async function trackCitation(request: NextRequest, citation: { platform: string; query?: string; detection_type: string }) {
   const wordpressUrl = process.env.WORDPRESS_URL;
   const apiKey = process.env.TA_CITATION_API_KEY;
 
   const data = {
     url: request.nextUrl.pathname,
     platform: citation.platform,
+    detection_type: citation.detection_type,
     referer: request.headers.get('referer') || '',
     search_query: citation.query || '',
     ip: request.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown',

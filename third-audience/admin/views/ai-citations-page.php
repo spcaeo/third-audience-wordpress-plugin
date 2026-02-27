@@ -51,6 +51,11 @@ if ( ! empty( $_GET['date'] ) ) {
 $where_clauses = array(
 	"traffic_type = 'citation_click'",
 	"(client_user_agent IS NOT NULL OR content_type IN ('rest_api', 'ajax') OR user_agent NOT LIKE 'Headless%')",
+	"url NOT LIKE '%/wp-admin%'",
+	"url NOT LIKE '%/wp-login%'",
+	"url NOT LIKE '%admin-ajax.php%'",
+	"url NOT LIKE '%/wp-cron%'",
+	"url NOT LIKE '%/xmlrpc%'",
 );
 
 if ( ! empty( $filters['platform'] ) ) {
@@ -75,10 +80,13 @@ if ( ! empty( $filters['search'] ) ) {
 	$where_clauses[] = $wpdb->prepare( '(url LIKE %s OR post_title LIKE %s OR search_query LIKE %s)', $search_term, $search_term, $search_term );
 }
 
-// NEW: Filter by browser (partial match in user_agent)
+// NEW: Filter by browser — check client_user_agent first (real browser UA), fall back to user_agent.
 if ( ! empty( $filters['browser'] ) ) {
 	$browser_term = '%' . $wpdb->esc_like( $filters['browser'] ) . '%';
-	$where_clauses[] = $wpdb->prepare( 'user_agent LIKE %s', $browser_term );
+	$where_clauses[] = $wpdb->prepare(
+		'(COALESCE(client_user_agent, user_agent) LIKE %s)',
+		$browser_term
+	);
 }
 
 // NEW: Filter by country code
@@ -86,12 +94,12 @@ if ( ! empty( $filters['country'] ) ) {
 	$where_clauses[] = $wpdb->prepare( 'country_code = %s', $filters['country'] );
 }
 
-// NEW: Filter by device type (Mobile vs Desktop)
+// NEW: Filter by device type — check client_user_agent first (real browser UA), fall back to user_agent.
 if ( ! empty( $filters['device'] ) ) {
 	if ( 'mobile' === $filters['device'] ) {
-		$where_clauses[] = "(user_agent LIKE '%Mobile%' OR user_agent LIKE '%iPhone%' OR user_agent LIKE '%Android%')";
+		$where_clauses[] = "(COALESCE(client_user_agent, user_agent) LIKE '%Mobile%' OR COALESCE(client_user_agent, user_agent) LIKE '%iPhone%' OR COALESCE(client_user_agent, user_agent) LIKE '%Android%')";
 	} elseif ( 'desktop' === $filters['device'] ) {
-		$where_clauses[] = "(user_agent NOT LIKE '%Mobile%' AND user_agent NOT LIKE '%iPhone%' AND user_agent NOT LIKE '%Android%')";
+		$where_clauses[] = "(COALESCE(client_user_agent, user_agent) NOT LIKE '%Mobile%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%iPhone%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%Android%')";
 	}
 }
 
@@ -246,11 +254,39 @@ $recent_citations = $wpdb->get_results(
 		ip_address,
 		country_code,
 		content_type,
+		detection_method,
 		visit_timestamp
 	FROM {$table_name}
 	WHERE {$where_sql}
 	ORDER BY visit_timestamp DESC
 	LIMIT 30",
+	ARRAY_A
+);
+
+// Broken citation URLs — cited by AI but no matching WP post (likely deleted/renamed pages or pure Next.js routes).
+// Used in Fix 2 redirect helper section.
+// Broken citations: URLs cited by AI but with no matching WP post resolved at tracking time.
+// Uses post_id = 0 (unresolvable URL) AND empty post_title for accuracy — avoids false positives
+// where a valid page was tracked but title was temporarily empty.
+$broken_citations = $wpdb->get_results(
+	"SELECT
+		url,
+		COUNT(*) as hit_count,
+		GROUP_CONCAT(DISTINCT ai_platform ORDER BY ai_platform SEPARATOR ', ') as platforms,
+		MAX(visit_timestamp) as last_seen
+	FROM {$table_name}
+	WHERE traffic_type = 'citation_click'
+		AND (post_id IS NULL OR post_id = 0)
+		AND (post_title IS NULL OR post_title = '')
+		AND url IS NOT NULL AND url != ''
+		AND url NOT LIKE '%/wp-admin%'
+		AND url NOT LIKE '%/wp-login%'
+		AND url NOT LIKE '%admin-ajax.php%'
+		AND url NOT LIKE '%/wp-cron%'
+		AND url NOT LIKE '%/xmlrpc%'
+	GROUP BY url
+	ORDER BY hit_count DESC
+	LIMIT 20",
 	ARRAY_A
 );
 
@@ -388,14 +424,13 @@ for ( $week = 3; $week >= 0; $week-- ) {
 	);
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+	// MD: bot crawls to .md format URLs (traffic_type = bot_crawl, content_type = markdown).
 	$week_md = $wpdb->get_var(
 		$wpdb->prepare(
 			"SELECT COUNT(*) FROM {$table_name}
-			WHERE traffic_type = 'citation_click'
-			AND request_type LIKE %s
-			AND content_type NOT IN ('rest_api', 'ajax')
+			WHERE traffic_type = 'bot_crawl'
+			AND (content_type = 'markdown' OR request_method = 'md_url')
 			AND DATE(visit_timestamp) BETWEEN %s AND %s",
-			'%markdown%',
 			$week_start,
 			$week_end
 		)
@@ -518,21 +553,40 @@ function ta_get_country_flag( $country_code ) {
 }
 
 /**
+ * Format a URL path into a human-readable page title.
+ * Used as fallback when post_title is empty (e.g. pure Next.js routes or deleted pages).
+ *
+ * @param string $url Full URL or path.
+ * @return string Formatted title.
+ */
+function ta_format_url_as_title( $url ) {
+	$path = trim( wp_parse_url( $url, PHP_URL_PATH ), '/' );
+	if ( empty( $path ) ) {
+		return 'Home';
+	}
+	$last_segment = basename( $path );
+	$title        = str_replace( array( '-', '_' ), ' ', $last_segment );
+	return ucwords( $title );
+}
+
+/**
  * Get available browsers from database for filter dropdown.
+ * Use COALESCE(client_user_agent, user_agent) so headless records
+ * with a real browser UA in client_user_agent are counted correctly.
  */
 $available_browsers = $wpdb->get_results(
 	"SELECT
 		CASE
-			WHEN user_agent LIKE '%Edg%' THEN 'Edge'
-			WHEN user_agent LIKE '%Chrome%' AND user_agent NOT LIKE '%Edg%' THEN 'Chrome'
-			WHEN user_agent LIKE '%Firefox%' THEN 'Firefox'
-			WHEN user_agent LIKE '%Safari%' AND user_agent NOT LIKE '%Chrome%' THEN 'Safari'
-			WHEN user_agent LIKE '%Opera%' OR user_agent LIKE '%OPR%' THEN 'Opera'
+			WHEN COALESCE(client_user_agent, user_agent) LIKE '%Edg%' THEN 'Edge'
+			WHEN COALESCE(client_user_agent, user_agent) LIKE '%Chrome%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%Edg%' THEN 'Chrome'
+			WHEN COALESCE(client_user_agent, user_agent) LIKE '%Firefox%' THEN 'Firefox'
+			WHEN COALESCE(client_user_agent, user_agent) LIKE '%Safari%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%Chrome%' THEN 'Safari'
+			WHEN COALESCE(client_user_agent, user_agent) LIKE '%Opera%' OR COALESCE(client_user_agent, user_agent) LIKE '%OPR%' THEN 'Opera'
 			ELSE 'Other'
 		END as browser,
 		COUNT(*) as count
 	FROM {$table_name}
-	WHERE traffic_type = 'citation_click' AND user_agent != ''
+	WHERE traffic_type = 'citation_click' AND COALESCE(client_user_agent, user_agent) != ''
 	GROUP BY browser
 	ORDER BY count DESC",
 	ARRAY_A
@@ -821,12 +875,10 @@ $available_dates = $wpdb->get_results(
 				</p>
 			</div>
 			<div class="ta-card-body" style="overflow-x: auto;">
-				<table class="wp-list-table widefat fixed striped" style="min-width: 1100px;">
+				<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
 					<thead>
 						<tr>
 							<th style="width: 90px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
-							<th style="width: 75px; text-align: center;"><?php esc_html_e( 'Source', 'third-audience' ); ?></th>
-							<th style="width: 60px; text-align: center;"><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
 							<th style="width: 180px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
 							<th style="width: 180px;">🌐 <?php esc_html_e( 'Browser & Device', 'third-audience' ); ?></th>
 							<th style="width: 70px; text-align: center;">🗺️ <?php esc_html_e( 'Location', 'third-audience' ); ?></th>
@@ -844,52 +896,37 @@ $available_dates = $wpdb->get_results(
 							$short_url  = strlen( $citation['url'] ) > 30 ? substr( $citation['url'], 0, 27 ) . '...' : $citation['url'];
 							$short_ref  = ! empty( $citation['referer'] ) ? ( strlen( $citation['referer'] ) > 35 ? substr( $citation['referer'], 0, 32 ) . '...' : $citation['referer'] ) : '—';
 
-							// Detect method from URL (UTM) or referrer
-							$has_utm = strpos( $citation['url'], 'utm_source=' ) !== false;
-							$method_color = $has_utm ? '#34c759' : '#007aff';
-							$method_label = $has_utm ? 'UTM' : 'Ref';
-
-							// Determine source type: Headless (REST/AJAX) vs Direct WordPress.
-							$content_type = $citation['content_type'] ?? '';
-							if ( in_array( $content_type, array( 'rest_api', 'ajax' ), true ) ) {
-								$source_label = 'Headless';
-								$source_color = '#8b5cf6';
-								$source_title = 'Tracked via headless Next.js middleware';
-							} else {
-								$source_label = 'Direct WP';
-								$source_color = '#0073aa';
-								$source_title = 'Tracked directly in WordPress';
-							}
-
 							// Prefer client_user_agent (real browser UA from JS navigator.userAgent)
 							// over user_agent (server-side HTTP_USER_AGENT, may be a bot/proxy UA).
-							$ua_string = ! empty( $citation['client_user_agent'] ) ? $citation['client_user_agent'] : ( $citation['user_agent'] ?? '' );
-							$ua_data   = ta_parse_user_agent( $ua_string );
+							$ua_string    = ! empty( $citation['client_user_agent'] ) ? $citation['client_user_agent'] : ( $citation['user_agent'] ?? '' );
+							$ua_data      = ta_parse_user_agent( $ua_string );
+							$content_type = $citation['content_type'] ?? '';
 
 							// NEW: Get country flag
 							$country_flag = ta_get_country_flag( $citation['country_code'] ?? '' );
 							?>
 							<tr>
 								<td><span class="ta-bot-badge"><?php echo esc_html( $citation['ai_platform'] ); ?></span></td>
-								<td style="text-align: center;">
-									<span title="<?php echo esc_attr( $source_title ); ?>" style="background: <?php echo esc_attr( $source_color ); ?>; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">
-										<?php echo esc_html( $source_label ); ?>
-									</span>
-								</td>
-								<td style="text-align: center;">
-									<span style="background: <?php echo esc_attr( $method_color ); ?>; color: #fff; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">
-										<?php echo esc_html( $method_label ); ?>
-									</span>
-								</td>
+								<?php
+								$display_title   = ! empty( $citation['post_title'] )
+									? $citation['post_title']
+									: ta_format_url_as_title( $citation['url'] );
+								$is_broken_title = empty( $citation['post_title'] );
+								?>
 								<td title="<?php echo esc_attr( $citation['url'] ); ?>">
-									<strong style="font-size: 12px;"><?php echo esc_html( $citation['post_title'] ?: 'Untitled' ); ?></strong>
+									<strong style="font-size: 12px;">
+										<?php echo esc_html( $display_title ); ?>
+										<?php if ( $is_broken_title ) : ?>
+											<span title="No matching WordPress page found — may need a redirect" style="color: #f59e0b; font-size: 9px; font-weight: normal; margin-left: 3px;">&#9888;</span>
+										<?php endif; ?>
+									</strong>
 									<br><code style="font-size: 9px; color: #8e8e93;"><?php echo esc_html( $short_url ); ?></code>
 								</td>
 								<!-- Browser & Device Column -->
 								<td style="font-size: 11px;">
-									<?php if ( ! empty( $citation['client_user_agent'] ) && 'Unknown' !== $ua_data['browser'] ) : ?>
+									<?php if ( ! empty( $citation['client_user_agent'] ) ) : ?>
 										<div style="line-height: 1.4;">
-											<strong><?php echo esc_html( $ua_data['browser'] ); ?></strong> on <?php echo esc_html( $ua_data['os'] ); ?>
+											<strong><?php echo esc_html( 'Unknown' !== $ua_data['browser'] ? $ua_data['browser'] : 'Browser' ); ?></strong> on <?php echo esc_html( 'Unknown' !== $ua_data['os'] ? $ua_data['os'] : 'Unknown OS' ); ?>
 											<br>
 											<span style="color: #8e8e93; font-size: 10px;">
 												<?php echo esc_html( $ua_data['icon'] ); ?> <?php echo esc_html( ucfirst( $ua_data['device'] ) ); ?>
@@ -1039,6 +1076,59 @@ $available_dates = $wpdb->get_results(
 			</form>
 		</div>
 	</div>
+
+	<!-- Fix 2: Broken Citations — Redirect Helper -->
+	<?php if ( ! empty( $broken_citations ) ) : ?>
+	<div class="ta-card" style="margin-top: 20px; border-left: 4px solid #f59e0b;">
+		<div class="ta-card-header" style="background: #fffbeb;">
+			<h2 style="color: #92400e;">&#9888; Broken AI Citations — Redirect Needed (<?php echo count( $broken_citations ); ?>)</h2>
+			<p style="margin: 4px 0 0; font-size: 13px; color: #78350f;">
+				<?php esc_html_e( 'These URLs are being cited by AI platforms but have no matching page in WordPress. Add 301 redirects to recover this traffic.', 'third-audience' ); ?>
+			</p>
+		</div>
+		<div class="ta-card-body" style="overflow-x: auto; padding: 0;">
+			<table class="wp-list-table widefat fixed striped" style="min-width: 700px;">
+				<thead>
+					<tr>
+						<th style="width: 40%;"><?php esc_html_e( 'Cited URL (404 / No WP Page)', 'third-audience' ); ?></th>
+						<th style="width: 20%;"><?php esc_html_e( 'AI Platforms', 'third-audience' ); ?></th>
+						<th style="width: 10%; text-align: center;"><?php esc_html_e( 'Hits', 'third-audience' ); ?></th>
+						<th style="width: 15%; text-align: center;"><?php esc_html_e( 'Last Seen', 'third-audience' ); ?></th>
+						<th style="width: 15%;"><?php esc_html_e( 'Action', 'third-audience' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $broken_citations as $broken ) : ?>
+						<?php
+						$broken_slug  = basename( trim( wp_parse_url( $broken['url'], PHP_URL_PATH ), '/' ) );
+						$broken_title = ucwords( str_replace( array( '-', '_' ), ' ', $broken_slug ) ) ?: 'Unknown Page';
+						$full_url     = home_url( $broken['url'] );
+						$last_seen    = human_time_diff( strtotime( $broken['last_seen'] ), current_time( 'timestamp' ) );
+						?>
+						<tr>
+							<td>
+								<strong style="font-size: 12px; color: #92400e;"><?php echo esc_html( $broken_title ); ?></strong>
+								<br>
+								<a href="<?php echo esc_url( $full_url ); ?>" target="_blank" rel="noopener" style="font-size: 9px; color: #8e8e93;">
+									<?php echo esc_html( $broken['url'] ); ?>
+								</a>
+							</td>
+							<td style="font-size: 11px; color: #646970;"><?php echo esc_html( $broken['platforms'] ); ?></td>
+							<td style="text-align: center; font-weight: bold; color: #dc2626;"><?php echo esc_html( $broken['hit_count'] ); ?></td>
+							<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( $last_seen ); ?> ago</td>
+							<td>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=ta-headless-setup#redirects' ) ); ?>"
+								   style="font-size: 11px; color: #0073aa; text-decoration: none; white-space: nowrap;">
+									&#8594; Add Redirect
+								</a>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+	</div>
+	<?php endif; ?>
 
 	<!-- Citations by Platform (Column-Dense Layout) -->
 	<div class="ta-card" style="margin-top: 20px;">

@@ -181,29 +181,65 @@ class TA_Admin_Notices {
 		// Warning if database permissions limited.
 		if ( isset( $env['db_permissions'] ) ) {
 			if ( empty( $env['db_permissions']['create'] ) || empty( $env['db_permissions']['alter'] ) ) {
-				?>
-				<div class="notice notice-error">
-					<h3 style="margin-top: 10px;">❌ Database Permission Issue</h3>
-					<p>Your database user has limited permissions. Some features may not work correctly.</p>
-					<p><strong>Missing permissions:</strong></p>
-					<ul style="list-style: disc; margin-left: 20px;">
-						<?php if ( empty( $env['db_permissions']['create'] ) ) : ?>
-							<li>CREATE TABLE</li>
-						<?php endif; ?>
-						<?php if ( empty( $env['db_permissions']['alter'] ) ) : ?>
-							<li>ALTER TABLE</li>
-						<?php endif; ?>
-					</ul>
-					<p>
-						<a href="<?php echo esc_url( admin_url( 'options-general.php?page=third-audience&tab=system-health' ) ); ?>" class="button">
-							View Manual SQL Commands
-						</a>
-						<a href="https://docs.thirdaudience.com/database-permissions" class="button" target="_blank">
-							Contact Hosting Support
-						</a>
-					</p>
-				</div>
-				<?php
+				// Skip if user has dismissed this notice.
+				if ( ! get_user_meta( get_current_user_id(), 'ta_dismiss_db_permission_notice', true ) ) {
+					?>
+					<div class="notice notice-error is-dismissible" data-notice="db-permission">
+						<h3 style="margin-top: 10px;">❌ Database Permission Issue</h3>
+						<p>Your database user has limited permissions. Some features may not work correctly.</p>
+						<p><strong>Missing permissions:</strong></p>
+						<ul style="list-style: disc; margin-left: 20px;">
+							<?php if ( empty( $env['db_permissions']['create'] ) ) : ?>
+								<li>CREATE TABLE</li>
+							<?php endif; ?>
+							<?php if ( empty( $env['db_permissions']['alter'] ) ) : ?>
+								<li>ALTER TABLE</li>
+							<?php endif; ?>
+						</ul>
+						<p>
+							<a href="<?php echo esc_url( admin_url( 'options-general.php?page=third-audience&tab=system-health' ) ); ?>" class="button">
+								View Manual SQL Commands
+							</a>
+							<a href="https://docs.thirdaudience.com/database-permissions" class="button" target="_blank">
+								Contact Hosting Support
+							</a>
+							<button type="button" class="button button-primary ta-retest-db-permissions" data-nonce="<?php echo esc_attr( wp_create_nonce( 'ta-redetect-env' ) ); ?>" style="margin-left: 10px;">
+								🔄 Re-run Permission Check
+							</button>
+						</p>
+					</div>
+					<script>
+					jQuery(document).ready(function($) {
+						// Handle WordPress dismiss button — store permanently via AJAX.
+						$('.notice[data-notice="db-permission"]').on('click', '.notice-dismiss', function() {
+							$.post(ajaxurl, {
+								action: 'ta_dismiss_db_permission_notice',
+								nonce: '<?php echo esc_js( wp_create_nonce( 'ta_dismiss_notice' ) ); ?>'
+							});
+						});
+
+						// Handle Re-run Check button — re-tests DB permissions and reloads.
+						$('.ta-retest-db-permissions').on('click', function() {
+							var $btn = $(this);
+							$btn.text('Checking...').prop('disabled', true);
+							$.post(ajaxurl, {
+								action: 'ta_redetect_environment',
+								nonce: $btn.data('nonce')
+							}, function(response) {
+								if (response.success) {
+									location.reload();
+								} else {
+									$btn.text('🔄 Re-run Permission Check').prop('disabled', false);
+									alert('Error: ' + (response.data || 'Unknown error'));
+								}
+							}).fail(function() {
+								$btn.text('🔄 Re-run Permission Check').prop('disabled', false);
+							});
+						});
+					});
+					</script>
+					<?php
+				}
 			}
 		}
 	}
@@ -249,6 +285,17 @@ class TA_Admin_Notices {
 		check_ajax_referer( 'ta_dismiss_notice', 'nonce' );
 
 		update_user_meta( get_current_user_id(), 'ta_dismiss_fallback_notice', true );
+
+		wp_send_json_success();
+	}
+
+	/**
+	 * AJAX handler to dismiss the DB permission notice.
+	 */
+	public function handle_dismiss_db_permission_notice() {
+		check_ajax_referer( 'ta_dismiss_notice', 'nonce' );
+
+		update_user_meta( get_current_user_id(), 'ta_dismiss_db_permission_notice', true );
 
 		wp_send_json_success();
 	}

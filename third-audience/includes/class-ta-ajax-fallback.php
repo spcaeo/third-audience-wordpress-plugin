@@ -97,6 +97,15 @@ class TA_AJAX_Fallback {
 		// Process citation.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$url = isset( $_POST['url'] ) ? sanitize_text_field( wp_unslash( $_POST['url'] ) ) : '';
+
+		// Reject admin, login, and system URLs — these are never real citation traffic.
+		$blocked_patterns = array( '/wp-admin', '/wp-login', 'admin-ajax.php', '/wp-cron', '/feed/', '/xmlrpc' );
+		foreach ( $blocked_patterns as $pattern ) {
+			if ( strpos( $url, $pattern ) !== false ) {
+				wp_send_json_error( array( 'message' => 'Invalid URL — admin/system URLs cannot be tracked' ), 400 );
+			}
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$referer = isset( $_POST['referer'] ) ? esc_url_raw( wp_unslash( $_POST['referer'] ) ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -105,6 +114,11 @@ class TA_AJAX_Fallback {
 		$ip                = isset( $_POST['ip'] ) ? sanitize_text_field( wp_unslash( $_POST['ip'] ) ) : $this->get_client_ip();
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$client_user_agent = isset( $_POST['client_user_agent'] ) ? sanitize_text_field( wp_unslash( $_POST['client_user_agent'] ) ) : null;
+		// Map middleware detection_type ('utm'|'referer') to consistent detection_method values.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$detection_type   = isset( $_POST['detection_type'] ) ? sanitize_text_field( wp_unslash( $_POST['detection_type'] ) ) : '';
+		$detection_method = 'utm' === $detection_type ? 'utm_parameter'
+			: ( 'referer' === $detection_type ? 'http_referer' : 'ajax_api' );
 
 		// Session-based dedup - treat same IP+platform within 30 minutes as one session.
 		// Matches GA4 session logic (30-min window). URL excluded so browsing multiple
@@ -184,7 +198,7 @@ class TA_AJAX_Fallback {
 				'ai_platform'            => $platform,
 				'referer_source'         => $platform,
 				'referer_medium'         => 'ai_citation',
-				'detection_method'       => 'ajax_api',
+				'detection_method'       => $detection_method,
 				'confidence_score'       => 1.0,
 				'ip_verified'            => $ip_verified,
 				'ip_verification_method' => $ip_verification_method,

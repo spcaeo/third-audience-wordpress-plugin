@@ -1237,6 +1237,9 @@ class TA_Admin {
 		// Delete the old environment detection setting.
 		delete_option( 'ta_environment_detection' );
 
+		// Clear the DB permission notice dismissal so fresh results are shown.
+		delete_user_meta( get_current_user_id(), 'ta_dismiss_db_permission_notice' );
+
 		// IMPORTANT: Run security bypass BEFORE detection to ensure REST API is whitelisted.
 		if ( class_exists( 'TA_Security_Bypass' ) ) {
 			$security_bypass  = new TA_Security_Bypass();
