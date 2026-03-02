@@ -111,29 +111,49 @@ class TA_Database_Auto_Fixer {
 		$table           = $wpdb->prefix . 'ta_bot_analytics';
 		$charset_collate = $wpdb->get_charset_collate();
 
+		// Schema must match TA_Bot_Analytics::maybe_create_table() exactly.
 		$sql = "CREATE TABLE {$table} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			bot_type varchar(50) NOT NULL,
 			bot_name varchar(100) NOT NULL,
 			user_agent text NOT NULL,
-			page_url varchar(500) NOT NULL,
-			page_title text DEFAULT NULL,
-			referer text DEFAULT NULL,
-			search_query text DEFAULT NULL,
-			ip_address varchar(45) DEFAULT NULL,
-			traffic_type varchar(20) DEFAULT 'bot_crawl',
-			content_type varchar(50) DEFAULT 'html',
-			status_code int(11) DEFAULT 200,
+			client_user_agent text DEFAULT NULL,
+			url varchar(500) NOT NULL,
+			post_id bigint(20) unsigned DEFAULT NULL,
+			post_type varchar(50) DEFAULT NULL,
+			post_title text DEFAULT NULL,
+			request_method varchar(20) NOT NULL DEFAULT 'md_url',
+			request_type varchar(20) DEFAULT 'unknown',
+			cache_status varchar(20) NOT NULL DEFAULT 'MISS',
 			response_time int(11) DEFAULT NULL,
-			cache_hit tinyint(1) DEFAULT 0,
-			is_citation tinyint(1) DEFAULT 0,
-			visited_at datetime NOT NULL,
+			response_size int(11) DEFAULT NULL,
+			http_status int(3) DEFAULT NULL,
+			ip_address varchar(45) DEFAULT NULL,
+			referer text DEFAULT NULL,
+			country_code varchar(2) DEFAULT NULL,
+			traffic_type varchar(20) DEFAULT 'bot_crawl',
+			content_type varchar(20) DEFAULT 'html',
+			ai_platform varchar(50) DEFAULT NULL,
+			search_query text DEFAULT NULL,
+			referer_source varchar(100) DEFAULT NULL,
+			referer_medium varchar(50) DEFAULT NULL,
+			detection_method varchar(50) DEFAULT 'legacy',
+			confidence_score decimal(3,2) DEFAULT NULL,
+			ip_verified tinyint(1) DEFAULT NULL,
+			ip_verification_method varchar(50) DEFAULT NULL,
+			content_word_count int(11) DEFAULT NULL,
+			content_heading_count int(11) DEFAULT NULL,
+			content_image_count int(11) DEFAULT NULL,
+			content_has_schema tinyint(1) DEFAULT 0,
+			content_freshness_days int(11) DEFAULT NULL,
+			visit_timestamp datetime NOT NULL,
 			created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (id),
 			KEY bot_name (bot_name),
+			KEY bot_type (bot_type),
 			KEY traffic_type (traffic_type),
-			KEY visited_at (visited_at),
-			KEY is_citation (is_citation),
+			KEY visit_timestamp (visit_timestamp),
+			KEY ai_platform (ai_platform),
 			KEY content_type (content_type)
 		) {$charset_collate};";
 
@@ -259,33 +279,17 @@ class TA_Database_Auto_Fixer {
 		// Get existing columns.
 		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-		// IMPORTANT: Add base columns FIRST (without AFTER clause), then dependent columns.
-		// This ensures proper order even if table schema is incomplete.
+		// Columns required by the current application code that may be missing
+		// from tables created by older plugin versions.
 		$required_columns = array(
-			// Phase 1: Base columns (no dependencies - add at end of table).
-			'page_url'           => "ALTER TABLE {$table} ADD COLUMN page_url varchar(500) NOT NULL AFTER user_agent",
-			'cache_hit'          => "ALTER TABLE {$table} ADD COLUMN cache_hit tinyint(1) DEFAULT 0 AFTER response_time",
-			'content_type'       => "ALTER TABLE {$table} ADD COLUMN content_type varchar(50) DEFAULT 'html' AFTER traffic_type",
-			// Phase 2: Dependent columns (require base columns to exist).
-			'page_title'         => "ALTER TABLE {$table} ADD COLUMN page_title text DEFAULT NULL AFTER page_url",
-			'is_citation'        => "ALTER TABLE {$table} ADD COLUMN is_citation tinyint(1) DEFAULT 0 AFTER cache_hit",
-			// Phase 3: LLM Traffic tracking columns (v3.5.0).
-			'client_user_agent'  => "ALTER TABLE {$table} ADD COLUMN client_user_agent text DEFAULT NULL AFTER user_agent",
-			'request_type'       => "ALTER TABLE {$table} ADD COLUMN request_type varchar(20) DEFAULT 'unknown' AFTER request_method",
+			'content_type'      => "ALTER TABLE {$table} ADD COLUMN content_type varchar(20) DEFAULT 'html' AFTER traffic_type",
+			'client_user_agent' => "ALTER TABLE {$table} ADD COLUMN client_user_agent text DEFAULT NULL AFTER user_agent",
+			'request_type'      => "ALTER TABLE {$table} ADD COLUMN request_type varchar(20) DEFAULT 'unknown' AFTER request_method",
+			'http_status'       => "ALTER TABLE {$table} ADD COLUMN http_status int(3) DEFAULT NULL AFTER response_size",
 		);
 
 		foreach ( $required_columns as $column => $sql ) {
 			if ( ! in_array( $column, $columns, true ) ) {
-				// For dependent columns, check if the base column exists first.
-				if ( 'page_title' === $column && ! in_array( 'page_url', $columns, true ) ) {
-					// Skip page_title if page_url doesn't exist yet (will be added next loop).
-					continue;
-				}
-				if ( 'is_citation' === $column && ! in_array( 'cache_hit', $columns, true ) ) {
-					// Skip is_citation if cache_hit doesn't exist yet (will be added next loop).
-					continue;
-				}
-
 				$result = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 
 				if ( false !== $result ) {
@@ -297,28 +301,6 @@ class TA_Database_Auto_Fixer {
 				} else {
 					if ( $this->logger ) {
 						$this->logger->error( "Failed to add column: {$column}", array( 'error' => $wpdb->last_error ) );
-					}
-				}
-			}
-		}
-
-		// Second pass: Try again for dependent columns in case base columns were just added.
-		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-
-		$dependent_columns = array(
-			'page_title'   => "ALTER TABLE {$table} ADD COLUMN page_title text DEFAULT NULL AFTER page_url",
-			'is_citation'  => "ALTER TABLE {$table} ADD COLUMN is_citation tinyint(1) DEFAULT 0 AFTER cache_hit",
-		);
-
-		foreach ( $dependent_columns as $column => $sql ) {
-			if ( ! in_array( $column, $columns, true ) ) {
-				$result = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-
-				if ( false !== $result ) {
-					$added[] = $column;
-
-					if ( $this->logger ) {
-						$this->logger->info( "Added missing dependent column: {$column} to {$table}" );
 					}
 				}
 			}
@@ -348,7 +330,7 @@ class TA_Database_Auto_Fixer {
 		$columns = $wpdb->get_results( "SHOW FULL COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		foreach ( $columns as $column ) {
-			// Fix content_type if it's too small (varchar(20) → varchar(50)).
+			// Fix content_type if it was created too small (varchar(20) → varchar(50)).
 			if ( 'content_type' === $column->Field && stripos( $column->Type, 'varchar(20)' ) !== false ) {
 				$result = $wpdb->query( "ALTER TABLE {$table} MODIFY COLUMN content_type varchar(50) DEFAULT 'html'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
@@ -361,15 +343,15 @@ class TA_Database_Auto_Fixer {
 				}
 			}
 
-			// Fix page_url if it's too small (varchar(255) → varchar(500)).
-			if ( 'page_url' === $column->Field && stripos( $column->Type, 'varchar(255)' ) !== false ) {
-				$result = $wpdb->query( "ALTER TABLE {$table} MODIFY COLUMN page_url varchar(500) NOT NULL" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// Fix url if it's too small (varchar(255) → varchar(500)).
+			if ( 'url' === $column->Field && stripos( $column->Type, 'varchar(255)' ) !== false ) {
+				$result = $wpdb->query( "ALTER TABLE {$table} MODIFY COLUMN url varchar(500) NOT NULL" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 				if ( false !== $result ) {
-					$fixed[] = 'page_url';
+					$fixed[] = 'url';
 
 					if ( $this->logger ) {
-						$this->logger->info( 'Fixed page_url column size (255→500)' );
+						$this->logger->info( 'Fixed url column size (255→500)' );
 					}
 				}
 			}
@@ -401,9 +383,11 @@ class TA_Database_Auto_Fixer {
 
 		// Add missing indexes.
 		$required_indexes = array(
-			'is_citation'  => "ALTER TABLE {$table} ADD KEY is_citation (is_citation)",
-			'content_type' => "ALTER TABLE {$table} ADD KEY content_type (content_type)",
-			'bot_name'     => "ALTER TABLE {$table} ADD KEY bot_name (bot_name)",
+			'bot_name'       => "ALTER TABLE {$table} ADD KEY bot_name (bot_name)",
+			'bot_type'       => "ALTER TABLE {$table} ADD KEY bot_type (bot_type)",
+			'content_type'   => "ALTER TABLE {$table} ADD KEY content_type (content_type)",
+			'ai_platform'    => "ALTER TABLE {$table} ADD KEY ai_platform (ai_platform)",
+			'visit_timestamp' => "ALTER TABLE {$table} ADD KEY visit_timestamp (visit_timestamp)",
 		);
 
 		foreach ( $required_indexes as $index_name => $sql ) {
@@ -441,17 +425,19 @@ class TA_Database_Auto_Fixer {
 			// Check columns.
 			$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
+			$status['url_exists']                = in_array( 'url', $columns, true );
+			$status['visit_timestamp_exists']    = in_array( 'visit_timestamp', $columns, true );
 			$status['content_type_exists']       = in_array( 'content_type', $columns, true );
-			$status['is_citation_exists']        = in_array( 'is_citation', $columns, true );
-			$status['page_title_exists']         = in_array( 'page_title', $columns, true );
 			$status['client_user_agent_exists']  = in_array( 'client_user_agent', $columns, true );
 			$status['request_type_exists']       = in_array( 'request_type', $columns, true );
+			$status['http_status_exists']        = in_array( 'http_status', $columns, true );
 		} else {
+			$status['url_exists']               = false;
+			$status['visit_timestamp_exists']   = false;
 			$status['content_type_exists']      = false;
-			$status['is_citation_exists']       = false;
-			$status['page_title_exists']        = false;
 			$status['client_user_agent_exists'] = false;
 			$status['request_type_exists']      = false;
+			$status['http_status_exists']       = false;
 		}
 
 		// Check citation alerts table.

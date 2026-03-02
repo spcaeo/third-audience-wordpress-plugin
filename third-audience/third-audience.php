@@ -242,6 +242,13 @@ function ta_auto_fix_database() {
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
 
+	// Skip if the table doesn't exist yet (fresh install in progress).
+	$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+	if ( $table_exists !== $table_name ) {
+		set_transient( 'ta_db_check_done', true, HOUR_IN_SECONDS );
+		return;
+	}
+
 	// Get all existing columns once.
 	$rows          = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	$existing_cols = wp_list_pluck( $rows, 'Field' );
@@ -268,6 +275,48 @@ function ta_auto_fix_database() {
 add_action( 'admin_init', 'ta_auto_fix_database', 1 );
 
 /**
+ * Run deferred environment detection on first admin load after activation.
+ *
+ * Environment detection (REST API health check) must not run inside the
+ * activation hook because REST API routes register on rest_api_init, which
+ * only fires after plugins_loaded — a hook that does not run during plugin
+ * activation. Running detection here, on admin_init, gives accurate results
+ * and avoids blocking the activation hook with slow HTTP requests.
+ *
+ * @since 3.5.4
+ * @return void
+ */
+function ta_maybe_detect_environment() {
+	if ( ! get_transient( 'ta_needs_environment_detection' ) ) {
+		return;
+	}
+
+	// Delete the transient first to prevent double-execution if detection is slow.
+	delete_transient( 'ta_needs_environment_detection' );
+
+	if ( ! class_exists( 'TA_Environment_Detector' ) ) {
+		require_once TA_PLUGIN_DIR . 'includes/class-ta-environment-detector.php';
+	}
+
+	$detector    = new TA_Environment_Detector();
+	$environment = $detector->detect_full_environment();
+
+	update_option( 'ta_environment_detection', $environment );
+
+	if ( ! $environment['rest_api']['accessible'] ) {
+		update_option( 'ta_use_ajax_fallback', true );
+	} else {
+		update_option( 'ta_use_ajax_fallback', false );
+	}
+
+	if ( class_exists( 'TA_Logger' ) ) {
+		$logger = TA_Logger::get_instance();
+		$logger->info( 'Deferred environment detection completed', $environment );
+	}
+}
+add_action( 'admin_init', 'ta_maybe_detect_environment', 2 );
+
+/**
  * Show admin notice if database needs fixing.
  *
  * @since 3.3.10
@@ -281,6 +330,12 @@ function ta_admin_notice_db_fix() {
 
 	global $wpdb;
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+	// Don't show a notice if the table doesn't exist yet (fresh install in progress).
+	$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+	if ( $table_exists !== $table_name ) {
+		return;
+	}
 
 	// Check if content_type column exists using SHOW COLUMNS (more reliable).
 	$columns = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" );
@@ -364,6 +419,16 @@ function ta_activation_hook() {
 	global $wpdb;
 
 	$table_name = $wpdb->prefix . 'ta_bot_analytics';
+
+	// On a fresh install the table does not exist yet — ta_activate() will create
+	// it via TA_Database_Auto_Fixer. Skip column inspection to avoid a MySQL error.
+	$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) );
+	if ( $table_exists !== $table_name ) {
+		update_option( 'ta_db_version', TA_DB_VERSION, false );
+		delete_option( 'ta_error_log' );
+		update_option( 'ta_last_activation', current_time( 'mysql' ), false );
+		return;
+	}
 
 	// Get all existing columns once.
 	$rows          = $wpdb->get_results( "SHOW COLUMNS FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -458,38 +523,24 @@ function ta_activate() {
 	$security_results = $security_bypass->auto_configure_on_activation();
 	$logger->info( 'Security plugins configured', $security_results );
 
-	// IMPORTANT: Give security plugins time to apply changes.
-	// Some security plugins (like Solid Security) cache their settings.
-	// This delay ensures settings are propagated before REST API test.
-	sleep( 2 );
-
-	// PHASE 2: Detect environment AFTER security plugins are whitelisted.
-	// This ensures accurate REST API accessibility detection.
-	$detector    = new TA_Environment_Detector();
-	$environment = $detector->detect_full_environment();
-
-	// Store environment detection results.
-	update_option( 'ta_environment_detection', $environment );
-	$logger->info( 'Environment detected', $environment );
+	// PHASE 2: Schedule environment detection for first admin page load.
+	// REST API routes are registered on rest_api_init, which only fires after
+	// plugins_loaded — a hook that does NOT run during plugin activation. Calling
+	// detect_full_environment() here always produces false-negatives and blocks
+	// activation for up to 10+ seconds (sleep + HTTP timeouts), causing a PHP
+	// fatal error on hosts with short max_execution_time limits.
+	// Detection is deferred; ta_maybe_detect_environment() picks it up on admin_init.
+	set_transient( 'ta_needs_environment_detection', true, DAY_IN_SECONDS );
+	$logger->info( 'Environment detection scheduled for first admin load' );
 
 	// PHASE 3: Fix database automatically.
-	$db_fixer = new TA_Database_Auto_Fixer();
+	$db_fixer   = new TA_Database_Auto_Fixer();
 	$db_results = $db_fixer->fix_all_issues();
 	$logger->info( 'Database auto-fix completed', $db_results );
 
-	// PHASE 4: Configure REST API fallback if needed.
-	if ( ! $environment['rest_api']['accessible'] ) {
-		update_option( 'ta_use_ajax_fallback', true );
-		$logger->warning( 'REST API not accessible, enabled AJAX fallback', array(
-			'blocker' => $environment['rest_api']['blocker'] ?? 'unknown',
-		) );
-
-		// Show admin notice about fallback mode.
-		set_transient( 'ta_show_activation_notice', true, HOUR_IN_SECONDS );
-	} else {
-		update_option( 'ta_use_ajax_fallback', false );
-		set_transient( 'ta_show_activation_notice', true, HOUR_IN_SECONDS );
-	}
+	// PHASE 4: Default to REST API mode. The deferred environment detection on
+	// first admin load will switch to AJAX fallback if REST API is inaccessible.
+	set_transient( 'ta_show_activation_notice', true, HOUR_IN_SECONDS );
 
 	// PHASE 5: Standard activation tasks.
 	// Force-register REST API routes before flushing rewrite rules.
