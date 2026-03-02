@@ -2,7 +2,7 @@
 
 **Serve AI-optimized Markdown to LLM crawlers. Track who's citing your content. Get discovered by ChatGPT, Perplexity, Claude, and Gemini.**
 
-![Version](https://img.shields.io/badge/version-3.5.2-blue)
+![Version](https://img.shields.io/badge/version-3.5.4-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![License](https://img.shields.io/badge/license-GPL%20v2-green)
@@ -119,6 +119,12 @@ Visit recorded in analytics dashboard
 1. Download the latest release ZIP from the [Releases page](../../releases)
 2. Go to **WordPress Admin → Plugins → Add New → Upload Plugin**
 3. Upload the ZIP and click **Activate**
+
+> **Important:** Always use the ZIP from the Releases page — not a ZIP exported
+> from GitHub's Code button. GitHub exports add a wrapper folder that breaks
+> WordPress's plugin installer. The release ZIP extracts correctly as `third-audience/`.
+>
+> For troubleshooting and detailed setup see [INSTALLATION.md](third-audience/INSTALLATION.md).
 
 ### Option 2 — Composer
 ```bash
@@ -291,7 +297,13 @@ Test files are in the `tests/` directory. See [TESTING-GUIDE.md](third-audience/
 
 See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
 
-**Latest: v3.5.2**
+**Latest: v3.5.4**
+- Fixed fatal error on fresh WordPress installs — activation hook no longer blocks on HTTP requests
+- Fixed `SHOW COLUMNS FROM` MySQL error when table doesn't exist yet on first install
+- Fixed database auto-fixer creating wrong table schema on fresh installs
+- Added `INSTALLATION.md` with full setup guide and troubleshooting
+
+**v3.5.3**
 - Dashboard enhancements, session dedup, headless data fixes
 - Client user agent tracking for real browser data
 - HTTP status code tracking to identify broken citations
