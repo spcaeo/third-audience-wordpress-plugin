@@ -120,25 +120,6 @@ class TA_AJAX_Fallback {
 		$detection_method = 'utm' === $detection_type ? 'utm_parameter'
 			: ( 'referer' === $detection_type ? 'http_referer' : 'ajax_api' );
 
-		// Session-based dedup - treat same IP+platform within 30 minutes as one session.
-		// Matches GA4 session logic (30-min window). URL excluded so browsing multiple
-		// pages in one AI-referred session counts as a single visit.
-		$dedup_key       = 'ta_citation_session_' . md5( $platform . $ip );
-		$already_tracked = get_transient( $dedup_key );
-
-		if ( $already_tracked ) {
-			wp_send_json_success(
-				array(
-					'message'   => 'Citation already tracked recently',
-					'duplicate' => true,
-					'method'    => 'ajax_fallback',
-				)
-			);
-		}
-
-		// Mark session as tracked for 30 minutes.
-		set_transient( $dedup_key, true, 30 * MINUTE_IN_SECONDS );
-
 		// Normalize platform name.
 		$platform = ucfirst( strtolower( $platform ) );
 

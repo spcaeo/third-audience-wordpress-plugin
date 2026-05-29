@@ -437,16 +437,18 @@ class TA_Bot_Analytics {
 		$is_markdown  = ( substr( $request_uri, -3 ) === '.md' );
 		$content_type = $is_markdown ? 'markdown' : 'html';
 
-		$post_id    = get_the_ID();
-		$post_title = $post_id ? get_the_title( $post_id ) : '';
+		$post_id    = get_queried_object_id() ?: null;
+		$post_title = $post_id ? get_the_title( $post_id ) : ( ( is_front_page() || is_home() ) ? get_bloginfo( 'name' ) : '' );
+		$post_type  = $post_id ? get_post_type( $post_id ) : ( ( is_front_page() || is_home() ) ? 'homepage' : null );
 
 		$tracking_data = array(
 			'bot_type'         => $bot_info['bot_type'] ?? $bot_info['type'],
 			'bot_name'         => $bot_info['name'],
 			'user_agent'       => $user_agent,
 			'url'              => home_url( $request_uri ),
-			'post_id'          => $post_id ?: null,
+			'post_id'          => $post_id,
 			'post_title'       => $post_title,
+			'post_type'        => $post_type,
 			'request_type'     => $this->detect_request_type(),
 			'ip_address'       => $this->geolocation->get_bot_client_ip(),
 			'cache_status'     => strtoupper( $content_type ),

@@ -378,41 +378,13 @@ class TA_Visit_Tracker {
 			return false;
 		}
 
-		// Session deduplication: same IP + same platform within 30 minutes = same session.
-		// Matches GA4 session behaviour — only the landing page of each AI session is counted.
-		global $wpdb;
-		$table_name  = $wpdb->prefix . self::TABLE_NAME;
-		$platform    = $citation_data['platform'];
-		$ip_address  = $this->geolocation->get_client_ip();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$recent_duplicate = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT id FROM {$table_name}
-				WHERE traffic_type = 'citation_click'
-				AND ai_platform = %s
-				AND ip_address = %s
-				AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
-				LIMIT 1",
-				$platform,
-				$ip_address
-			)
-		);
-
-		if ( $recent_duplicate ) {
-			$this->logger->debug( 'Duplicate citation detected, skipping.', array(
-				'platform'    => $platform,
-				'url'         => esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' ),
-				'existing_id' => $recent_duplicate,
-			) );
-			return false;
-		}
+		$platform   = $citation_data['platform'];
 
 		// Get current page info.
-		$post_id    = get_queried_object_id();
+		$post_id    = get_queried_object_id() ?: null;
 		$post       = $post_id ? get_post( $post_id ) : null;
-		$post_type  = $post ? $post->post_type : null;
-		$post_title = $post ? $post->post_title : null;
+		$post_type  = $post ? $post->post_type  : ( ( is_front_page() || is_home() ) ? 'homepage' : null );
+		$post_title = $post ? $post->post_title : ( ( is_front_page() || is_home() ) ? get_bloginfo( 'name' ) : null );
 
 		// Detect request type.
 		$request_type = $this->detect_request_type();
@@ -437,7 +409,7 @@ class TA_Visit_Tracker {
 			'bot_type'         => 'AI_Citation',
 			'bot_name'         => $citation_data['platform'],
 			'user_agent'       => isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '',
-			'url'              => esc_url_raw( $_SERVER['REQUEST_URI'] ?? '/' ),
+			'url'              => home_url( $_SERVER['REQUEST_URI'] ?? '/' ),
 			'post_id'          => $post_id,
 			'post_type'        => $post_type,
 			'post_title'       => $post_title,

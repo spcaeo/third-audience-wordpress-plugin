@@ -72,18 +72,16 @@ class TA_AI_Citation_Tracker {
 			'color'       => '#4285F4',
 		),
 
-		// Google AI Overview (heuristic detection)
+		// Google AI Overview (direct detection - no heuristic)
 		'www.google.com'   => array(
 			'name'        => 'Google AI Overview',
 			'query_param' => 'q',
 			'color'       => '#4285F4',
-			'heuristic'   => true, // Requires pattern matching
 		),
 		'google.com'       => array(
 			'name'        => 'Google AI Overview',
 			'query_param' => 'q',
 			'color'       => '#4285F4',
-			'heuristic'   => true,
 		),
 
 		// Microsoft Copilot
@@ -207,20 +205,8 @@ class TA_AI_Citation_Tracker {
 			$search_query = self::extract_search_query( $parsed_url, $platform_config );
 			$detection_method = 'http_referer';
 
-			// HEURISTIC DETECTION: For Google/Bing, use pattern matching.
-			if ( ! empty( $platform_config['heuristic'] ) ) {
-				$heuristic_result = self::apply_heuristics( $parsed_url, $search_query, $platform_config );
-
-				if ( ! $heuristic_result['is_ai_traffic'] ) {
-					return false; // Heuristics determined this is NOT AI traffic
-				}
-
-				$confidence_score = $heuristic_result['confidence'];
-				$detection_method = 'heuristic_' . $detection_method;
-			} else {
-				// Direct platform match (Perplexity, Claude, etc.)
-				$confidence_score = 0.95; // Very high confidence
-			}
+			// Direct platform match — confidence 0.95 for all known platforms.
+			$confidence_score = 0.95;
 		}
 
 		// Determine source and medium (similar to Google Analytics).
