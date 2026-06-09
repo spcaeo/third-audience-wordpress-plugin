@@ -2,7 +2,7 @@
 
 **Serve AI-optimized Markdown to LLM crawlers. Track who's citing your content. Get discovered by ChatGPT, Perplexity, Claude, and Gemini.**
 
-![Version](https://img.shields.io/badge/version-3.5.4-blue)
+![Version](https://img.shields.io/badge/version-3.5.5-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![License](https://img.shields.io/badge/license-GPL%20v2-green)
