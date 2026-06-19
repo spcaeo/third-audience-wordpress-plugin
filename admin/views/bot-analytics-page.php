@@ -32,17 +32,25 @@ if ( ! empty( $_GET['content_type'] ) ) {
 
 $time_period = isset( $_GET['period'] ) ? sanitize_text_field( wp_unslash( $_GET['period'] ) ) : 'day';
 
+// Bot-only filters: exclude human AI-referral clicks (citation_click) from all
+// bot analytics metrics so hero cards, distribution, and page lists show only
+// actual bot crawls — not user visits that arrived from AI platforms.
+$bot_filters = array_merge(
+	$filters,
+	array( 'exclude_traffic_type' => 'citation_click' )
+);
+
 // Get analytics data.
-$summary       = $analytics->get_summary( $filters );
-$bot_stats     = $analytics->get_visits_by_bot( $filters );
-$top_pages     = $analytics->get_top_pages( $filters, 10 );
-$visits_time   = $analytics->get_visits_over_time( $filters, $time_period, 30 );
+$summary       = $analytics->get_summary( $bot_filters );
+$bot_stats     = $analytics->get_visits_by_bot( $bot_filters );
+$top_pages     = $analytics->get_top_pages( $bot_filters, 10 );
+$visits_time   = $analytics->get_visits_over_time( $bot_filters, $time_period, 30 );
 
 // Pagination.
 $current_page  = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
 $per_page      = 30;
 $offset        = ( $current_page - 1 ) * $per_page;
-// Bot Activity feed shows bot crawls only — human AI-referral clicks
+// Bot Crawl Feed shows bot crawls only — human AI-referral clicks
 // (citation_click) live on the LLM Traffic page, not here. Plain HTML page
 // crawls are excluded too, so the feed shows only .md / .txt requests.
 $feed_filters  = array_merge(
@@ -63,10 +71,6 @@ $crawl_budget_hour = $analytics->get_crawl_budget_metrics( null, 'hour' );
 // Citation Performance (v2.7.0).
 $citation_data = $analytics->get_citation_to_crawl_ratio( $filters, 10 );
 
-// Content Performance Analysis (v2.7.0).
-$content_performance = $analytics->get_content_performance_analysis( $filters );
-$optimal_length      = $analytics->get_optimal_content_length();
-
 // Rate limiting.
 $rate_limiter      = new TA_Rate_Limiter();
 $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
@@ -77,11 +81,11 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		<?php esc_html_e( 'Bot Analytics', 'third-audience' ); ?>
 		<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
 	</h1>
-	<p class="description"><?php esc_html_e( 'Real-time insights into AI bot activity', 'third-audience' ); ?></p>
+	<p class="description"><?php esc_html_e( 'Track which AI bots are crawling your site, how deeply they read your content, and how often that crawling turns into real user traffic from AI platforms.', 'third-audience' ); ?></p>
 
 	<!-- Real-time Metrics Hero -->
 	<div class="ta-hero-metrics">
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="total_visits" title="<?php esc_attr_e( 'Click to see visit breakdown by bot type', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--blue" data-metric="total_visits" title="<?php esc_attr_e( 'Click to see visit breakdown by bot type', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-chart-line"></span>
 			</div>
@@ -91,54 +95,59 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-meta">
 					<?php echo number_format( $summary['visits_today'] ); ?> today
 				</div>
+				<div class="ta-hero-desc">AI bots that crawled your pages to read &amp; index content</div>
 			</div>
 			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="pages_crawled" title="<?php esc_attr_e( 'Click to see all crawled pages', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--teal" data-metric="pages_crawled" title="<?php esc_attr_e( 'Click to see all crawled pages', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-admin-page"></span>
 			</div>
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Pages Crawled', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo number_format( $summary['unique_pages'] ); ?></div>
-				<div class="ta-hero-meta"><?php echo number_format( $summary['unique_bots'] ); ?> unique bots</div>
+				<div class="ta-hero-meta"><?php echo number_format( $summary['unique_bots'] ); ?> unique bots detected</div>
+				<div class="ta-hero-desc">Unique pages discovered &amp; read across all bot visits</div>
 			</div>
 			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="cache_hit_rate" title="<?php esc_attr_e( 'Click to see cache performance details', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--green" data-metric="cache_hit_rate" title="<?php esc_attr_e( 'Click to see cache performance details', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-performance"></span>
 			</div>
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Cache Hit Rate', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo $summary['cache_hit_rate']; ?>%</div>
-				<div class="ta-hero-meta">Performance metric</div>
+				<div class="ta-hero-meta">Higher = faster bot response</div>
+				<div class="ta-hero-desc">% of bot requests served from pre-generated cache — saves server load</div>
 			</div>
 			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="avg_response" title="<?php esc_attr_e( 'Click to see response time breakdown', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--purple" data-metric="avg_response" title="<?php esc_attr_e( 'Click to see response time breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-dashboard"></span>
 			</div>
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Avg Response', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo $summary['avg_response_time']; ?><span style="font-size: 14px;">ms</span></div>
-				<div class="ta-hero-meta">Average response time</div>
+				<div class="ta-hero-meta">Lower = faster server responses</div>
+				<div class="ta-hero-desc">How fast your server responds when a bot requests a page</div>
 			</div>
 			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="verified_bots" title="<?php esc_attr_e( 'Click to see verification breakdown', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--orange" data-metric="verified_bots" title="<?php esc_attr_e( 'Click to see verification breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon">
 				<span class="dashicons dashicons-yes-alt"></span>
 			</div>
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Verified Bots', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo $summary['ip_verified_percentage']; ?>%</div>
-				<div class="ta-hero-meta"><?php echo number_format( $summary['ip_verified_count'] ); ?> verified visits</div>
+				<div class="ta-hero-meta"><?php echo number_format( $summary['ip_verified_count'] ); ?> confirmed legitimate visits</div>
+				<div class="ta-hero-desc">Bot IPs cross-checked against official provider IP ranges (e.g. OpenAI, Google)</div>
 			</div>
 			<span class="ta-card-arrow"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
@@ -151,24 +160,25 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			<?php esc_html_e( 'Session Analytics', 'third-audience' ); ?>
 		</h2>
 		<p class="description">
-			<?php esc_html_e( 'Bot crawl sessions grouped by 30-minute windows', 'third-audience' ); ?>
+			<?php esc_html_e( 'How bots behave during each visit — how many pages they read, how long they stay, and how often they return. A bot that reads more pages per session is indexing your content more thoroughly.', 'third-audience' ); ?>
 		</p>
 	</div>
 
 	<div class="ta-hero-metrics ta-hero-metrics-secondary">
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="fingerprints" title="<?php esc_attr_e( 'Click to see all bot fingerprints', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--purple" data-metric="fingerprints" title="<?php esc_attr_e( 'Click to see all bot fingerprints', 'third-audience' ); ?>">
 			<div class="ta-hero-icon ta-hero-icon-purple">
 				<span class="dashicons dashicons-admin-users"></span>
 			</div>
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Bot Fingerprints', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo number_format( $session_stats['total_bot_fingerprints'] ); ?></div>
-				<div class="ta-hero-meta">Unique bot+IP combinations</div>
+				<div class="ta-hero-meta">Unique bot + IP combinations</div>
+				<div class="ta-hero-desc">Same bot crawling from 3 different IPs = 3 fingerprints. Helps identify distributed crawlers.</div>
 			</div>
 			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="pages_per_session" title="<?php esc_attr_e( 'Click to see pages per session breakdown', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--blue" data-metric="pages_per_session" title="<?php esc_attr_e( 'Click to see pages per session breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon ta-hero-icon-blue">
 				<span class="dashicons dashicons-admin-page"></span>
 			</div>
@@ -176,11 +186,12 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<div class="ta-hero-label"><?php esc_html_e( 'Pages Per Session', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo number_format( $session_stats['avg_pages_per_session'], 1 ); ?></div>
 				<div class="ta-hero-meta"><?php echo number_format( $session_stats['avg_visits_per_bot'], 1 ); ?> visits/bot avg</div>
+				<div class="ta-hero-desc">Avg pages a bot reads per crawl session — 5+ means deep, thorough indexing</div>
 			</div>
 			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="session_duration" title="<?php esc_attr_e( 'Click to see session duration breakdown', 'third-audience' ); ?>">
+		<div class="ta-hero-card ta-hero-card-clickable ta-hero-card--green" data-metric="session_duration" title="<?php esc_attr_e( 'Click to see session duration breakdown', 'third-audience' ); ?>">
 			<div class="ta-hero-icon ta-hero-icon-green">
 				<span class="dashicons dashicons-clock"></span>
 			</div>
@@ -193,22 +204,12 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 					?>
 					<span style="font-size: 14px;">min</span>
 				</div>
-				<div class="ta-hero-meta"><?php echo number_format( $session_stats['avg_session_duration'] ); ?>s average</div>
+				<div class="ta-hero-meta"><?php echo number_format( $session_stats['avg_session_duration'] ); ?>s per crawl session</div>
+				<div class="ta-hero-desc">How long a bot spends on your site in one visit — longer = more pages read</div>
 			</div>
 			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
 		</div>
 
-		<div class="ta-hero-card ta-hero-card-clickable" data-metric="request_interval" title="<?php esc_attr_e( 'Click to see request interval breakdown', 'third-audience' ); ?>">
-			<div class="ta-hero-icon ta-hero-icon-orange">
-				<span class="dashicons dashicons-update"></span>
-			</div>
-			<div class="ta-hero-content">
-				<div class="ta-hero-label"><?php esc_html_e( 'Request Interval', 'third-audience' ); ?></div>
-				<div class="ta-hero-value"><?php echo number_format( $session_stats['avg_request_interval'] ); ?><span style="font-size: 14px;">s</span></div>
-				<div class="ta-hero-meta">Time between requests</div>
-			</div>
-			<span class="ta-click-hint"><span class="dashicons dashicons-arrow-right-alt2"></span></span>
-		</div>
 	</div>
 
 	<!-- Filters (Collapsible) -->
@@ -271,7 +272,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 	<div class="ta-cards-container">
 		<!-- Bot Distribution -->
 		<div class="ta-card">
-			<div class="ta-card-header">
+			<div class="ta-card-header ta-card-header--blue">
 				<h2><?php esc_html_e( 'Bot Activity Distribution', 'third-audience' ); ?></h2>
 				<?php if ( ! empty( $bot_stats ) ) : ?>
 				<button type="button" class="button button-small ta-export-btn" data-export="bot-distribution" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
@@ -280,7 +281,43 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<?php endif; ?>
 			</div>
 			<div class="ta-card-body">
+				<p style="margin: 0 0 14px 0; font-size: 13px; color: #646970;">
+					Which AI bots visited your site and how many times. Hover over a bot name to see what it does. Click any row to see a full breakdown.
+				</p>
 				<?php if ( ! empty( $bot_stats ) ) : ?>
+					<?php
+					// Known bot descriptions shown on row hover.
+					$known_bot_descriptions = array(
+						'ChatGPT-User'           => 'OpenAI ChatGPT crawler — reads your pages to answer user queries in ChatGPT',
+						'ChatGPT User'           => 'OpenAI ChatGPT crawler — reads your pages to answer user queries in ChatGPT',
+						'Chatgpt'                => 'OpenAI ChatGPT — same crawler, detected via an alternate user-agent pattern',
+						'GPTBot'                 => 'OpenAI training crawler — indexes your content for future GPT model training',
+						'OAI-SearchBot'          => 'OpenAI search-focused crawler — used for real-time web search in ChatGPT',
+						'Oai-searchbot'          => 'OpenAI search-focused crawler — used for real-time web search in ChatGPT',
+						'PerplexityBot'          => 'Perplexity AI crawler — indexes content to power Perplexity search answers',
+						'Perplexity'             => 'Perplexity AI — user arrived from a Perplexity AI link to your site',
+						'Googlebot'              => 'Google search crawler — indexes your pages for Google Search results',
+						'Google-Extended'        => 'Google AI training crawler — indexes content for Gemini AI models',
+						'Google search'          => 'Google Search referral — a user clicked your link in Google Search results',
+						'Google AI Mode'         => 'Google AI Mode referral — user clicked your link from Google AI-assisted search results',
+						'Bingbot'                => 'Microsoft Bing crawler — indexes your pages for Bing Search',
+						'Bing ai'                => 'Microsoft Bing AI referral — user arrived from a Bing AI search result',
+						'Bing AI'                => 'Microsoft Bing AI referral — user arrived from a Bing AI search result',
+						'ClaudeBot'              => 'Anthropic training crawler — indexes content for Claude AI model training',
+						'Claude [ Referrer ]'    => 'Anthropic Claude referral — user clicked your link from Claude.ai',
+						'Claude [Referrer]'      => 'Anthropic Claude referral — user clicked your link from Claude.ai',
+						'Hidden Referrer (Claude)' => 'Likely Claude.ai — referer header was stripped (privacy mode), detected via Sec-Fetch headers',
+						'Amazonbot'              => 'Amazon web crawler — used for Amazon product search and Alexa data',
+						'Bytespider'             => 'ByteDance AI crawler — TikTok parent company, indexes content for AI products',
+						'ByteDance AI'           => 'ByteDance AI crawler — TikTok parent company, indexes content for AI products',
+						'Barkrowler'             => 'Babbar.tech SEO crawler — audits site structure for SEO analysis tools',
+						'Webscraperbot'          => 'WebScraper.io bot — general content extraction tool',
+						'Duckassistbot'          => 'DuckDuckGo AI crawler — indexes content for DuckDuckGo AI features',
+						'TikTokSpider'           => 'TikTok content crawler — indexes pages for TikTok recommendations',
+						'Unknown Bot'            => 'Detected as a bot but identity not confirmed — unusual user-agent or unrecognized pattern',
+						'Unknown'                => 'Detected as a bot but identity not confirmed — unusual user-agent or unrecognized pattern',
+					);
+					?>
 					<table class="ta-table ta-table-compact">
 						<thead>
 							<tr>
@@ -302,12 +339,13 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 								$percentage = $total > 0 ? round( ( $bot['count'] / $total ) * 100 ) : 0;
 								$bot_priority = $analytics->get_bot_priority( $bot['bot_type'], 'medium' );
 								$color = $priority_colors[ $bot_priority ] ?? '#999';
+								$bot_desc = $known_bot_descriptions[ $bot['bot_name'] ] ?? $known_bot_descriptions[ $bot['bot_type'] ] ?? 'Click to see detailed breakdown';
 								?>
 								<tr class="ta-bot-dist-row"
 									style="cursor: pointer;"
 									data-bot-type="<?php echo esc_attr( $bot['bot_type'] ); ?>"
 									data-bot-name="<?php echo esc_attr( $bot['bot_name'] ); ?>"
-									title="<?php esc_attr_e( 'Click to see detailed breakdown', 'third-audience' ); ?>">
+									title="<?php echo esc_attr( $bot_desc ); ?>">
 									<td>
 										<span class="ta-bot-name">
 											<span class="ta-bot-dot" style="background: <?php echo esc_attr( $color ); ?>"></span>
@@ -333,7 +371,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 
 		<!-- Top Content -->
 		<div class="ta-card">
-			<div class="ta-card-header">
+			<div class="ta-card-header ta-card-header--green">
 				<h2><?php esc_html_e( 'Most Crawled Content', 'third-audience' ); ?></h2>
 				<?php if ( ! empty( $top_pages ) ) : ?>
 				<button type="button" class="button button-small ta-export-btn" data-export="top-content" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
@@ -342,6 +380,9 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<?php endif; ?>
 			</div>
 			<div class="ta-card-body">
+				<p style="margin: 0 0 14px 0; font-size: 13px; color: #646970;">
+					Pages AI bots have visited most — these are the pages being indexed for AI answers. The <span class="dashicons dashicons-media-text" style="font-size: 14px; vertical-align: middle;"></span> icon shows what bots actually see (Markdown version).
+				</p>
 				<?php if ( ! empty( $top_pages ) ) : ?>
 					<table class="ta-table ta-table-compact">
 						<thead>
@@ -351,9 +392,10 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 							</tr>
 						</thead>
 						<tbody>
-							<?php foreach ( array_slice( $top_pages, 0, 10 ) as $page ) : ?>
+							<?php $rank = 0; foreach ( array_slice( $top_pages, 0, 10 ) as $page ) : $rank++; $rank_extra = $rank <= 3 ? " ta-rank-badge--{$rank}" : ''; ?>
 								<tr>
 									<td>
+										<span class="ta-rank-badge<?php echo esc_attr( $rank_extra ); ?>"><?php echo $rank; ?></span>
 										<a href="<?php echo esc_url( ta_citation_public_url( $page['url'] ) ); ?>" target="_blank" class="ta-page-link" title="<?php esc_attr_e( 'View page', 'third-audience' ); ?>">
 											<?php echo esc_html( wp_trim_words( ta_page_display_title( $page['post_title'] ?? '', $page['url'] ), 8 ) ); ?>
 										</a>
@@ -396,7 +438,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			/* JS tooltip — see #ta-engagement-tooltip below */
 		</style>
 		<div class="ta-card">
-			<div class="ta-card-header">
+			<div class="ta-card-header ta-card-header--teal">
 				<h2><?php esc_html_e( 'How Deeply Bots Read Your Content', 'third-audience' ); ?></h2>
 			</div>
 			<div class="ta-card-body">
@@ -469,13 +511,16 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 
 		<!-- Crawl Budget Metrics -->
 		<div class="ta-card">
-			<div class="ta-card-header">
+			<div class="ta-card-header ta-card-header--orange">
 				<h2><?php esc_html_e( 'Crawl Budget Analysis', 'third-audience' ); ?></h2>
 				<button type="button" class="button button-small ta-export-btn" data-export="crawl-budget" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
 					<span class="dashicons dashicons-download"></span>
 				</button>
 			</div>
 			<div class="ta-card-body">
+				<p style="margin: 0 0 14px 0; font-size: 13px; color: #646970;">
+					How much server capacity AI bots consumed. <strong>Last 24 Hours</strong> = full previous day's crawl activity. <strong>Last Hour</strong> = most recent 60 minutes. Unique Pages = distinct URLs requested; Total Requests = total crawl calls including re-crawls.
+				</p>
 				<div class="ta-crawl-budget-grid">
 					<!-- Last 24 Hours -->
 					<div class="ta-crawl-budget-section">
@@ -623,7 +668,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 
 	<!-- Citation Performance (v2.7.0) -->
 	<div class="ta-card" style="margin-top: 20px;">
-		<div class="ta-card-header">
+		<div class="ta-card-header ta-card-header--purple">
 			<h2>
 				<span class="dashicons dashicons-admin-links"></span>
 				<?php esc_html_e( 'Citation Performance', 'third-audience' ); ?>
@@ -635,6 +680,9 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			<?php endif; ?>
 		</div>
 		<div class="ta-card-body">
+			<p style="margin: 0 0 14px 0; font-size: 13px; color: #646970;">
+				For each page: <strong>Crawls</strong> = how many times AI bots read it &nbsp;|&nbsp; <strong>Citations</strong> = how many real users then arrived from an AI platform &nbsp;|&nbsp; <strong>Rate</strong> = Citations ÷ Crawls. A high rate means bots are actively recommending this page to users.
+			</p>
 			<?php if ( empty( $citation_data ) ) : ?>
 				<p class="ta-no-data"><?php esc_html_e( 'No citation data yet. Citations are tracked when users click links from AI platforms (ChatGPT, Perplexity, etc.).', 'third-audience' ); ?></p>
 			<?php else : ?>
@@ -642,9 +690,9 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 					<thead>
 						<tr>
 							<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
-							<th style="text-align: right;"><?php esc_html_e( 'Crawls', 'third-audience' ); ?></th>
-							<th style="text-align: right;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
-							<th style="text-align: right;"><?php esc_html_e( 'Rate', 'third-audience' ); ?></th>
+							<th style="text-align: right;" title="How many times AI bots crawled this page"><?php esc_html_e( 'Crawls', 'third-audience' ); ?> ↓</th>
+							<th style="text-align: right;" title="How many real users clicked to this page from an AI platform (ChatGPT, Perplexity, etc.)"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
+							<th style="text-align: right;" title="Citation Rate = Citations ÷ Crawls — how often crawling converts to actual user traffic"><?php esc_html_e( 'Rate', 'third-audience' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -652,17 +700,15 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 							<?php
 							$citation_rate_percent = round( $page['citation_rate'] * 100, 1 );
 
-							// Color coding based on citation rate.
-							if ( $citation_rate_percent >= 50 ) {
-								$rate_class = 'ta-citation-rate-high';
-								$rate_color = '#34c759';
-							} elseif ( $citation_rate_percent >= 20 ) {
-								$rate_class = 'ta-citation-rate-medium';
-								$rate_color = '#ff9500';
+							// 3-tier color: > 10% = strong (green), 2–10% = average (blue), < 2% = low (gray).
+							if ( $citation_rate_percent > 10 ) {
+								$rate_class = 'ta-citation-rate-strong';
+							} elseif ( $citation_rate_percent >= 2 ) {
+								$rate_class = 'ta-citation-rate-avg';
 							} else {
 								$rate_class = 'ta-citation-rate-low';
-								$rate_color = '#ff3b30';
 							}
+							$rate_color = '';
 							?>
 							<tr>
 								<td>
@@ -677,7 +723,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 									<?php echo number_format( $page['citations'] ); ?>
 								</td>
 								<td style="text-align: right;">
-									<span class="ta-citation-rate-badge <?php echo esc_attr( $rate_class ); ?>" style="color: <?php echo esc_attr( $rate_color ); ?>;">
+									<span class="ta-citation-rate-badge <?php echo esc_attr( $rate_class ); ?>">
 										<?php echo esc_html( $citation_rate_percent ); ?>%
 									</span>
 								</td>
@@ -698,171 +744,25 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 		</div>
 	</div>
 
-<!-- Content Performance Insights (v2.7.0) -->
-<div class="ta-card" style="margin-top: 20px;">
-	<div class="ta-card-header">
-		<h2>
-			<span class="dashicons dashicons-media-document"></span>
-			<?php esc_html_e( 'Content Performance Insights', 'third-audience' ); ?>
-		</h2>
-	</div>
-	<div class="ta-card-body">
-		<?php if ( $content_performance['cited_posts']['total_count'] === 0 && $content_performance['crawled_posts']['total_count'] === 0 ) : ?>
-			<p class="ta-no-data"><?php esc_html_e( 'No content metrics yet. Content analysis happens automatically when AI bots crawl your site.', 'third-audience' ); ?></p>
-		<?php else : ?>
-			<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-				<!-- Cited Posts Stats -->
-				<div style="padding: 16px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
-					<h4 style="margin: 0 0 12px 0; font-size: 14px; color: #0369a1;">
-						<span class="dashicons dashicons-yes-alt" style="font-size: 16px; vertical-align: middle;"></span>
-						<?php esc_html_e( 'Cited Posts', 'third-audience' ); ?>
-					</h4>
-					<table class="ta-table ta-table-borderless" style="margin: 0;">
-						<tbody>
-							<tr>
-								<td><?php esc_html_e( 'Avg Word Count', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_word_count'] ); ?></strong> words</td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Avg Headings', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_heading_count'], 1 ); ?></strong></td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Avg Images', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_image_count'], 1 ); ?></strong></td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Schema Markup', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['cited_posts']['schema_percentage'], 1 ); ?>%</strong></td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Avg Freshness', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['cited_posts']['avg_freshness_days'] ); ?></strong> days</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<!-- Crawled Posts Stats -->
-				<div style="padding: 16px; background: #fef9f3; border-radius: 8px; border: 1px solid #fed7aa;">
-					<h4 style="margin: 0 0 12px 0; font-size: 14px; color: #c2410c;">
-						<span class="dashicons dashicons-search" style="font-size: 16px; vertical-align: middle;"></span>
-						<?php esc_html_e( 'Crawled Posts', 'third-audience' ); ?>
-					</h4>
-					<table class="ta-table ta-table-borderless" style="margin: 0;">
-						<tbody>
-							<tr>
-								<td><?php esc_html_e( 'Avg Word Count', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_word_count'] ); ?></strong> words</td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Avg Headings', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_heading_count'], 1 ); ?></strong></td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Avg Images', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_image_count'], 1 ); ?></strong></td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Schema Markup', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['crawled_posts']['schema_percentage'], 1 ); ?>%</strong></td>
-							</tr>
-							<tr>
-								<td><?php esc_html_e( 'Avg Freshness', 'third-audience' ); ?></td>
-								<td><strong><?php echo number_format( $content_performance['crawled_posts']['avg_freshness_days'] ); ?></strong> days</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
-
-			<!-- Key Insights -->
-			<div style="margin-top: 16px;">
-				<h4 style="margin: 0 0 12px 0; font-size: 14px;">
-					<span class="dashicons dashicons-lightbulb"></span>
-					<?php esc_html_e( 'Key Insights', 'third-audience' ); ?>
-				</h4>
-				<ul class="ta-insights-list">
-					<?php if ( $optimal_length['optimal_range'] !== 'N/A' ) : ?>
-						<li class="ta-insight-good">
-							<span class="dashicons dashicons-yes-alt"></span>
-							<?php
-							printf(
-								/* translators: 1: word count range, 2: citation count */
-								esc_html__( 'Optimal content length: %1$s words (%2$s citations)', 'third-audience' ),
-								'<strong>' . esc_html( $optimal_length['optimal_range'] ) . '</strong>',
-								'<strong>' . number_format( $optimal_length['citation_count'] ) . '</strong>'
-							);
-							?>
-						</li>
-					<?php endif; ?>
-
-					<?php if ( $content_performance['cited_posts']['avg_word_count'] > 0 && $content_performance['crawled_posts']['avg_word_count'] > 0 ) : ?>
-						<?php
-						$word_count_diff = $content_performance['cited_posts']['avg_word_count'] - $content_performance['crawled_posts']['avg_word_count'];
-						?>
-						<li class="<?php echo $word_count_diff > 0 ? 'ta-insight-good' : 'ta-insight-warning'; ?>">
-							<span class="dashicons dashicons-<?php echo $word_count_diff > 0 ? 'yes-alt' : 'info'; ?>"></span>
-							<?php
-							if ( $word_count_diff > 0 ) {
-								printf(
-									/* translators: %s: word count difference */
-									esc_html__( 'Cited posts are %s words longer on average', 'third-audience' ),
-									'<strong>' . number_format( abs( $word_count_diff ) ) . '</strong>'
-								);
-							} else {
-								esc_html_e( 'Consider writing longer, more comprehensive content', 'third-audience' );
-							}
-							?>
-						</li>
-					<?php endif; ?>
-
-					<?php if ( $content_performance['schema_multiplier'] > 1.5 ) : ?>
-						<li class="ta-insight-good">
-							<span class="dashicons dashicons-yes-alt"></span>
-							<?php
-							printf(
-								/* translators: %s: schema multiplier */
-								esc_html__( 'Posts with schema markup get %sx more citations', 'third-audience' ),
-								'<strong>' . number_format( $content_performance['schema_multiplier'], 1 ) . '</strong>'
-							);
-							?>
-						</li>
-					<?php elseif ( $content_performance['cited_posts']['schema_percentage'] < 50 ) : ?>
-						<li class="ta-insight-warning">
-							<span class="dashicons dashicons-warning"></span>
-							<?php esc_html_e( 'Consider adding schema.org markup to improve citation rates', 'third-audience' ); ?>
-						</li>
-					<?php endif; ?>
-
-					<?php if ( $content_performance['cited_posts']['avg_freshness_days'] < $content_performance['crawled_posts']['avg_freshness_days'] ) : ?>
-						<li class="ta-insight-good">
-							<span class="dashicons dashicons-yes-alt"></span>
-							<?php esc_html_e( 'Fresh content performs better - keep your posts updated!', 'third-audience' ); ?>
-						</li>
-					<?php endif; ?>
-				</ul>
-			</div>
-		<?php endif; ?>
-	</div>
-</div>
-
 	<!-- Activity Timeline Chart -->
 	<div class="ta-card">
-		<div class="ta-card-header">
-			<h2><?php esc_html_e( 'Activity Timeline', 'third-audience' ); ?></h2>
+		<div class="ta-card-header ta-card-header--blue">
+			<h2><?php esc_html_e( 'Bot Activity Over Time', 'third-audience' ); ?></h2>
 			<button type="button" class="button button-small ta-export-btn" data-export="activity-timeline" title="<?php esc_attr_e( 'Export to CSV', 'third-audience' ); ?>">
 				<span class="dashicons dashicons-download"></span>
 			</button>
 		</div>
 		<div class="ta-card-body">
+			<p style="margin: 0 0 14px 0; font-size: 13px; color: #646970;">
+				Daily bot crawl volume over the last 30 days. Spikes indicate active indexing periods — useful for seeing when AI platforms are most actively crawling your site.
+			</p>
 			<canvas id="ta-visits-chart" style="max-height: 300px;"></canvas>
 		</div>
 	</div>
 
 	<!-- Live Activity Feed -->
 	<div class="ta-card">
-		<div class="ta-card-header">
+		<div class="ta-card-header ta-card-header--green">
 			<h2>
 				<span class="ta-live-indicator"></span>
 				<?php esc_html_e( 'Bot Crawl Feed', 'third-audience' ); ?>
@@ -876,6 +776,9 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 			</div>
 		</div>
 		<div class="ta-card-body">
+			<p style="margin: 0 0 14px 0; font-size: 13px; color: #646970;">
+				Live feed of AI bot crawl requests — only <strong>MD</strong> (Markdown) and <strong>TXT</strong> requests are shown here, which are the AI-targeted formats. <strong>Type</strong> = file format served &nbsp;|&nbsp; <strong>Cache</strong> = whether it was served instantly from cache or generated fresh &nbsp;|&nbsp; <strong>Location</strong> = country the bot IP is registered in.
+			</p>
 			<table class="ta-table" id="ta-activity-table">
 				<thead>
 					<tr>
@@ -884,6 +787,7 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 						<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Type', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Location', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'IP Address', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Cache', 'third-audience' ); ?></th>
 						<th><?php esc_html_e( 'Response', 'third-audience' ); ?></th>
 					</tr>
@@ -891,26 +795,31 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 				<tbody id="ta-activity-tbody">
 					<?php if ( empty( $recent_visits ) ) : ?>
 						<tr>
-							<td colspan="7" class="ta-no-data"><?php esc_html_e( 'No activity yet', 'third-audience' ); ?></td>
+							<td colspan="8" class="ta-no-data"><?php esc_html_e( 'No activity yet', 'third-audience' ); ?></td>
 						</tr>
 					<?php else : ?>
 						<?php
-						$priority_colors = array(
-							'high'    => '#007aff',
-							'medium'  => '#34c759',
-							'low'     => '#ff9500',
-							'blocked' => '#ff3b30',
-						);
 						foreach ( $recent_visits as $visit ) :
-							$bot_priority = $analytics->get_bot_priority( $visit['bot_type'], 'medium' );
-							$priority_color = $priority_colors[ $bot_priority ] ?? '#999';
+							// Per-bot brand color from the detector (ChatGPT teal, Claude
+							// orange, Perplexity cyan…). Unknown/custom bots fall back to
+							// a stable name-hash color so every distinct bot name gets its
+							// own color — same name always renders the same color.
+							$brand_color = $analytics->get_bot_color( $visit['bot_type'] );
+							if ( '#8B5CF6' === $brand_color ) {
+								$hue        = absint( crc32( strtolower( (string) $visit['bot_name'] ) ) % 360 );
+								$bot_color  = "hsl({$hue}, 62%, 38%)";
+								$bot_bg     = "hsla({$hue}, 62%, 38%, 0.09)";
+							} else {
+								$bot_color = $brand_color;
+								$bot_bg    = $brand_color . '18';
+							}
 							?>
 							<tr>
 								<td class="ta-time-cell">
 									<?php echo esc_html( human_time_diff( strtotime( $visit['visit_timestamp'] ), current_time( 'timestamp' ) ) ); ?> ago
 								</td>
 								<td>
-									<span class="ta-bot-tag" style="border-left-color: <?php echo esc_attr( $priority_color ); ?>;">
+									<span class="ta-bot-tag" style="border-left-color:<?php echo esc_attr( $bot_color ); ?>;background:<?php echo esc_attr( $bot_bg ); ?>;color:<?php echo esc_attr( $bot_color ); ?>;">
 										<?php echo esc_html( $visit['bot_name'] ); ?>
 									</span>
 								</td>
@@ -951,10 +860,23 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 									</span>
 								</td>
 								<td>
-									<?php if ( ! empty( $visit['country_code'] ) ) : ?>
-										<span class="ta-location" title="<?php echo esc_attr( $visit['ip_address'] ?? '' ); ?>">
-											<?php echo esc_html( $visit['country_code'] ); ?>
+									<?php
+									$cc = strtoupper( (string) ( $visit['country_code'] ?? '' ) );
+									if ( 2 === strlen( $cc ) && ctype_alpha( $cc ) ) :
+										// Country code → flag emoji (regional indicator pair).
+										$flag_html = '&#' . ( 127397 + ord( $cc[0] ) ) . ';&#' . ( 127397 + ord( $cc[1] ) ) . ';';
+										?>
+										<span class="ta-location">
+											<?php echo $flag_html; // phpcs:ignore WordPress.Security.EscapeOutput -- numeric HTML entities built from validated A-Z chars. ?>
+											<?php echo esc_html( $cc ); ?>
 										</span>
+									<?php else : ?>
+										-
+									<?php endif; ?>
+								</td>
+								<td>
+									<?php if ( ! empty( $visit['ip_address'] ) ) : ?>
+										<code style="font-size:11px; background:#f6f7f7; border:1px solid #dcdcde; border-radius:4px; padding:1px 6px;"><?php echo esc_html( $visit['ip_address'] ); ?></code>
 									<?php else : ?>
 										-
 									<?php endif; ?>
@@ -1094,8 +1016,9 @@ jQuery(document).ready(function($) {
 	var sessionChart = null;
 	var heroChart = null;
 
-	// Hero metrics (top 5 cards)
-	var heroMetrics = ['total_visits', 'pages_crawled', 'cache_hit_rate', 'avg_response', 'verified_bots'];
+	// Hero metrics (top 5 cards + pages_per_session which has its own
+	// crawl-depth-by-bot modal instead of the shared fingerprints modal)
+	var heroMetrics = ['total_visits', 'pages_crawled', 'cache_hit_rate', 'avg_response', 'verified_bots', 'pages_per_session'];
 
 	// Click handler for all clickable cards
 	$('.ta-hero-card-clickable').on('click', function() {
@@ -1133,7 +1056,8 @@ jQuery(document).ready(function($) {
 			'pages_crawled': '<?php echo esc_js( __( 'Pages Crawled - Content Analysis', 'third-audience' ) ); ?>',
 			'cache_hit_rate': '<?php echo esc_js( __( 'Cache Performance - Hit/Miss Analysis', 'third-audience' ) ); ?>',
 			'avg_response': '<?php echo esc_js( __( 'Response Time - Performance Analysis', 'third-audience' ) ); ?>',
-			'verified_bots': '<?php echo esc_js( __( 'Bot Verification - Status Breakdown', 'third-audience' ) ); ?>'
+			'verified_bots': '<?php echo esc_js( __( 'Bot Verification - Status Breakdown', 'third-audience' ) ); ?>',
+			'pages_per_session': '<?php echo esc_js( __( 'Pages Per Session - Crawl Depth by Bot', 'third-audience' ) ); ?>'
 		};
 		$('#ta-hero-modal-title').text(titles[metric] || '<?php echo esc_js( __( 'Metric Details', 'third-audience' ) ); ?>');
 
@@ -1287,7 +1211,6 @@ jQuery(document).ready(function($) {
 		// Set title based on metric
 		var titles = {
 			'fingerprints': '<?php echo esc_js( __( 'Bot Fingerprints - All Unique Bot+IP Combinations', 'third-audience' ) ); ?>',
-			'pages_per_session': '<?php echo esc_js( __( 'Pages Per Session - Crawl Depth Analysis', 'third-audience' ) ); ?>',
 			'session_duration': '<?php echo esc_js( __( 'Session Duration - Time Spent Crawling', 'third-audience' ) ); ?>',
 			'request_interval': '<?php echo esc_js( __( 'Request Interval - Time Between Requests', 'third-audience' ) ); ?>'
 		};
@@ -1295,8 +1218,7 @@ jQuery(document).ready(function($) {
 
 		// Set default sort based on metric
 		var sortMap = {
-			'fingerprints': 'last_seen',
-			'pages_per_session': 'pages_per_session',
+			'fingerprints': 'classification',
 			'session_duration': 'session_duration',
 			'request_interval': 'request_interval'
 		};

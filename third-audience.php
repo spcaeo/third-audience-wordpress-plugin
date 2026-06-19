@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
- * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.5.5
+ * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with an Open Knowledge Format (OKF) bundle at /okf/, Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
+ * Version: 3.6.0
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.5.5' );
+define( 'TA_VERSION', '3.6.0' );
 
 /**
  * Database version for migrations.
@@ -1009,7 +1009,7 @@ function ta_bot_md_config_callback() {
 	$ai_bot_patterns = array(
 		'GPTBot', 'ChatGPT-User', 'OAI-SearchBot',
 		'ClaudeBot', 'Claude-User', 'Claude-Web', 'anthropic-ai',
-		'PerplexityBot', 'Perplexity-User',
+		'PerplexityBot',
 		'Google-Extended', 'Bytespider', 'Amazonbot',
 		'cohere-ai', 'CCBot', 'Meta-ExternalAgent',
 		'YouBot', 'DuckAssistBot',
@@ -1760,6 +1760,40 @@ function ta_track_citation_callback( $request ) {
 		);
 	}
 
+	// For referer-based detections, verify the Referer is actually from a known
+	// AI platform domain. In headless setups iOS Safari prefetches visible links
+	// on the landing page; those requests carry the landing page's full URL
+	// (e.g. /page/?utm_source=chatgpt) as their Referer. The middleware matches
+	// "chatgpt" in that URL string and sends a 'referer' detection — but the
+	// referer is the site itself, not an AI platform. Drop these false positives.
+	if ( 'referer' === $detection_type && $referer ) {
+		$ai_referer_domains = array(
+			'chat.openai.com', 'chatgpt.com', 'openai.com',
+			'perplexity.ai',
+			'claude.ai',
+			'gemini.google.com', 'bard.google.com',
+			'google.com', 'www.google.com',
+			'copilot.microsoft.com',
+			'bing.com', 'www.bing.com',
+		);
+		$referer_host  = strtolower( wp_parse_url( $referer, PHP_URL_HOST ) ?: '' );
+		$is_ai_referer = false;
+		foreach ( $ai_referer_domains as $ai_domain ) {
+			if ( $referer_host === $ai_domain ||
+				( strlen( $referer_host ) > strlen( $ai_domain ) &&
+				  substr( $referer_host, -( strlen( $ai_domain ) + 1 ) ) === '.' . $ai_domain ) ) {
+				$is_ai_referer = true;
+				break;
+			}
+		}
+		if ( ! $is_ai_referer ) {
+			return new WP_REST_Response(
+				array( 'success' => true, 'skipped' => true, 'reason' => 'referer not an AI platform domain' ),
+				200
+			);
+		}
+	}
+
 	// Normalize platform name.
 	$platform = ucfirst( strtolower( sanitize_text_field( $platform ) ) );
 
@@ -1770,14 +1804,16 @@ function ta_track_citation_callback( $request ) {
 
 	// Determine platform color.
 	$platform_colors = array(
-		'ChatGPT'           => '#10A37F',
-		'ChatGPT Search'    => '#10A37F',
-		'Perplexity'        => '#1FB6D0',
-		'Claude'            => '#D97757',
-		'Gemini'            => '#4285F4',
+		'ChatGPT'            => '#10A37F',
+		'ChatGPT Search'     => '#10A37F',
+		'Perplexity'         => '#1FB6D0',
+		'Claude'             => '#D97757',
+		'Gemini'             => '#4285F4',
 		'Google AI Overview' => '#4285F4',
-		'Copilot'           => '#00BCF2',
-		'Bing AI'           => '#008373',
+		'Google Search'      => '#4285F4',
+		'Google AI Mode'     => '#1A73E8',
+		'Copilot'            => '#00BCF2',
+		'Bing AI'            => '#008373',
 	);
 	$platform_color = isset( $platform_colors[ $platform ] ) ? $platform_colors[ $platform ] : '#8B5CF6';
 

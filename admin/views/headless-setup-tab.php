@@ -295,6 +295,10 @@ const AI_CITATION_SOURCES = [
  * Detect if request came from an AI citation
  */
 function detectAICitation(request: NextRequest): { platform: string; query?: string; detection_type: string } | null {
+  // Skip browser prefetch requests — Chrome prefetches visible links after page load,
+  // all carrying the original referer → false duplicate citation entries.
+  if (request.headers.get('sec-fetch-purpose') === 'prefetch') return null;
+
   const url = request.nextUrl;
   const referer = request.headers.get('referer') || '';
 
@@ -322,6 +326,17 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
       }
       return { platform: source.name, detection_type: 'referer' };
     }
+  }
+
+  // Google Search / AI Mode — srsltid in the landing URL signals AI-assisted results.
+  if (referer) {
+    try {
+      const refHost = new URL(referer).hostname.toLowerCase();
+      if (refHost === 'www.google.com' || refHost === 'google.com') {
+        const platform = url.searchParams.has('srsltid') ? 'Google AI Mode' : 'Google Search';
+        return { platform, detection_type: 'referer' };
+      }
+    } catch {}
   }
 
   // Fallback: cross-site navigation with NO referer and NO utm.
@@ -411,12 +426,15 @@ async function trackCitation(request: NextRequest, citation: { platform: string;
 }
 
 export async function middleware(request: NextRequest) {
-  // Detect AI citation
-  const citation = detectAICitation(request);
+  const { pathname } = request.nextUrl;
 
-  if (citation) {
-    // Track asynchronously (non-blocking)
-    trackCitation(request, citation);
+  // Skip .md / .txt — bot-targeted URLs; tracking them creates duplicate
+  // entries alongside the real HTML page visit after redirect.
+  if (!pathname.endsWith('.md') && !pathname.endsWith('.txt')) {
+    const citation = detectAICitation(request);
+    if (citation && !request.nextUrl.searchParams.has('_rsc')) {
+      trackCitation(request, citation);
+    }
   }
 
   return NextResponse.next();
@@ -783,6 +801,17 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
     }
   }
 
+  // Google Search / AI Mode — srsltid in the landing URL signals AI-assisted results.
+  if (referer) {
+    try {
+      const refHost = new URL(referer).hostname.toLowerCase();
+      if (refHost === 'www.google.com' || refHost === 'google.com') {
+        const platform = url.searchParams.has('srsltid') ? 'Google AI Mode' : 'Google Search';
+        return { platform, detection_type: 'referer' };
+      }
+    } catch {}
+  }
+
   return null;
 }
 
@@ -829,9 +858,15 @@ async function trackCitation(request: NextRequest, citation: { platform: string;
 }
 
 export async function middleware(request: NextRequest) {
-  const citation = detectAICitation(request);
-  if (citation) {
-    trackCitation(request, citation); // Fire and forget
+  const { pathname } = request.nextUrl;
+
+  // Skip .md / .txt — bot-targeted URLs; tracking them creates duplicate
+  // entries alongside the real HTML page visit after redirect.
+  if (!pathname.endsWith('.md') && !pathname.endsWith('.txt')) {
+    const citation = detectAICitation(request);
+    if (citation && !request.nextUrl.searchParams.has('_rsc')) {
+      trackCitation(request, citation);
+    }
   }
 
   return NextResponse.next();

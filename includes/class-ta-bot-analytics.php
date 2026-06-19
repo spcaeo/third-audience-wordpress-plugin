@@ -211,6 +211,21 @@ class TA_Bot_Analytics {
 		if ( is_admin() || 'GET' !== $_SERVER['REQUEST_METHOD'] ) {
 			return;
 		}
+
+		// In headless mode the Next.js middleware already tracks citations via
+		// AJAX/REST. Firing here too creates a duplicate wp.domain.com entry.
+		$headless_settings = get_option( 'ta_headless_settings', array() );
+		if ( ! empty( $headless_settings['enabled'] ) ) {
+			return;
+		}
+
+		// Skip .md and .txt requests — these are bot-targeted markdown URLs.
+		// Tracking them creates duplicate entries alongside the real HTML page visit.
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		if ( preg_match( '/\.(md|txt)(\?|#|$)/i', $request_uri ) ) {
+			return;
+		}
+
 		$this->tracker->track_citation_click();
 	}
 
@@ -687,6 +702,28 @@ class TA_Bot_Analytics {
 	 */
 	public function get_top_bots_by_metric( $metric = 'pages_per_session', $limit = 10 ) {
 		return $this->query->get_top_bots_by_metric( $metric, $limit );
+	}
+
+	/**
+	 * Get IP-verification breakdown per bot (verified / failed / not checked).
+	 *
+	 * @since 3.5.6
+	 * @param int $limit Max bots to return.
+	 * @return array { totals: array, bots: array }
+	 */
+	public function get_verification_breakdown_by_bot( $limit = 20 ) {
+		return $this->query->get_verification_breakdown_by_bot( $limit );
+	}
+
+	/**
+	 * Get bot brand color by type (delegates to detector).
+	 *
+	 * @since 3.5.6
+	 * @param string $bot_type Bot type key (e.g. 'ChatGPT-User').
+	 * @return string Hex color code.
+	 */
+	public function get_bot_color( $bot_type ) {
+		return $this->detector->get_bot_color( $bot_type );
 	}
 
 	/**

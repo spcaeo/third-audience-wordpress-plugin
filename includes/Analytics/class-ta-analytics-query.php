@@ -223,7 +223,7 @@ class TA_Analytics_Query {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$summary['visits_today'] = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table_name} WHERE DATE(visit_timestamp) = %s",
+				"SELECT COUNT(*) FROM {$table_name} {$where} AND DATE(visit_timestamp) = %s",
 				$today
 			)
 		);
@@ -231,7 +231,7 @@ class TA_Analytics_Query {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$summary['visits_yesterday'] = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table_name} WHERE DATE(visit_timestamp) = %s",
+				"SELECT COUNT(*) FROM {$table_name} {$where} AND DATE(visit_timestamp) = %s",
 				$yesterday
 			)
 		);
@@ -239,7 +239,7 @@ class TA_Analytics_Query {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$summary['visits_this_week'] = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table_name} WHERE DATE(visit_timestamp) >= %s",
+				"SELECT COUNT(*) FROM {$table_name} {$where} AND DATE(visit_timestamp) >= %s",
 				$week_start
 			)
 		);
@@ -247,7 +247,7 @@ class TA_Analytics_Query {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$summary['visits_this_month'] = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table_name} WHERE DATE(visit_timestamp) >= %s",
+				"SELECT COUNT(*) FROM {$table_name} {$where} AND DATE(visit_timestamp) >= %s",
 				$month_start
 			)
 		);
@@ -703,21 +703,23 @@ class TA_Analytics_Query {
 
 		$order_column = $allowed_metrics[ $metric ] ?? 'pages_per_session_avg';
 
+		// Group by classification so the same bot (e.g. Barkrowler) does not appear
+		// once per IP. We aggregate: sum visits, average the session metrics.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$results = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT
 					classification as bot_type,
-					user_agent,
-					visit_count,
-					pages_per_session_avg,
-					session_duration_avg,
-					request_interval_avg,
-					first_seen,
-					last_seen
+					SUM(visit_count) as visit_count,
+					AVG(pages_per_session_avg) as pages_per_session_avg,
+					AVG(session_duration_avg) as session_duration_avg,
+					AVG(request_interval_avg) as request_interval_avg,
+					MIN(first_seen) as first_seen,
+					MAX(last_seen) as last_seen
 				FROM {$fingerprints_table}
 				WHERE {$order_column} IS NOT NULL
-				ORDER BY {$order_column} DESC
+				GROUP BY classification
+				ORDER BY AVG({$order_column}) DESC
 				LIMIT %d",
 				$limit
 			),
@@ -725,6 +727,66 @@ class TA_Analytics_Query {
 		);
 
 		return $results ?: array();
+	}
+
+	/**
+	 * Get IP-verification breakdown per bot.
+	 *
+	 * Splits every bot's visits into three buckets:
+	 *   verified    — ip_verified = 1  (IP matched the provider's official ranges)
+	 *   failed      — ip_verified = 0  (checked but did NOT match — possible fake bot)
+	 *   not_checked — ip_verified NULL (row predates verification or check never ran)
+	 *
+	 * Citation clicks are excluded — verification only applies to bot crawls.
+	 *
+	 * @since 3.5.6
+	 * @param int $limit Max bots to return.
+	 * @return array { totals: array, bots: array }
+	 */
+	public function get_verification_breakdown_by_bot( $limit = 20 ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$totals = $wpdb->get_row(
+			"SELECT
+				COUNT(*) as total,
+				SUM(CASE WHEN ip_verified = 1 THEN 1 ELSE 0 END) as verified,
+				SUM(CASE WHEN ip_verified = 0 THEN 1 ELSE 0 END) as failed,
+				SUM(CASE WHEN ip_verified IS NULL THEN 1 ELSE 0 END) as not_checked
+			FROM {$table_name}
+			WHERE traffic_type != 'citation_click'",
+			ARRAY_A
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$bots = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT
+					bot_name,
+					COUNT(*) as total,
+					SUM(CASE WHEN ip_verified = 1 THEN 1 ELSE 0 END) as verified,
+					SUM(CASE WHEN ip_verified = 0 THEN 1 ELSE 0 END) as failed,
+					SUM(CASE WHEN ip_verified IS NULL THEN 1 ELSE 0 END) as not_checked
+				FROM {$table_name}
+				WHERE traffic_type != 'citation_click'
+				GROUP BY bot_name
+				ORDER BY total DESC
+				LIMIT %d",
+				$limit
+			),
+			ARRAY_A
+		);
+
+		return array(
+			'totals' => array(
+				'total'       => absint( $totals['total'] ?? 0 ),
+				'verified'    => absint( $totals['verified'] ?? 0 ),
+				'failed'      => absint( $totals['failed'] ?? 0 ),
+				'not_checked' => absint( $totals['not_checked'] ?? 0 ),
+			),
+			'bots'   => $bots ?: array(),
+		);
 	}
 
 	/**
@@ -739,7 +801,9 @@ class TA_Analytics_Query {
 		global $wpdb;
 		$table_name = $wpdb->prefix . self::TABLE_NAME;
 
-		$where_conditions = array( '1=1' );
+		// Exclude citation_click (human referral) entries — they have no response_time
+		// which would drag AVG() to zero and inflate request counts.
+		$where_conditions = array( "1=1", "traffic_type != 'citation_click'" );
 
 		if ( $bot_type ) {
 			$where_conditions[] = $wpdb->prepare( 'bot_type = %s', $bot_type );

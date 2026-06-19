@@ -2,7 +2,7 @@
 
 **Serve AI-optimized Markdown to LLM crawlers. Track who's citing your content. Get discovered by ChatGPT, Perplexity, Claude, and Gemini.**
 
-![Version](https://img.shields.io/badge/version-3.5.5-blue)
+![Version](https://img.shields.io/badge/version-3.6.0-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![License](https://img.shields.io/badge/license-GPL%20v2-green)
@@ -297,7 +297,13 @@ Test files are in the `tests/` directory. See [TESTING-GUIDE.md](third-audience/
 
 See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
 
-**Latest: v3.5.4**
+**Latest: v3.6.0**
+- **OKF (Open Knowledge Format) bundle** served at `/okf/` — a self-contained Markdown bundle of your whole site for AI agents
+- **`.txt` URL support** — every page is also served at `/<path>.txt` (same content as `.md`, as `text/plain`)
+- **Redesigned LLM Traffic dashboard** — drill-down cards (platform, country, browser, device, page type) → modal with the exact visits + CSV export, date-range filter
+- Distinct platform colours, LLM-only Traffic Trend chart; About page documents `.md` / `.txt` / `/okf/` discovery
+
+**v3.5.4**
 - Fixed fatal error on fresh WordPress installs — activation hook no longer blocks on HTTP requests
 - Fixed `SHOW COLUMNS FROM` MySQL error when table doesn't exist yet on first install
 - Fixed database auto-fixer creating wrong table schema on fresh installs

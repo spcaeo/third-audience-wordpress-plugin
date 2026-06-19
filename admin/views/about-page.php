@@ -54,13 +54,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<p><?php esc_html_e( 'Third Audience uses two complementary approaches to serve AI-optimized content:', 'third-audience' ); ?></p>
 
 			<h3><?php esc_html_e( '1. Auto-Discovery (Recommended by Crawlers)', 'third-audience' ); ?></h3>
-			<p><?php esc_html_e( 'Every HTML page includes a discovery tag that tells AI crawlers where to find the Markdown version:', 'third-audience' ); ?></p>
-			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #007aff; overflow-x: auto;"><code>&lt;link rel="alternate" type="text/markdown" href="https://yoursite.com/post-name.md" /&gt;</code></pre>
+			<p><?php esc_html_e( 'Every HTML page includes discovery tags that point AI crawlers to the Markdown and plain-text versions — plus a sitewide OKF bundle:', 'third-audience' ); ?></p>
+			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #007aff; overflow-x: auto;"><code>&lt;link rel="alternate" type="text/markdown" href="https://yoursite.com/post-name.md" title="Markdown version" /&gt;
+&lt;link rel="alternate" type="text/plain" href="https://yoursite.com/post-name.txt" title="Text version" /&gt;
+&lt;link rel="alternate" type="text/markdown" href="https://yoursite.com/okf/index.md" title="OKF bundle" /&gt;</code></pre>
 
-			<h3><?php esc_html_e( '2. Direct .md URL Access', 'third-audience' ); ?></h3>
-			<p><?php esc_html_e( 'AI agents can append .md to any post URL:', 'third-audience' ); ?></p>
-			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #007aff; overflow-x: auto;"><code>https://yoursite.com/my-post       → HTML version (for humans)
-https://yoursite.com/my-post.md    → Markdown version (for AI)</code></pre>
+			<h3><?php esc_html_e( '2. Direct .md / .txt URL Access', 'third-audience' ); ?></h3>
+			<p><?php esc_html_e( 'AI agents can append .md (or .txt) to any post URL. The .txt variant serves the exact same content with a text/plain header, for crawlers that prefer plain text:', 'third-audience' ); ?></p>
+			<pre style="background: #f5f5f5; padding: 15px; border-left: 3px solid #007aff; overflow-x: auto;"><code>https://yoursite.com/my-post        → HTML version (for humans)
+https://yoursite.com/my-post.md     → Markdown version (for AI)
+https://yoursite.com/my-post.txt    → same content, served as text/plain
+https://yoursite.com/okf/index.md   → full-site OKF bundle (all posts)</code></pre>
 
 			<h3><?php esc_html_e( '3. Content Negotiation (HTTP Headers)', 'third-audience' ); ?></h3>
 			<p><?php esc_html_e( 'Advanced AI crawlers can request Markdown using HTTP headers:', 'third-audience' ); ?></p>
@@ -112,6 +116,8 @@ Accept: text/markdown
 					<strong style="color: #007aff;">└───────────────────────────────────────────────────┘</strong>
 				</div>
 			</div>
+
+			<p style="margin-top:12px;"><strong><?php esc_html_e( 'Note:', 'third-audience' ); ?></strong> <?php esc_html_e( 'Requesting .txt instead of .md (or sending an Accept: text/markdown header) returns the same content — .txt is served as text/plain. Reserved files like robots.txt, ads.txt and llms.txt are left untouched.', 'third-audience' ); ?></p>
 
 			<p><strong><?php esc_html_e( 'Performance:', 'third-audience' ); ?></strong></p>
 			<ul>
@@ -177,13 +183,26 @@ Accept: text/markdown
 						<li><?php esc_html_e( 'Comprehensive troubleshooting guides', 'third-audience' ); ?></li>
 					</ul>
 				</div>
+
+				<div class="ta-feature-item">
+					<div class="ta-feature-icon" style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);">
+						<span class="dashicons dashicons-media-text"></span>
+					</div>
+					<h3><?php esc_html_e( 'OKF Bundle — Open Knowledge Format (/okf/)', 'third-audience' ); ?></h3>
+					<ul>
+						<li><?php esc_html_e( 'Open, vendor-neutral AI knowledge format (not a Google/proprietary spec)', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Live bundle at /okf/ — one Markdown file per post, plus index.md & log.md', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Internal links rewritten to sibling .md — a navigable graph for AI', 'third-audience' ); ?></li>
+						<li><?php esc_html_e( 'Cached & auto-regenerated when content changes', 'third-audience' ); ?></li>
+					</ul>
+				</div>
 			</div>
 		</div>
 
 		<!-- Technical Architecture -->
 		<div class="ta-card">
 			<h2><?php esc_html_e( 'Technical Architecture', 'third-audience' ); ?></h2>
-			<p><?php esc_html_e( 'Version 2.0 uses a fully self-contained architecture:', 'third-audience' ); ?></p>
+			<p><?php printf( esc_html__( 'Version %s uses a fully self-contained architecture:', 'third-audience' ), esc_html( TA_VERSION ) ); ?></p>
 			<ul>
 				<li><strong><?php esc_html_e( 'PHP Library:', 'third-audience' ); ?></strong> <?php esc_html_e( 'league/html-to-markdown for high-quality conversion', 'third-audience' ); ?></li>
 				<li><strong><?php esc_html_e( 'Dependency Management:', 'third-audience' ); ?></strong> <?php esc_html_e( 'Composer for clean dependency handling', 'third-audience' ); ?></li>
@@ -254,19 +273,19 @@ Accept: text/markdown
 			<h3 style="margin: 30px 0 16px 0; color: #1d1d1f; font-size: 18px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 16px;">
 				<?php esc_html_e( 'Built with Open Source', 'third-audience' ); ?>
 			</h3>
-			<p style="color: #86868b; margin-bottom: 20px;">
+			<p style="color: #515154; margin-bottom: 20px;">
 				<?php esc_html_e( 'Third Audience is powered by this amazing open source library:', 'third-audience' ); ?>
 			</p>
 			<div class="ta-credits-grid">
 				<div class="ta-credit-item">
 					<h3><?php esc_html_e( 'HTML to Markdown', 'third-audience' ); ?></h3>
 					<a href="https://github.com/thephpleague/html-to-markdown" target="_blank" rel="noopener"><?php esc_html_e( 'league/html-to-markdown', 'third-audience' ); ?></a>
-					<p style="font-size: 13px; color: #86868b; margin-top: 8px;">
+					<p style="font-size: 13px; color: #515154; margin-top: 8px;">
 						<?php esc_html_e( 'Fast, clean HTML to Markdown conversion for serving AI-optimized content.', 'third-audience' ); ?>
 					</p>
 				</div>
 			</div>
-			<p style="color: #86868b; margin-top: 20px; font-size: 13px;">
+			<p style="color: #515154; margin-top: 20px; font-size: 13px;">
 				<?php esc_html_e( 'AI citation tracking and referrer parsing is handled by our custom lightweight implementation - zero external dependencies!', 'third-audience' ); ?>
 			</p>
 		</div>
@@ -278,66 +297,63 @@ Accept: text/markdown
 				<?php esc_html_e( 'Track all updates and improvements to Third Audience.', 'third-audience' ); ?>
 			</p>
 
-			<!-- Version 1.1.1 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #007aff; padding-left: 20px; margin: 6px 0;">
-				<h3 style="margin: 0 0 10px 0; color: #007aff;">
-					<?php esc_html_e( 'Version 1.1.1', 'third-audience' ); ?>
-					<span style="font-size: 13px; color: #646970; font-weight: normal;">— January 21, 2026</span>
-				</h3>
-				<p><strong><?php esc_html_e( 'Bug Fix:', 'third-audience' ); ?></strong></p>
-				<ul>
-					<li><?php esc_html_e( 'Homepage URLs now generate correct .md URLs (e.g., /index.md instead of .md)', 'third-audience' ); ?></li>
-				</ul>
-				<p><strong><?php esc_html_e( 'New Features:', 'third-audience' ); ?></strong></p>
-				<ul>
-					<li><?php esc_html_e( 'Customizable homepage markdown pattern (index.md, home.md, root.md, or custom)', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Automatic fallback to latest post when no static homepage is set', 'third-audience' ); ?></li>
-				</ul>
-				<p><strong><?php esc_html_e( 'Improvements:', 'third-audience' ); ?></strong></p>
-				<ul>
-					<li><?php esc_html_e( 'Better URL parsing to handle edge cases', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Settings UI with pattern examples and warnings', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'JavaScript for custom pattern toggle', 'third-audience' ); ?></li>
-				</ul>
-			</div>
+			<?php
+			// Auto-generated from CHANGELOG.md so this list is always current and latest-first.
+			$ta_changelog = TA_PLUGIN_DIR . 'CHANGELOG.md';
+			$ta_versions  = array();
+			if ( is_readable( $ta_changelog ) ) {
+				$ta_cur = null;
+				$ta_sec = '';
+				foreach ( file( $ta_changelog, FILE_IGNORE_NEW_LINES ) as $ta_line ) {
+					if ( preg_match( '/^##\s*\[([^\]]+)\]\s*-\s*(.+)$/', $ta_line, $m ) ) {
+						if ( $ta_cur ) {
+							$ta_versions[] = $ta_cur;
+						}
+						$ta_cur = array( 'version' => trim( $m[1] ), 'date' => trim( $m[2] ), 'sections' => array() );
+						$ta_sec = __( 'Changes', 'third-audience' );
+					} elseif ( $ta_cur && preg_match( '/^###\s+(.+)$/', $ta_line, $m ) ) {
+						$ta_sec = trim( $m[1] );
+					} elseif ( $ta_cur && preg_match( '/^-\s+(.+)$/', $ta_line, $m ) ) {
+						$ta_cur['sections'][ $ta_sec ][] = trim( $m[1] );
+					}
+				}
+				if ( $ta_cur ) {
+					$ta_versions[] = $ta_cur;
+				}
+			}
+			$ta_versions = array_slice( $ta_versions, 0, 1 ); // Latest release only.
 
-			<!-- Version 1.1.0 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #2271b1; padding-left: 20px; margin: 6px 0;">
-				<h3 style="margin: 0 0 10px 0; color: #2271b1;">
-					<?php esc_html_e( 'Version 1.1.0', 'third-audience' ); ?>
-					<span style="font-size: 13px; color: #646970; font-weight: normal;">— January 21, 2026</span>
-				</h3>
-				<p><strong><?php esc_html_e( 'Major Features:', 'third-audience' ); ?></strong></p>
-				<ul>
-					<li><?php esc_html_e( 'Headless WordPress Configuration Wizard', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Auto-detect headless setup and generate configuration snippets', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Support for Nginx, Apache, Cloudflare, Vercel, and Next.js', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'One-click copy for server configurations', 'third-audience' ); ?></li>
-				</ul>
-				<p><strong><?php esc_html_e( 'Performance:', 'third-audience' ); ?></strong></p>
-				<ul>
-					<li><?php esc_html_e( '1-hour transient cache for auto-detection', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Rate limiting (3 tests per 5 minutes)', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Filter hooks for extensibility', 'third-audience' ); ?></li>
-				</ul>
-			</div>
-
-			<!-- Version 1.0.0 -->
-			<div class="ta-version-entry" style="border-left: 4px solid #00a32a; padding-left: 20px; margin: 6px 0;">
-				<h3 style="margin: 0 0 10px 0; color: #00a32a;">
-					<?php esc_html_e( 'Version 1.0.0', 'third-audience' ); ?>
-					<span style="font-size: 13px; color: #646970; font-weight: normal;">— January 16, 2026</span>
-				</h3>
-				<p><strong><?php esc_html_e( 'Initial Release:', 'third-audience' ); ?></strong></p>
-				<ul>
-					<li><?php esc_html_e( 'Local HTML to Markdown conversion (no external dependencies!)', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Support for all post types', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Pre-generation on post save', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Bot-specific blocking and analytics', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Cache management', 'third-audience' ); ?></li>
-					<li><?php esc_html_e( 'Discovery tags for AI crawlers', 'third-audience' ); ?></li>
-				</ul>
-			</div>
+			// Light, safe inline Markdown: input is esc_html'd first, then ** and ` are styled.
+			$ta_md = function ( $text ) {
+				$t = esc_html( $text );
+				$t = preg_replace( '/\*\*(.+?)\*\*/', '<strong>$1</strong>', $t );
+				$t = preg_replace( '/`(.+?)`/', '<code>$1</code>', $t );
+				return $t;
+			};
+			?>
+			<?php if ( empty( $ta_versions ) ) : ?>
+				<p><?php esc_html_e( 'Changelog could not be loaded.', 'third-audience' ); ?></p>
+			<?php else : ?>
+				<?php foreach ( $ta_versions as $ta_i => $ta_v ) : ?>
+					<div class="ta-version-entry" style="border-left: 4px solid <?php echo 0 === $ta_i ? '#007aff' : '#c3c4c7'; ?>; padding-left: 20px; margin: 6px 0;">
+						<h3 style="margin: 0 0 10px 0; color: <?php echo 0 === $ta_i ? '#007aff' : '#1d1d1f'; ?>;">
+							<?php echo esc_html( 'v' . $ta_v['version'] ); ?>
+							<span style="font-size: 13px; color: #646970; font-weight: normal;">— <?php echo esc_html( $ta_v['date'] ); ?></span>
+							<?php if ( 0 === $ta_i ) : ?>
+								<span style="font-size: 11px; background: #e8f0fe; color: #1a73e8; border-radius: 10px; padding: 2px 8px; font-weight: 600;"><?php esc_html_e( 'Latest', 'third-audience' ); ?></span>
+							<?php endif; ?>
+						</h3>
+						<?php foreach ( $ta_v['sections'] as $ta_secname => $ta_items ) : ?>
+							<p><strong><?php echo esc_html( $ta_secname ); ?></strong></p>
+							<ul>
+								<?php foreach ( $ta_items as $ta_item ) : ?>
+									<li><?php echo $ta_md( $ta_item ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- esc_html applied inside $ta_md ?></li>
+								<?php endforeach; ?>
+							</ul>
+						<?php endforeach; ?>
+					</div>
+				<?php endforeach; ?>
+			<?php endif; ?>
 
 			<p style="margin-top: 30px;">
 				<a href="https://github.com/spcaeo/third-audience-wordpress-plugin/releases" class="button button-secondary" target="_blank" rel="noopener">
@@ -401,7 +417,7 @@ Accept: text/markdown
 .ta-about-page .description {
 	margin-top: 6px;
 	font-size: 13px;
-	color: #86868b;
+	color: #515154;
 	line-height: 1.5;
 }
 
@@ -415,7 +431,7 @@ Accept: text/markdown
 	background: #ffffff;
 	border: none;
 	border-radius: 8px;
-	padding: 6px 10px;
+	padding: 18px 22px;
 	margin-bottom: 10px;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -430,7 +446,7 @@ Accept: text/markdown
 .ta-hero {
 	background: linear-gradient(135deg, #f5f5f7 0%, #e8e8ed 100%);
 	border: none;
-	padding: 6px 10px;
+	padding: 18px 22px;
 	position: relative;
 	overflow: hidden;
 	text-align: center;
@@ -449,14 +465,15 @@ Accept: text/markdown
 
 .ta-hero-icon .dashicons {
 	color: #fff;
-	font-size: 13px;
-	width: 28px;
-	height: 28px;
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
+	line-height: 20px;
 }
 
 .ta-hero h2 {
 	margin: 0 0 12px 0;
-	font-size: 13px;
+	font-size: 19px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.5px;
@@ -472,7 +489,7 @@ Accept: text/markdown
 }
 
 .ta-hero p {
-	color: #86868b;
+	color: #515154;
 	line-height: 1.6;
 	font-size: 13px;
 	margin: 6px auto;
@@ -482,7 +499,7 @@ Accept: text/markdown
 /* Typography - Apple SF Pro Style */
 .ta-card h2 {
 	margin: 0 0 16px 0;
-	font-size: 13px;
+	font-size: 17px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.4px;
@@ -493,7 +510,7 @@ Accept: text/markdown
 
 .ta-card h3 {
 	margin: 6px 0 12px 0;
-	font-size: 13px;
+	font-size: 14.5px;
 	font-weight: 600;
 	color: #1d1d1f;
 	letter-spacing: -0.3px;
@@ -501,7 +518,7 @@ Accept: text/markdown
 }
 
 .ta-card p {
-	color: #86868b;
+	color: #515154;
 	line-height: 1.6;
 	font-size: 13px;
 	margin: 6px 0;
@@ -515,7 +532,7 @@ Accept: text/markdown
 
 .ta-card li {
 	margin-bottom: 8px;
-	color: #86868b;
+	color: #515154;
 	font-size: 13px;
 }
 
@@ -544,14 +561,16 @@ Accept: text/markdown
 .ta-features-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: 6px;
+	gap: 16px;
 	margin-top: 24px;
 }
 
 .ta-feature-item {
 	background: #f5f5f7;
 	border-radius: 8px;
-	padding: 6px;
+	padding: 16px 18px;
+	min-width: 0;
+	overflow-wrap: anywhere;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -573,9 +592,10 @@ Accept: text/markdown
 
 .ta-feature-icon .dashicons {
 	color: #fff;
-	font-size: 13px;
-	width: 28px;
-	height: 28px;
+	font-size: 24px;
+	width: 24px;
+	height: 24px;
+	line-height: 24px;
 }
 
 .ta-feature-icon-performance {
@@ -637,7 +657,7 @@ Accept: text/markdown
 
 .ta-credit-item h3 {
 	font-size: 13px;
-	color: #86868b;
+	color: #515154;
 	margin: 0 0 8px 0;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
@@ -679,7 +699,7 @@ Accept: text/markdown
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	padding: 6px;
+	padding: 16px 18px;
 	background: #f5f5f7;
 	border-radius: 8px;
 	text-decoration: none;
@@ -725,12 +745,12 @@ Accept: text/markdown
 
 .ta-link-content span {
 	font-size: 13px;
-	color: #86868b;
+	color: #515154;
 	font-weight: 400;
 }
 
 .ta-link-card .dashicons-arrow-right-alt2 {
-	color: #86868b;
+	color: #515154;
 	font-size: 13px;
 	width: 20px;
 	height: 20px;
@@ -763,7 +783,7 @@ Accept: text/markdown
 
 .ta-version-entry h3 span {
 	font-size: 13px;
-	color: #86868b;
+	color: #515154;
 	font-weight: 400;
 }
 
@@ -823,7 +843,7 @@ Accept: text/markdown
 /* Responsive Design */
 @media (max-width: 782px) {
 	.ta-card {
-		padding: 6px 10px;
+		padding: 18px 22px;
 		border-radius: 8px;
 	}
 

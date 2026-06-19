@@ -56,12 +56,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 				<!-- Detailed Table -->
 				<div class="ta-session-table-section">
-					<h4 style="margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center;">
+					<h4 style="margin: 0 0 8px 0; display: flex; justify-content: space-between; align-items: center;">
 						<span>
 							<span class="dashicons dashicons-list-view"></span>
 							<?php esc_html_e( 'Bot Fingerprints Detail', 'third-audience' ); ?>
 						</span>
 						<select id="ta-session-sort" style="font-weight: normal; font-size: 13px;">
+							<option value="classification"><?php esc_html_e( 'Bot Name (A–Z)', 'third-audience' ); ?></option>
 							<option value="last_seen"><?php esc_html_e( 'Last Seen (Recent)', 'third-audience' ); ?></option>
 							<option value="visit_count"><?php esc_html_e( 'Total Visits', 'third-audience' ); ?></option>
 							<option value="pages_per_session"><?php esc_html_e( 'Pages/Session', 'third-audience' ); ?></option>
@@ -69,6 +70,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<option value="request_interval"><?php esc_html_e( 'Request Interval', 'third-audience' ); ?></option>
 						</select>
 					</h4>
+					<p style="margin: 0 0 10px 0; font-size: 12px; color: #8c8f94; line-height: 1.4;">
+						Each row = one unique IP address for that bot. If Barkrowler crawls from 5 different IPs, it appears 5 times — one fingerprint per IP.
+					</p>
 					<div style="max-height: 350px; overflow-y: auto;">
 						<table class="ta-table ta-table-compact" id="ta-session-table">
 							<thead>

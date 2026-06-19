@@ -108,6 +108,39 @@ class TA_AJAX_Fallback {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$referer = isset( $_POST['referer'] ) ? esc_url_raw( wp_unslash( $_POST['referer'] ) ) : '';
+
+		// For referer-based detections, verify the Referer is actually from a known
+		// AI platform domain. In headless setups iOS Safari prefetches visible links
+		// on the landing page; those requests carry the landing page's full URL
+		// (e.g. /page/?utm_source=chatgpt) as their Referer. The middleware matches
+		// "chatgpt" in that URL string and sends a 'referer' detection — but the
+		// referer is the site itself, not an AI platform. Drop these false positives.
+		if ( 'referer' === $detection_type && $referer ) {
+			$ai_referer_domains = array(
+				'chat.openai.com', 'chatgpt.com', 'openai.com',
+				'perplexity.ai',
+				'claude.ai',
+				'gemini.google.com', 'bard.google.com',
+				'google.com', 'www.google.com',
+				'copilot.microsoft.com',
+				'bing.com', 'www.bing.com',
+			);
+			$referer_host  = strtolower( wp_parse_url( $referer, PHP_URL_HOST ) ?: '' );
+			$is_ai_referer = false;
+			foreach ( $ai_referer_domains as $ai_domain ) {
+				if ( $referer_host === $ai_domain ||
+					( strlen( $referer_host ) > strlen( $ai_domain ) &&
+					  substr( $referer_host, -( strlen( $ai_domain ) + 1 ) ) === '.' . $ai_domain ) ) {
+					$is_ai_referer = true;
+					break;
+				}
+			}
+			if ( ! $is_ai_referer ) {
+				wp_send_json_success( array( 'skipped' => true, 'reason' => 'referer not an AI platform domain' ) );
+				return;
+			}
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$search_query = isset( $_POST['search_query'] ) ? sanitize_text_field( wp_unslash( $_POST['search_query'] ) ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing

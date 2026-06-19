@@ -235,6 +235,19 @@ class TA_Local_Converter {
 		$frontmatter .= 'url: "' . ( function_exists( 'ta_frontend_permalink' ) ? ta_frontend_permalink( $post->ID ) : get_permalink( $post->ID ) ) . "\"\n";
 		$frontmatter .= 'date: "' . get_the_date( 'c', $post->ID ) . "\"\n";
 		$frontmatter .= 'modified: "' . get_the_modified_date( 'c', $post->ID ) . "\"\n";
+
+		// Open Knowledge Format (OKF v0.1) fields. `type` is the one field the
+		// spec requires; `resource` and `timestamp` are the OKF-canonical names
+		// for the canonical URL and last-modified time. Adding them here makes
+		// each file a valid OKF concept document as well as a Third Audience
+		// markdown file, without removing the existing url/date/modified fields.
+		if ( get_option( 'ta_enable_okf', true ) ) {
+			$okf_type = ( 'post' === $post->post_type ) ? 'Article' : 'WebPage';
+			$frontmatter .= 'type: "' . $okf_type . "\"\n";
+			$frontmatter .= 'resource: "' . ( function_exists( 'ta_frontend_permalink' ) ? ta_frontend_permalink( $post->ID ) : get_permalink( $post->ID ) ) . "\"\n";
+			$frontmatter .= 'timestamp: "' . get_the_modified_date( 'c', $post->ID ) . "\"\n";
+		}
+
 		// Author as object with name and url (matches Dries' format).
 		$author_name = get_the_author_meta( 'display_name', $post->post_author );
 		$author_url  = get_the_author_meta( 'user_url', $post->post_author );

@@ -2,6 +2,38 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.6.0] - 2026-06-16
+
+### Added
+- **Open Knowledge Format (OKF v0.1) bundle** served live at `/okf/`. Turns published posts and pages into a self-contained bundle of clean Markdown files that AI agents can read without scraping HTML or calling an API.
+  - `/okf/index.md` manifest listing every concept, plus a `/okf/log.md` changelog grouped by modified date.
+  - Each concept document is served at `/okf/<slug>.md` with OKF frontmatter (`type`, `title`, `description`, `resource`, `tags`, `timestamp`).
+  - Internal links between posts are rewritten to point at sibling `.md` files (resolved via `url_to_postid()`), making the bundle a navigable graph.
+  - Dedicated top-level **OKF** admin menu with settings (enable toggle, bundle title/description), bundle stats, a "Generate bundle now" button, serving URLs, and an interactive knowledge graph (drag/zoom/pan, click-to-open, no dependencies).
+  - Bundle is cached and regenerates automatically when content is published, edited, trashed, or deleted.
+  - OKF bundle advertised via a `<link>` discovery tag and a `robots.txt` pointer.
+  - Health check now reports OKF bundle conformance (every concept file has a non-empty `type`).
+- New OKF frontmatter fields (`type`, `resource`, `timestamp`) added to all Markdown output when OKF is enabled.
+- **`.txt` URL support** — every page is also served at `/<path>.txt` (same content as `.md`, sent with a `text/plain` header) for AI crawlers that prefer plain text. Reserved files (`robots.txt`, `ads.txt`, `humans.txt`, `security.txt`, `llms.txt`, `.well-known/*`) are left untouched, and a `<link rel="alternate" type="text/plain">` discovery tag is added.
+- **Redesigned LLM Traffic (AI Citations) dashboard** with click-to-drill-down cards for Platforms, Countries, Browsers, Top Cited Pages, Devices, and Page Type — each row opens a focused modal listing the exact visits, with per-view CSV export.
+- Date-range filter (All Time / Today / Last 7 / Last 30 days / custom) that recomputes every card, KPI, and chart; the Recent LLMs Visits list auto-collapses while a date filter is active.
+- `TA_Citation_Query` helper — single source of truth for browser / device / page-type bucketing, so a card count always reconciles with its drill-down rows.
+- `ta_citations_drilldown` AJAX endpoint powering the modal drill-downs.
+
+### Changed
+- Hero metrics reworked (Total LLM Traffic, AI Platforms, Top Country, Avg Citations/Day) with clean inline SVG icons.
+- Platform colours now use a distinct palette (name variants no longer collapse to one colour); `get_platform_color()` matches platform names case-insensitively.
+- Traffic Trend chart shows LLM citation clicks only (Google and bot crawls removed from this chart).
+- About page: Version History is now generated from `CHANGELOG.md` (latest release shown); `.md` / `.txt` / `/okf/` discovery and the OKF bundle are documented; refreshed icons, spacing, and colours.
+
+### Removed
+- Redundant duplicate sections from the AI Citations page (legacy platform / country / top-cited tables, daily-by-type & weekly charts, the separate filters box) and the "Broken AI Citations" section (inaccurate on headless sites).
+
+### Notes
+- New options: `ta_enable_okf` (default on), `ta_okf_bundle_title`, `ta_okf_bundle_desc`.
+
+---
+
 ## [3.5.2] - 2026-02-20
 
 ### Changed

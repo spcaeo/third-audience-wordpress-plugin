@@ -68,6 +68,257 @@ class TA_Admin_AJAX_Analytics {
 		add_action( 'wp_ajax_ta_get_hero_metric_details', array( $this, 'ajax_get_hero_metric_details' ) );
 		add_action( 'wp_ajax_ta_get_bot_details', array( $this, 'ajax_get_bot_details' ) );
 		add_action( 'wp_ajax_ta_export_analytics_data', array( $this, 'ajax_export_analytics_data' ) );
+		add_action( 'wp_ajax_ta_load_more_citations', array( $this, 'ajax_load_more_citations' ) );
+		add_action( 'wp_ajax_ta_citations_paginate', array( $this, 'ajax_citations_paginate' ) );
+		add_action( 'wp_ajax_ta_citations_drilldown', array( $this, 'ajax_citations_drilldown' ) );
+	}
+
+	/**
+	 * AJAX handler — load next page of Recent LLMs Visits rows.
+	 */
+	public function ajax_load_more_citations() {
+		check_ajax_referer( 'ta_analytics_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Unauthorized', 403 );
+		}
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+		$per_page   = 30;
+		$offset     = max( 0, intval( $_POST['offset'] ?? 0 ) );
+
+		// Rebuild WHERE from posted filters (same logic as the page query).
+		$filters    = array();
+		$where_parts = array();
+		$values      = array();
+
+		if ( ! empty( $_POST['platform'] ) ) {
+			$filters['platform'] = sanitize_text_field( wp_unslash( $_POST['platform'] ) );
+			$where_parts[] = 'ai_platform = %s';
+			$values[]      = $filters['platform'];
+		}
+		if ( ! empty( $_POST['date_from'] ) ) {
+			$where_parts[] = 'DATE(visit_timestamp) >= %s';
+			$values[]      = sanitize_text_field( wp_unslash( $_POST['date_from'] ) );
+		}
+		if ( ! empty( $_POST['date_to'] ) ) {
+			$where_parts[] = 'DATE(visit_timestamp) <= %s';
+			$values[]      = sanitize_text_field( wp_unslash( $_POST['date_to'] ) );
+		}
+		if ( ! empty( $_POST['date'] ) ) {
+			$where_parts[] = 'DATE(visit_timestamp) = %s';
+			$values[]      = sanitize_text_field( wp_unslash( $_POST['date'] ) );
+		}
+		if ( ! empty( $_POST['search'] ) ) {
+			$where_parts[] = '(url LIKE %s OR post_title LIKE %s)';
+			$s = '%' . $wpdb->esc_like( sanitize_text_field( wp_unslash( $_POST['search'] ) ) ) . '%';
+			$values[] = $s;
+			$values[] = $s;
+		}
+
+		// Same traffic_type / content_type filter as the page.
+		$base_where = "(client_user_agent IS NOT NULL OR content_type IN ('rest_api','ajax') OR user_agent NOT LIKE 'Headless%') AND traffic_type = 'citation_click'";
+		$where_sql  = $base_where;
+		if ( ! empty( $where_parts ) ) {
+			$where_sql .= ' AND ' . implode( ' AND ', $where_parts );
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$query = $wpdb->prepare(
+			"SELECT ai_platform, url, post_title, search_query, referer, user_agent, client_user_agent, ip_address, country_code, content_type, detection_method, visit_timestamp
+			FROM {$table_name}
+			WHERE {$where_sql}
+			ORDER BY visit_timestamp DESC
+			LIMIT %d OFFSET %d",
+			array_merge( $values, array( $per_page, $offset ) )
+		);
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results( $query, ARRAY_A );
+
+		wp_send_json_success( array(
+			'rows'     => $rows,
+			'has_more' => count( $rows ) === $per_page,
+		) );
+	}
+
+	/**
+	 * AJAX handler — paginated citations for LLM visits or Google Search (15 per page).
+	 */
+	public function ajax_citations_paginate() {
+		check_ajax_referer( 'ta_analytics_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Unauthorized', 403 );
+		}
+
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'ta_bot_analytics';
+		$per_page   = 15;
+		$page       = max( 1, intval( $_POST['page'] ?? 1 ) );
+		$offset     = ( $page - 1 ) * $per_page;
+		$section    = sanitize_key( $_POST['section'] ?? 'llm' );
+
+		$where_parts = array();
+		$values      = array();
+
+		if ( 'google' === $section ) {
+			$base_where = "traffic_type = 'citation_click' AND ai_platform IN ('Google Search', 'Google AI Mode') AND (client_user_agent IS NOT NULL OR content_type IN ('rest_api','ajax') OR user_agent NOT LIKE 'Headless%') AND url NOT LIKE '%/wp-admin%' AND url NOT LIKE '%/wp-login%'";
+			$select     = 'ai_platform, url, post_title, referer, user_agent, client_user_agent, country_code, content_type, visit_timestamp';
+		} else {
+			$base_where = "traffic_type = 'citation_click' AND (client_user_agent IS NOT NULL OR content_type IN ('rest_api','ajax') OR user_agent NOT LIKE 'Headless%') AND ai_platform NOT IN ('Google Search', 'Google AI Mode') AND url NOT LIKE '%/wp-admin%' AND url NOT LIKE '%/wp-login%' AND url NOT LIKE '%admin-ajax.php%' AND url NOT LIKE '%/wp-cron%' AND url NOT LIKE '%/xmlrpc%'";
+			$select     = 'ai_platform, url, post_title, search_query, referer, user_agent, client_user_agent, ip_address, country_code, content_type, detection_method, visit_timestamp';
+
+			if ( ! empty( $_POST['platform'] ) ) {
+				$where_parts[] = 'ai_platform = %s';
+				$values[]      = sanitize_text_field( wp_unslash( $_POST['platform'] ) );
+			}
+			if ( ! empty( $_POST['search'] ) ) {
+				$where_parts[] = '(url LIKE %s OR post_title LIKE %s OR search_query LIKE %s)';
+				$s = '%' . $wpdb->esc_like( sanitize_text_field( wp_unslash( $_POST['search'] ) ) ) . '%';
+				$values[] = $s; $values[] = $s; $values[] = $s;
+			}
+			if ( ! empty( $_POST['browser'] ) ) {
+				$where_parts[] = '(COALESCE(client_user_agent, user_agent) LIKE %s)';
+				$values[]      = '%' . $wpdb->esc_like( sanitize_text_field( wp_unslash( $_POST['browser'] ) ) ) . '%';
+			}
+			if ( ! empty( $_POST['country'] ) ) {
+				$where_parts[] = 'country_code = %s';
+				$values[]      = sanitize_text_field( wp_unslash( $_POST['country'] ) );
+			}
+			if ( ! empty( $_POST['device'] ) ) {
+				if ( 'mobile' === $_POST['device'] ) {
+					$where_parts[] = "(COALESCE(client_user_agent, user_agent) LIKE '%Mobile%' OR COALESCE(client_user_agent, user_agent) LIKE '%iPhone%' OR COALESCE(client_user_agent, user_agent) LIKE '%Android%')";
+				} elseif ( 'desktop' === $_POST['device'] ) {
+					$where_parts[] = "(COALESCE(client_user_agent, user_agent) NOT LIKE '%Mobile%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%iPhone%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%Android%')";
+				}
+			}
+		}
+
+		// Date filters apply to both sections.
+		if ( ! empty( $_POST['date_from'] ) ) {
+			$where_parts[] = 'DATE(visit_timestamp) >= %s';
+			$values[]      = sanitize_text_field( wp_unslash( $_POST['date_from'] ) );
+		}
+		if ( ! empty( $_POST['date_to'] ) ) {
+			$where_parts[] = 'DATE(visit_timestamp) <= %s';
+			$values[]      = sanitize_text_field( wp_unslash( $_POST['date_to'] ) );
+		}
+		if ( ! empty( $_POST['date'] ) ) {
+			$where_parts[] = 'DATE(visit_timestamp) = %s';
+			$values[]      = sanitize_text_field( wp_unslash( $_POST['date'] ) );
+		}
+
+		$where_sql = $base_where;
+		if ( ! empty( $where_parts ) ) {
+			$where_sql .= ' AND ' . implode( ' AND ', $where_parts );
+		}
+
+		// Get total count.
+		if ( ! empty( $values ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$total_rows = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table_name} WHERE {$where_sql}", $values ) );
+		} else {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$total_rows = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name} WHERE {$where_sql}" );
+		}
+
+		$total_pages = max( 1, (int) ceil( $total_rows / $per_page ) );
+		$all_values  = array_merge( $values, array( $per_page, $offset ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$query = $wpdb->prepare(
+			"SELECT {$select} FROM {$table_name} WHERE {$where_sql} ORDER BY visit_timestamp DESC LIMIT %d OFFSET %d",
+			$all_values
+		);
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->get_results( $query, ARRAY_A );
+
+		wp_send_json_success( array(
+			'rows'        => $rows,
+			'page'        => $page,
+			'total_pages' => $total_pages,
+			'total_rows'  => $total_rows,
+		) );
+	}
+
+	/**
+	 * AJAX handler for the AI Citations card drill-down.
+	 *
+	 * Returns the exact citation visits behind a card row (platform / country /
+	 * browser / device / page-type / page), honouring the active date filter.
+	 * Uses the same bucket logic (TA_Citation_Query) as the card counts, so the
+	 * drill-down row count always reconciles with the number that was clicked.
+	 *
+	 * @since 3.6.0
+	 * @return void
+	 */
+	public function ajax_citations_drilldown() {
+		check_ajax_referer( 'ta_analytics_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Unauthorized', 403 );
+		}
+
+		global $wpdb;
+		$table  = $wpdb->prefix . 'ta_bot_analytics';
+		$dim    = sanitize_key( $_POST['dim'] ?? '' );
+		$val    = isset( $_POST['val'] ) ? wp_unslash( $_POST['val'] ) : '';
+		$page   = max( 1, intval( $_POST['page'] ?? 1 ) );
+		$export = ! empty( $_POST['export'] );
+		$per    = $export ? 5000 : 15;
+		$offset = ( $page - 1 ) * $per;
+
+		// All clauses are built from the trusted helper + esc_sql'd values, so the
+		// string is safe to interpolate directly (no %-placeholder prepare needed).
+		$where = TA_Citation_Query::base_where_clauses();
+
+		switch ( $dim ) {
+			case 'platform':
+				$where[] = "ai_platform = '" . esc_sql( sanitize_text_field( $val ) ) . "'";
+				break;
+			case 'country':
+				$where[] = "country_code = '" . esc_sql( sanitize_text_field( $val ) ) . "'";
+				break;
+			case 'browser':
+				$where[] = TA_Citation_Query::browser_where( sanitize_text_field( $val ) );
+				break;
+			case 'device':
+				$where[] = TA_Citation_Query::device_where( sanitize_text_field( $val ) );
+				break;
+			case 'pagetype':
+				$where[] = TA_Citation_Query::pagetype_where( sanitize_text_field( $val ) );
+				break;
+			case 'page':
+				$where[] = "url = '" . esc_sql( esc_url_raw( $val ) ) . "'";
+				break;
+		}
+
+		$date_ops = array( 'date_from' => '>=', 'date_to' => '<=', 'date' => '=' );
+		foreach ( $date_ops as $key => $op ) {
+			if ( ! empty( $_POST[ $key ] ) ) {
+				$where[] = "DATE(visit_timestamp) {$op} '" . esc_sql( sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) ) . "'";
+			}
+		}
+
+		$where_sql = implode( ' AND ', $where );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where_sql}" );
+		$rows  = $wpdb->get_results(
+			"SELECT ai_platform, url, post_title, search_query, referer, user_agent, client_user_agent, country_code, content_type, post_type, visit_timestamp
+			FROM {$table} WHERE {$where_sql}
+			ORDER BY visit_timestamp DESC LIMIT {$per} OFFSET {$offset}",
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		wp_send_json_success( array(
+			'rows'        => $rows,
+			'total'       => $total,
+			'page'        => $page,
+			'total_pages' => max( 1, (int) ceil( $total / $per ) ),
+			'per'         => $per,
+		) );
 	}
 
 	/**
@@ -821,9 +1072,10 @@ class TA_Admin_AJAX_Analytics {
 		$metric = isset( $_POST['metric'] ) ? sanitize_text_field( wp_unslash( $_POST['metric'] ) ) : '';
 
 		$analytics = TA_Bot_Analytics::get_instance();
-		$summary   = $analytics->get_summary( array() );
-		$bot_stats = $analytics->get_visits_by_bot( array() );
-		$top_pages = $analytics->get_top_pages( array(), 20 );
+		$bot_only  = array( 'exclude_traffic_type' => 'citation_click' );
+		$summary   = $analytics->get_summary( $bot_only );
+		$bot_stats = $analytics->get_visits_by_bot( $bot_only );
+		$top_pages = $analytics->get_top_pages( $bot_only, 20 );
 
 		$response = array();
 
@@ -842,6 +1094,9 @@ class TA_Admin_AJAX_Analytics {
 				break;
 			case 'verified_bots':
 				$response = $this->get_verification_details( $summary, $bot_stats );
+				break;
+			case 'pages_per_session':
+				$response = $this->get_pages_per_session_details();
 				break;
 			default:
 				wp_send_json_error( array( 'message' => 'Invalid metric' ) );
@@ -891,13 +1146,10 @@ class TA_Admin_AJAX_Analytics {
 
 		foreach ( $bot_stats as $bot ) {
 			$visit_count = (int) ( $bot['count'] ?? $bot['visit_count'] ?? 0 );
-			// All citation clicks share bot_type 'AI_Citation' but have distinct
-			// bot_name (platform). Labelling by bot_type made "AI_Citation" appear
-			// multiple times; use the platform name for citations so each row is
-			// unique and meaningful (crawls still use bot_type).
-			$label       = ( 'AI_Citation' === $bot['bot_type'] && ! empty( $bot['bot_name'] ) )
-				? $bot['bot_name']
-				: $bot['bot_type'];
+			// bot_name is the human-readable display name (already normalised in DB);
+			// use it so "ChatGPT User" shows instead of raw "ChatGPT-User", and
+			// PerplexityBot / Perplexity variants surface under the same label.
+			$label       = ! empty( $bot['bot_name'] ) ? $bot['bot_name'] : $bot['bot_type'];
 			$labels[]    = $label;
 			$values[]    = $visit_count;
 			$pct         = $total > 0 ? round( ( $visit_count / $total ) * 100, 1 ) . '%' : '0%';
@@ -1000,7 +1252,7 @@ class TA_Admin_AJAX_Analytics {
 		$na     = $cache_stats['not_applicable'] ?? 0;
 		$total  = $hits + $misses + $pregen + $na;
 
-		$labels = array( 'Cache Hit', 'Cache Miss', 'Pre-generated', 'N/A' );
+		$labels = array( 'Direct Cache Hit', 'Cache Miss', 'Pre-generated', 'No Cache Data' );
 		$values = array( $hits, $misses, $pregen, $na );
 		$pcts   = array();
 		foreach ( $values as $v ) {
@@ -1018,8 +1270,8 @@ class TA_Admin_AJAX_Analytics {
 
 		return array(
 			'stats'         => array(
-				array( 'label' => __( 'Hit Rate', 'third-audience' ), 'value' => $summary['cache_hit_rate'] . '%' ),
-				array( 'label' => __( 'Cache Hits', 'third-audience' ), 'value' => number_format( $hits ) ),
+				array( 'label' => __( 'Overall Hit Rate (Direct + Pre-generated)', 'third-audience' ), 'value' => $summary['cache_hit_rate'] . '%' ),
+				array( 'label' => __( 'Direct Cache Hits', 'third-audience' ), 'value' => number_format( $hits ) ),
 				array( 'label' => __( 'Cache Misses', 'third-audience' ), 'value' => number_format( $misses ) ),
 			),
 			'chart_title'   => __( 'Cache Status Distribution', 'third-audience' ),
@@ -1095,35 +1347,50 @@ class TA_Admin_AJAX_Analytics {
 	 * @return array Response data.
 	 */
 	private function get_verification_details( $summary, $bot_stats ) {
-		$verified   = $summary['ip_verified_count'];
-		$total      = $summary['total_visits'];
-		$unverified = $total - $verified;
+		$analytics = TA_Bot_Analytics::get_instance();
+		$breakdown = $analytics->get_verification_breakdown_by_bot( 20 );
+		$totals    = $breakdown['totals'];
 
-		$labels = array( __( 'Verified', 'third-audience' ), __( 'Unverified', 'third-audience' ) );
-		$values = array( $verified, $unverified );
-		$pcts   = array(
-			$total > 0 ? round( ( $verified / $total ) * 100, 1 ) . '%' : '0%',
-			$total > 0 ? round( ( $unverified / $total ) * 100, 1 ) . '%' : '0%',
+		$total       = $totals['total'];
+		$verified    = $totals['verified'];
+		$failed      = $totals['failed'];
+		$not_checked = $totals['not_checked'];
+
+		$pct = function ( $n ) use ( $total ) {
+			return $total > 0 ? round( ( $n / $total ) * 100, 1 ) . '%' : '0%';
+		};
+
+		// 3-way split: Verified (legit) / Not Checked (never verified — old rows
+		// or no IP ranges for that provider) / Failed (checked, IP did NOT match
+		// official ranges — possible fake bot).
+		$labels = array(
+			__( 'Verified', 'third-audience' ),
+			__( 'Not Checked', 'third-audience' ),
+			__( 'Failed (Suspicious)', 'third-audience' ),
 		);
+		$values = array( $verified, $not_checked, $failed );
+		$pcts   = array( $pct( $verified ), $pct( $not_checked ), $pct( $failed ) );
 
 		$rows = array();
-		foreach ( $bot_stats as $bot ) {
-			$visit_count = (int) ( $bot['count'] ?? $bot['visit_count'] ?? 0 );
-			$rows[]      = array(
-				'<span class="ta-bot-name">' . esc_html( $bot['bot_type'] ) . '</span>',
-				'<strong>' . number_format( $visit_count ) . '</strong>',
-				isset( $bot['verified_count'] ) ? number_format( $bot['verified_count'] ) : '0',
-				isset( $bot['verified_count'] ) && $visit_count > 0
-					? round( ( $bot['verified_count'] / $visit_count ) * 100, 1 ) . '%'
-					: '0%',
+		foreach ( $breakdown['bots'] as $bot ) {
+			$bot_total = (int) $bot['total'];
+			$rows[]    = array(
+				'<span class="ta-bot-name">' . esc_html( $bot['bot_name'] ) . '</span>',
+				'<strong>' . number_format( $bot_total ) . '</strong>',
+				'<span style="color:#34c759;">' . number_format( (int) $bot['verified'] ) . '</span>',
+				'<span style="color:#8e8e93;">' . number_format( (int) $bot['not_checked'] ) . '</span>',
+				(int) $bot['failed'] > 0
+					? '<span style="color:#ff3b30; font-weight:600;">' . number_format( (int) $bot['failed'] ) . '</span>'
+					: '<span style="color:#8e8e93;">0</span>',
+				$bot_total > 0 ? round( ( (int) $bot['verified'] / $bot_total ) * 100, 1 ) . '%' : '0%',
 			);
 		}
 
 		return array(
 			'stats'         => array(
-				array( 'label' => __( 'Verification Rate', 'third-audience' ), 'value' => $summary['ip_verified_percentage'] . '%' ),
-				array( 'label' => __( 'Verified Visits', 'third-audience' ), 'value' => number_format( $verified ) ),
-				array( 'label' => __( 'Unverified Visits', 'third-audience' ), 'value' => number_format( $unverified ) ),
+				array( 'label' => __( 'Verified', 'third-audience' ), 'value' => number_format( $verified ) . ' (' . $pct( $verified ) . ')' ),
+				array( 'label' => __( 'Not Checked', 'third-audience' ), 'value' => number_format( $not_checked ) . ' (' . $pct( $not_checked ) . ')' ),
+				array( 'label' => __( 'Failed — Suspicious', 'third-audience' ), 'value' => number_format( $failed ) . ' (' . $pct( $failed ) . ')' ),
 			),
 			'chart_title'   => __( 'Verification Status', 'third-audience' ),
 			'chart_type'    => 'doughnut',
@@ -1132,12 +1399,94 @@ class TA_Admin_AJAX_Analytics {
 				'values'      => $values,
 				'percentages' => $pcts,
 			),
-			'table_title'   => __( 'Verification by Bot', 'third-audience' ),
+			'table_title'   => __( 'Verification by Bot — Verified = IP matched official provider ranges · Not Checked = verification never ran (old rows / no published ranges) · Failed = IP did NOT match (possible fake bot)', 'third-audience' ),
 			'table_headers' => array(
 				array( 'label' => __( 'Bot', 'third-audience' ), 'align' => 'left' ),
 				array( 'label' => __( 'Total Visits', 'third-audience' ), 'align' => 'right' ),
 				array( 'label' => __( 'Verified', 'third-audience' ), 'align' => 'right' ),
+				array( 'label' => __( 'Not Checked', 'third-audience' ), 'align' => 'right' ),
+				array( 'label' => __( 'Failed', 'third-audience' ), 'align' => 'right' ),
 				array( 'label' => __( 'Rate', 'third-audience' ), 'align' => 'right' ),
+			),
+			'table_rows'    => $rows,
+		);
+	}
+
+	/**
+	 * Get pages-per-session (crawl depth) breakdown by bot.
+	 *
+	 * Powers the "Pages Per Session" hero card modal — aggregated per bot
+	 * (one row per bot, not per fingerprint/IP like the session modal).
+	 *
+	 * @since 3.5.6
+	 * @return array Response data.
+	 */
+	private function get_pages_per_session_details() {
+		$analytics = TA_Bot_Analytics::get_instance();
+		$top_bots  = $analytics->get_top_bots_by_metric( 'pages_per_session', 20 );
+		$session   = $analytics->get_session_analytics();
+
+		$deepest_bot  = ! empty( $top_bots ) ? $top_bots[0]['bot_type'] : '—';
+		$deepest_avg  = ! empty( $top_bots ) ? round( floatval( $top_bots[0]['pages_per_session_avg'] ), 1 ) : 0;
+
+		$chart_labels = array();
+		$chart_values = array();
+		foreach ( array_slice( $top_bots, 0, 10 ) as $bot ) {
+			$chart_labels[] = $bot['bot_type'];
+			$chart_values[] = round( floatval( $bot['pages_per_session_avg'] ), 1 );
+		}
+
+		$rows = array();
+		foreach ( $top_bots as $bot ) {
+			$pages_avg = round( floatval( $bot['pages_per_session_avg'] ), 1 );
+			$duration  = (int) $bot['session_duration_avg'];
+			if ( $duration <= 0 ) {
+				$duration_label = '-';
+			} elseif ( $duration < 60 ) {
+				$duration_label = $duration . 's';
+			} else {
+				$duration_label = floor( $duration / 60 ) . 'm ' . ( $duration % 60 ) . 's';
+			}
+			// 5+ pages/session = deep indexing, 2-5 = moderate, <2 = shallow.
+			if ( $pages_avg >= 5 ) {
+				$depth_badge = '<span style="color:#34c759; font-weight:600;">' . esc_html__( 'Deep', 'third-audience' ) . '</span>';
+			} elseif ( $pages_avg >= 2 ) {
+				$depth_badge = '<span style="color:#ff9500; font-weight:600;">' . esc_html__( 'Moderate', 'third-audience' ) . '</span>';
+			} else {
+				$depth_badge = '<span style="color:#8e8e93;">' . esc_html__( 'Shallow', 'third-audience' ) . '</span>';
+			}
+			$rows[] = array(
+				'<span class="ta-bot-name">' . esc_html( $bot['bot_type'] ) . '</span>',
+				'<strong>' . number_format( (int) $bot['visit_count'] ) . '</strong>',
+				'<strong>' . $pages_avg . '</strong>',
+				$duration_label,
+				$depth_badge,
+				! empty( $bot['last_seen'] )
+					? esc_html( human_time_diff( strtotime( $bot['last_seen'] ), current_time( 'timestamp' ) ) . ' ago' )
+					: '-',
+			);
+		}
+
+		return array(
+			'stats'         => array(
+				array( 'label' => __( 'Avg Pages/Session (All Bots)', 'third-audience' ), 'value' => $session['avg_pages_per_session'] ),
+				array( 'label' => __( 'Deepest Crawler', 'third-audience' ), 'value' => $deepest_bot . ' (' . $deepest_avg . ')' ),
+				array( 'label' => __( 'Bots Ranked', 'third-audience' ), 'value' => number_format( count( $top_bots ) ) ),
+			),
+			'chart_title'   => __( 'Top 10 Bots by Crawl Depth (Pages per Session)', 'third-audience' ),
+			'chart_type'    => 'bar',
+			'chart_data'    => array(
+				'labels' => $chart_labels,
+				'values' => $chart_values,
+			),
+			'table_title'   => __( 'Crawl Depth by Bot — one row per bot (aggregated across all its IPs). 5+ pages/session = deep, thorough indexing.', 'third-audience' ),
+			'table_headers' => array(
+				array( 'label' => __( 'Bot', 'third-audience' ), 'align' => 'left' ),
+				array( 'label' => __( 'Total Visits', 'third-audience' ), 'align' => 'right' ),
+				array( 'label' => __( 'Pages/Session', 'third-audience' ), 'align' => 'right' ),
+				array( 'label' => __( 'Avg Duration', 'third-audience' ), 'align' => 'right' ),
+				array( 'label' => __( 'Depth', 'third-audience' ), 'align' => 'center' ),
+				array( 'label' => __( 'Last Seen', 'third-audience' ), 'align' => 'right' ),
 			),
 			'table_rows'    => $rows,
 		);

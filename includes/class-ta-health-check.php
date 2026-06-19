@@ -66,6 +66,7 @@ class TA_Health_Check {
 			'cache'     => $this->check_cache(),
 			'system'    => $this->check_system(),
 			'config'    => $this->check_configuration(),
+			'okf'       => $this->check_okf(),
 		);
 
 		// Determine overall status.
@@ -98,6 +99,62 @@ class TA_Health_Check {
 		}
 
 		return $response;
+	}
+
+	/**
+	 * Check OKF bundle conformance.
+	 *
+	 * A bundle conforms to OKF v0.1 if every non-reserved .md file carries a
+	 * non-empty `type` field. Reports degraded if any concept file is missing it.
+	 *
+	 * @since 3.6.0
+	 * @return array OKF health status.
+	 */
+	public function check_okf() {
+		$result = array(
+			'status' => self::STATUS_HEALTHY,
+			'issues' => array(),
+			'data'   => array(),
+		);
+
+		if ( ! get_option( 'ta_enable_okf', true ) ) {
+			$result['data']['status'] = 'OKF bundle disabled';
+			return $result;
+		}
+
+		$store = get_option( 'ta_okf_bundle' );
+		if ( ! is_array( $store ) || empty( $store['files'] ) ) {
+			$result['status']         = self::STATUS_DEGRADED;
+			$result['issues'][]       = __( 'OKF bundle is enabled but has not been generated yet.', 'third-audience' );
+			$result['data']['status'] = 'Not generated';
+			return $result;
+		}
+
+		$non_conformant = 0;
+		foreach ( $store['files'] as $path => $content ) {
+			if ( 'index.md' === $path || 'log.md' === $path ) {
+				continue; // Reserved files carry no concept frontmatter.
+			}
+			if ( ! preg_match( '/^---\s.*\btype:\s*\S/s', (string) $content ) ) {
+				$non_conformant++;
+			}
+		}
+
+		$result['data']['concepts']       = isset( $store['stats']['concepts'] ) ? (int) $store['stats']['concepts'] : 0;
+		$result['data']['non_conformant'] = $non_conformant;
+
+		if ( $non_conformant > 0 ) {
+			$result['status']   = self::STATUS_DEGRADED;
+			$result['issues'][] = sprintf(
+				/* translators: %d: number of non-conformant concept files */
+				__( '%d OKF concept file(s) are missing a non-empty "type" field.', 'third-audience' ),
+				$non_conformant
+			);
+		} else {
+			$result['data']['status'] = 'All concepts conform to OKF v0.1';
+		}
+
+		return $result;
 	}
 
 	/**

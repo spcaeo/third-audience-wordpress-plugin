@@ -121,6 +121,7 @@ class TA_Autoloader {
 
 			// Feature classes
 			'TA_URL_Router'          => 'includes/class-ta-url-router.php',
+			'TA_OKF_Bundle'          => 'includes/class-ta-okf-bundle.php',
 			'TA_Content_Negotiation' => 'includes/class-ta-content-negotiation.php',
 			'TA_Discovery'           => 'includes/class-ta-discovery.php',
 			'TA_Cache_Manager'       => 'includes/class-ta-cache-manager.php',

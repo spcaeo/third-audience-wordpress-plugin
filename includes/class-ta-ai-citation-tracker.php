@@ -72,14 +72,14 @@ class TA_AI_Citation_Tracker {
 			'color'       => '#4285F4',
 		),
 
-		// Google AI Overview (direct detection - no heuristic)
+		// Google Search (includes AI Mode — distinguished at detection time via srsltid param)
 		'www.google.com'   => array(
-			'name'        => 'Google AI Overview',
+			'name'        => 'Google Search',
 			'query_param' => 'q',
 			'color'       => '#4285F4',
 		),
 		'google.com'       => array(
-			'name'        => 'Google AI Overview',
+			'name'        => 'Google Search',
 			'query_param' => 'q',
 			'color'       => '#4285F4',
 		),
@@ -131,6 +131,13 @@ class TA_AI_Citation_Tracker {
 	 * @return array|false Citation data or false if not AI platform traffic.
 	 */
 	public static function detect_citation_traffic() {
+		// Skip browser prefetch requests — Chrome prefetches visible links after page load,
+		// all carrying the original referer → false duplicate citation entries.
+		$sec_fetch_purpose = isset( $_SERVER['HTTP_SEC_FETCH_PURPOSE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_FETCH_PURPOSE'] ) ) : '';
+		if ( 'prefetch' === $sec_fetch_purpose ) {
+			return false;
+		}
+
 		$platform_config = null;
 		$search_query    = null;
 		$detection_method = null;
@@ -207,6 +214,17 @@ class TA_AI_Citation_Tracker {
 
 			// Direct platform match — confidence 0.95 for all known platforms.
 			$confidence_score = 0.95;
+		}
+
+		// For Google Search: upgrade to "Google AI Mode" when srsltid is present in the
+		// landing URL (most reliable signal), OR when the referer contains udm=50
+		// (Google's internal parameter for AI Mode searches — not present on regular organic).
+		if ( 'Google Search' === $platform_config['name'] ) {
+			$srsltid       = isset( $_GET['srsltid'] ) ? sanitize_text_field( wp_unslash( $_GET['srsltid'] ) ) : '';
+			$referer_query = isset( $parsed_url['query'] ) ? $parsed_url['query'] : '';
+			if ( ! empty( $srsltid ) || false !== strpos( $referer_query, 'udm=50' ) ) {
+				$platform_config['name'] = 'Google AI Mode';
+			}
 		}
 
 		// Determine source and medium (similar to Google Analytics).
@@ -494,11 +512,46 @@ class TA_AI_Citation_Tracker {
 	 * @return string Hex color code.
 	 */
 	public static function get_platform_color( $platform_name ) {
+		// Case-insensitive keyword match so real DB variants ("Chatgpt",
+		// "Bing ai", "Hidden Referrer (Claude)", "Google AI Overview",
+		// "Claude [Referrer]") all resolve to the correct brand colour
+		// instead of falling back to the default purple.
+		$n = strtolower( (string) $platform_name );
+		if ( '' !== $n ) {
+			if ( false !== strpos( $n, 'chatgpt' ) || false !== strpos( $n, 'openai' ) || false !== strpos( $n, 'gpt' ) ) {
+				return '#10A37F';
+			}
+			if ( false !== strpos( $n, 'perplexity' ) ) {
+				return '#1FB6D0';
+			}
+			if ( false !== strpos( $n, 'claude' ) || false !== strpos( $n, 'anthropic' ) ) {
+				return '#D97757';
+			}
+			if ( false !== strpos( $n, 'gemini' ) || false !== strpos( $n, 'bard' ) ) {
+				return '#4285F4';
+			}
+			if ( false !== strpos( $n, 'copilot' ) ) {
+				return '#00BCF2';
+			}
+			if ( false !== strpos( $n, 'bing' ) ) {
+				return '#008373';
+			}
+			if ( false !== strpos( $n, 'google' ) ) {
+				return '#4285F4';
+			}
+			if ( false !== strpos( $n, 'you.com' ) ) {
+				return '#8B5CF6';
+			}
+			if ( false !== strpos( $n, 'brave' ) ) {
+				return '#FB542B';
+			}
+		}
+		// Fall back to an exact name match, then default purple.
 		foreach ( self::$ai_platforms as $config ) {
 			if ( $config['name'] === $platform_name ) {
 				return $config['color'];
 			}
 		}
-		return '#8B5CF6'; // Default purple.
+		return '#8B5CF6';
 	}
 }

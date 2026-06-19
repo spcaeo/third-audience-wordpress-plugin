@@ -88,5 +88,13 @@ class TA_Discovery {
             '<link rel="alternate" type="text/plain" href="%s" title="Text version" />' . "\n",
             esc_url($text_url)
         );
+
+        // Phase 5: advertise the OKF bundle index so agents can discover it.
+        if (get_option('ta_enable_okf', true)) {
+            printf(
+                '<link rel="alternate" type="text/markdown" href="%s" title="OKF bundle" />' . "\n",
+                esc_url(home_url('/okf/index.md'))
+            );
+        }
     }
 }

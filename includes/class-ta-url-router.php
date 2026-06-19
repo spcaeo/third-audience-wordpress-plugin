@@ -139,6 +139,38 @@ class TA_URL_Router {
 			return;
 		}
 
+		// Real users arriving via an AI platform citation (e.g. Perplexity indexed the
+		// .md URL and a human clicks it) should land on the normal HTML page, not raw
+		// markdown. We detect this by checking the HTTP Referer: if it comes from a
+		// known AI platform domain AND the visitor is not a bot, redirect to HTML.
+		// Direct access (developer testing, no referer) continues to serve markdown.
+		$ua_string = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+		$bot_info  = $this->bot_analytics->detect_bot( $ua_string );
+		if ( false === $bot_info ) {
+			$http_referer = isset( $_SERVER['HTTP_REFERER'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '';
+			if ( $http_referer ) {
+				$ai_referer_domains = array(
+					'chat.openai.com', 'chatgpt.com', 'openai.com',
+					'perplexity.ai',
+					'claude.ai',
+					'gemini.google.com', 'bard.google.com',
+					'copilot.microsoft.com',
+					'bing.com', 'www.bing.com',
+				);
+				$referer_host = strtolower( wp_parse_url( $http_referer, PHP_URL_HOST ) ?: '' );
+				foreach ( $ai_referer_domains as $ai_domain ) {
+					if ( $referer_host === $ai_domain ||
+						( strlen( $referer_host ) > strlen( $ai_domain ) &&
+						  substr( $referer_host, -( strlen( $ai_domain ) + 1 ) ) === '.' . $ai_domain ) ) {
+						$raw_path   = get_query_var( 'ta_path' );
+						$clean_path = $raw_path ? '/' . ltrim( $raw_path, '/' ) . '/' : '/';
+						wp_redirect( home_url( $clean_path ), 302 );
+						exit;
+					}
+				}
+			}
+		}
+
 		// Start tracking request time for analytics.
 		$request_start_time = microtime( true );
 

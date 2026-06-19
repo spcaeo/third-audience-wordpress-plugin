@@ -56,6 +56,8 @@ $where_clauses = array(
 	"url NOT LIKE '%admin-ajax.php%'",
 	"url NOT LIKE '%/wp-cron%'",
 	"url NOT LIKE '%/xmlrpc%'",
+	// Google Search and Google AI Mode are shown separately — not in LLM/AI citation counts.
+	"ai_platform NOT IN ('Google Search', 'Google AI Mode')",
 );
 
 if ( ! empty( $filters['platform'] ) ) {
@@ -80,27 +82,32 @@ if ( ! empty( $filters['search'] ) ) {
 	$where_clauses[] = $wpdb->prepare( '(url LIKE %s OR post_title LIKE %s OR search_query LIKE %s)', $search_term, $search_term, $search_term );
 }
 
-// NEW: Filter by browser — check client_user_agent first (real browser UA), fall back to user_agent.
+// Filter by browser — same bucket logic as the Browsers card + drill-down
+// (TA_Citation_Query), so the count and its detail rows always reconcile.
 if ( ! empty( $filters['browser'] ) ) {
-	$browser_term = '%' . $wpdb->esc_like( $filters['browser'] ) . '%';
-	$where_clauses[] = $wpdb->prepare(
-		'(COALESCE(client_user_agent, user_agent) LIKE %s)',
-		$browser_term
-	);
+	$where_clauses[] = TA_Citation_Query::browser_where( $filters['browser'] );
 }
 
-// NEW: Filter by country code
+// Filter by country code.
 if ( ! empty( $filters['country'] ) ) {
 	$where_clauses[] = $wpdb->prepare( 'country_code = %s', $filters['country'] );
 }
 
-// NEW: Filter by device type — check client_user_agent first (real browser UA), fall back to user_agent.
+// Filter by device type — same bucket logic as the Devices card / drill-down.
 if ( ! empty( $filters['device'] ) ) {
-	if ( 'mobile' === $filters['device'] ) {
-		$where_clauses[] = "(COALESCE(client_user_agent, user_agent) LIKE '%Mobile%' OR COALESCE(client_user_agent, user_agent) LIKE '%iPhone%' OR COALESCE(client_user_agent, user_agent) LIKE '%Android%')";
-	} elseif ( 'desktop' === $filters['device'] ) {
-		$where_clauses[] = "(COALESCE(client_user_agent, user_agent) NOT LIKE '%Mobile%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%iPhone%' AND COALESCE(client_user_agent, user_agent) NOT LIKE '%Android%')";
-	}
+	$where_clauses[] = TA_Citation_Query::device_where( $filters['device'] );
+}
+
+// Filter by page type (post_type bucket) — Page Type card / drill-down.
+if ( ! empty( $_GET['pagetype'] ) ) {
+	$filters['pagetype'] = sanitize_text_field( wp_unslash( $_GET['pagetype'] ) );
+	$where_clauses[]     = TA_Citation_Query::pagetype_where( $filters['pagetype'] );
+}
+
+// Filter by exact page URL — Top Cited Pages drill-down.
+if ( ! empty( $_GET['url'] ) ) {
+	$filters['url']  = esc_url_raw( wp_unslash( $_GET['url'] ) );
+	$where_clauses[] = $wpdb->prepare( 'url = %s', $filters['url'] );
 }
 
 $where_sql = implode( ' AND ', $where_clauses );
@@ -210,6 +217,34 @@ $citations_by_platform = $wpdb->get_results(
 	ARRAY_A
 );
 
+// Citations by browser bucket — same CASE as the drill-down, so each card count
+// and its detail rows reconcile, and all buckets sum to $total_citations.
+$browser_case_sql     = TA_Citation_Query::browser_case();
+$citations_by_browser = $wpdb->get_results(
+	"SELECT {$browser_case_sql} AS browser, COUNT(*) as count
+	FROM {$table_name} WHERE {$where_sql}
+	GROUP BY browser ORDER BY count DESC",
+	ARRAY_A
+);
+
+// Citations by device bucket (mobile / desktop) — sums to $total_citations.
+$device_case_sql     = TA_Citation_Query::device_case();
+$citations_by_device = $wpdb->get_results(
+	"SELECT {$device_case_sql} AS device, COUNT(*) as count
+	FROM {$table_name} WHERE {$where_sql}
+	GROUP BY device ORDER BY count DESC",
+	ARRAY_A
+);
+
+// Citations by page type (post_type bucket) — auto-adapts to the site's post types.
+$pagetype_case_sql     = TA_Citation_Query::pagetype_case();
+$citations_by_pagetype = $wpdb->get_results(
+	"SELECT {$pagetype_case_sql} AS pagetype, COUNT(*) as count
+	FROM {$table_name} WHERE {$where_sql}
+	GROUP BY pagetype ORDER BY count DESC",
+	ARRAY_A
+);
+
 // Recent search queries.
 $recent_queries = $wpdb->get_results(
 	"SELECT
@@ -259,7 +294,83 @@ $recent_citations = $wpdb->get_results(
 	FROM {$table_name}
 	WHERE {$where_sql}
 	ORDER BY visit_timestamp DESC
-	LIMIT 30",
+	LIMIT 15",
+	ARRAY_A
+);
+
+// Organic Search Traffic — Google Search visits (separate from AI citations).
+$google_search_base = array(
+	"traffic_type = 'citation_click'",
+	"ai_platform IN ('Google Search', 'Google AI Mode')",
+	"(client_user_agent IS NOT NULL OR content_type IN ('rest_api', 'ajax') OR user_agent NOT LIKE 'Headless%')",
+	"url NOT LIKE '%/wp-admin%'",
+	"url NOT LIKE '%/wp-login%'",
+);
+$google_search_sql = implode( ' AND ', $google_search_base );
+
+$google_search_total = $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name} WHERE {$google_search_sql}" );
+
+$google_search_today = $wpdb->get_var(
+	$wpdb->prepare(
+		"SELECT COUNT(*) FROM {$table_name} WHERE {$google_search_sql} AND DATE(visit_timestamp) = %s",
+		current_time( 'Y-m-d' )
+	)
+);
+
+$google_ai_mode_total = $wpdb->get_var(
+	"SELECT COUNT(*) FROM {$table_name} WHERE traffic_type = 'citation_click' AND ai_platform = 'Google AI Mode'"
+);
+$google_organic_total = $wpdb->get_var(
+	"SELECT COUNT(*) FROM {$table_name} WHERE traffic_type = 'citation_click' AND ai_platform = 'Google Search'"
+);
+
+$google_search_visits = $wpdb->get_results(
+	"SELECT ai_platform, url, post_title, referer, user_agent, client_user_agent, country_code, content_type, visit_timestamp
+	FROM {$table_name}
+	WHERE {$google_search_sql}
+	ORDER BY visit_timestamp DESC
+	LIMIT 15",
+	ARRAY_A
+);
+
+$llm_per_page       = 15;
+$llm_total_pages    = max( 1, (int) ceil( $total_citations / $llm_per_page ) );
+$google_per_page    = 15;
+$google_total_pages = max( 1, (int) ceil( $google_search_total / $google_per_page ) );
+
+// Crawl → Citation chains: for each recent citation click, find pages the same
+// platform's own bot crawled in the 30 minutes BEFORE the click. This links a
+// bot crawl session to the human visit it produced — topic-level insight into
+// what the AI read before citing us (the user's prompt itself is never sent).
+$crawl_chains = $wpdb->get_results(
+	"SELECT
+		c.id,
+		c.ai_platform,
+		c.url AS cited_url,
+		c.post_title AS cited_title,
+		c.visit_timestamp AS click_time,
+		GROUP_CONCAT(DISTINCT b.url ORDER BY b.visit_timestamp DESC SEPARATOR '||') AS crawled_urls,
+		MAX(b.visit_timestamp) AS last_crawl_time,
+		COUNT(DISTINCT b.id) AS crawl_count
+	FROM {$table_name} c
+	INNER JOIN {$table_name} b
+		ON b.traffic_type = 'bot_crawl'
+		AND b.visit_timestamp BETWEEN DATE_SUB(c.visit_timestamp, INTERVAL 30 MINUTE) AND c.visit_timestamp
+		AND (
+			( c.ai_platform = 'ChatGPT' AND ( b.bot_type IN ('ChatGPT-User', 'GPTBot') OR b.user_agent LIKE '%OAI-SearchBot%' ) )
+			OR ( c.ai_platform = 'Perplexity' AND b.bot_type = 'PerplexityBot' )
+			OR ( c.ai_platform = 'Claude' AND b.bot_type IN ('ClaudeBot', 'anthropic-ai') )
+			OR ( c.ai_platform IN ('Gemini', 'Bard (Gemini)') AND b.bot_type = 'Google-Extended' )
+			OR ( c.ai_platform IN ('Copilot', 'Bing AI') AND b.bot_type LIKE '%bing%' )
+		)
+	WHERE c.traffic_type = 'citation_click'
+		AND c.ai_platform NOT IN ('Google Search', 'Google AI Mode')
+		AND c.visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+		AND c.url NOT LIKE '%/wp-admin%'
+		AND c.url NOT LIKE '%admin-ajax.php%'
+	GROUP BY c.id, c.ai_platform, c.url, c.post_title, c.visit_timestamp
+	ORDER BY c.visit_timestamp DESC
+	LIMIT 10",
 	ARRAY_A
 );
 
@@ -318,6 +429,18 @@ $daily_crawls = $wpdb->get_results(
 	ARRAY_A
 );
 
+// Daily Google (organic + AI Mode) for last 30 days — for the trend chart line.
+$daily_google = $wpdb->get_results(
+	"SELECT DATE(visit_timestamp) as date, COUNT(*) as google
+	FROM {$table_name}
+	WHERE traffic_type = 'citation_click'
+		AND ai_platform IN ('Google Search', 'Google AI Mode')
+		AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+	GROUP BY DATE(visit_timestamp)
+	ORDER BY date ASC",
+	ARRAY_A
+);
+
 // Daily traffic by request type (HTML / MD / Other) — last 30 days.
 // REST API and AJAX fallback records are real browser HTML page visits.
 $daily_by_type_rows = $wpdb->get_results(
@@ -342,11 +465,13 @@ $daily_by_type_rows = $wpdb->get_results(
 $chart_labels      = array();
 $chart_citations   = array();
 $chart_crawls      = array();
+$chart_google      = array();
 $chart_html        = array();
 $chart_md          = array();
 $chart_other       = array();
 $citations_by_date = array();
 $crawls_by_date    = array();
+$google_by_date    = array();
 $html_by_date      = array();
 $md_by_date        = array();
 $other_by_date     = array();
@@ -370,6 +495,9 @@ foreach ( $daily_citations as $row ) {
 foreach ( $daily_crawls as $row ) {
 	$crawls_by_date[ $row['date'] ] = (int) $row['crawls'];
 }
+foreach ( $daily_google as $row ) {
+	$google_by_date[ $row['date'] ] = (int) $row['google'];
+}
 
 // Generate labels for last 30 days.
 for ( $i = 29; $i >= 0; $i-- ) {
@@ -377,6 +505,7 @@ for ( $i = 29; $i >= 0; $i-- ) {
 	$chart_labels[]    = gmdate( 'M j', strtotime( $date ) );
 	$chart_citations[] = isset( $citations_by_date[ $date ] ) ? $citations_by_date[ $date ] : 0;
 	$chart_crawls[]    = isset( $crawls_by_date[ $date ] ) ? $crawls_by_date[ $date ] : 0;
+	$chart_google[]    = isset( $google_by_date[ $date ] ) ? $google_by_date[ $date ] : 0;
 	$chart_html[]      = isset( $html_by_date[ $date ] ) ? $html_by_date[ $date ] : 0;
 	$chart_md[]        = isset( $md_by_date[ $date ] ) ? $md_by_date[ $date ] : 0;
 	$chart_other[]     = isset( $other_by_date[ $date ] ) ? $other_by_date[ $date ] : 0;
@@ -657,58 +786,79 @@ $available_dates = $wpdb->get_results(
 	</div>
 	<?php endif; ?>
 
-	<!-- Date Filter (single-date, right-aligned, always visible) -->
-	<div style="display: flex; justify-content: flex-end; align-items: center; margin-top: 12px; margin-bottom: 4px;">
-		<form method="get" style="display: flex; align-items: center; gap: 8px;">
+	<!-- Date range filter (presets + custom) -->
+	<?php
+	$ta_today = current_time( 'Y-m-d' );
+	$ta_d7    = gmdate( 'Y-m-d', strtotime( '-6 days', current_time( 'timestamp' ) ) );
+	$ta_d30   = gmdate( 'Y-m-d', strtotime( '-29 days', current_time( 'timestamp' ) ) );
+	$ta_from  = $filters['date_from'] ?? '';
+	$ta_to    = $filters['date_to'] ?? '';
+	$ta_keep  = array( 'platform', 'browser', 'country', 'device', 'search', 'pagetype' );
+	$ta_base  = array( 'page' => 'third-audience-ai-citations' );
+	foreach ( $ta_keep as $ta_k ) {
+		if ( ! empty( $filters[ $ta_k ] ) ) {
+			$ta_base[ $ta_k ] = $filters[ $ta_k ];
+		}
+	}
+	$ta_url = function ( $from, $to ) use ( $ta_base ) {
+		$args = $ta_base;
+		if ( $from ) {
+			$args['date_from'] = $from;
+		}
+		if ( $to ) {
+			$args['date_to'] = $to;
+		}
+		return esc_url( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+	};
+	$ta_is_all   = ( empty( $ta_from ) && empty( $ta_to ) && empty( $filters['date'] ) );
+	$ta_is_today = ( $ta_from === $ta_today && $ta_to === $ta_today );
+	$ta_is_7     = ( $ta_from === $ta_d7 && $ta_to === $ta_today );
+	$ta_is_30    = ( $ta_from === $ta_d30 && $ta_to === $ta_today );
+	$ta_btn      = 'display:inline-block;padding:6px 13px;border-radius:7px;font-size:13px;font-weight:500;text-decoration:none;color:#646970;';
+	$ta_act      = 'background:#fff;color:#1d1d1f;box-shadow:0 1px 3px rgba(0,0,0,.12);';
+	?>
+	<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #e5e5ea;border-radius:12px;padding:12px 14px;margin:12px 0 16px;">
+		<span style="font-weight:600;color:#646970;">📅 <?php esc_html_e( 'Date', 'third-audience' ); ?></span>
+		<span style="display:inline-flex;background:#f2f2f7;border-radius:9px;padding:3px;gap:2px;">
+			<a href="<?php echo $ta_url( '', '' ); // phpcs:ignore WordPress.Security.EscapeOutput ?>" style="<?php echo esc_attr( $ta_btn . ( $ta_is_all ? $ta_act : '' ) ); ?>"><?php esc_html_e( 'All Time', 'third-audience' ); ?></a>
+			<a href="<?php echo $ta_url( $ta_today, $ta_today ); // phpcs:ignore WordPress.Security.EscapeOutput ?>" style="<?php echo esc_attr( $ta_btn . ( $ta_is_today ? $ta_act : '' ) ); ?>"><?php esc_html_e( 'Today', 'third-audience' ); ?></a>
+			<a href="<?php echo $ta_url( $ta_d7, $ta_today ); // phpcs:ignore WordPress.Security.EscapeOutput ?>" style="<?php echo esc_attr( $ta_btn . ( $ta_is_7 ? $ta_act : '' ) ); ?>"><?php esc_html_e( 'Last 7 Days', 'third-audience' ); ?></a>
+			<a href="<?php echo $ta_url( $ta_d30, $ta_today ); // phpcs:ignore WordPress.Security.EscapeOutput ?>" style="<?php echo esc_attr( $ta_btn . ( $ta_is_30 ? $ta_act : '' ) ); ?>"><?php esc_html_e( 'Last 30 Days', 'third-audience' ); ?></a>
+		</span>
+		<form method="get" style="display:flex;align-items:center;gap:6px;margin-left:auto;">
 			<input type="hidden" name="page" value="third-audience-ai-citations">
-			<?php if ( ! empty( $filters['platform'] ) ) : ?>
-				<input type="hidden" name="platform" value="<?php echo esc_attr( $filters['platform'] ); ?>">
-			<?php endif; ?>
-			<label style="font-size: 13px; color: #646970; font-weight: 500; white-space: nowrap;">
-				📅 <?php esc_html_e( 'Filter by Date:', 'third-audience' ); ?>
-			</label>
-			<select name="date" onchange="this.form.submit()" style="font-size: 13px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ccd0d4; background: #fff; min-width: 180px;">
-				<option value=""><?php esc_html_e( 'All Time', 'third-audience' ); ?></option>
-				<?php foreach ( $available_dates as $d ) : ?>
-					<option value="<?php echo esc_attr( $d['date'] ); ?>" <?php selected( $filters['date'] ?? '', $d['date'] ); ?>>
-						<?php echo esc_html( gmdate( 'M j, Y', strtotime( $d['date'] ) ) ); ?> (<?php echo esc_html( number_format( $d['count'] ) ); ?>)
-					</option>
-				<?php endforeach; ?>
-			</select>
-			<?php if ( ! empty( $filters['date'] ) ) : ?>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-ai-citations' ) ); ?>" style="font-size: 12px; color: #646970; text-decoration: none; padding: 4px 6px; border: 1px solid #ccd0d4; border-radius: 4px; background: #fff;">
-					✕ <?php esc_html_e( 'Clear', 'third-audience' ); ?>
-				</a>
-			<?php endif; ?>
+			<?php foreach ( $ta_keep as $ta_k ) : ?>
+				<?php if ( ! empty( $filters[ $ta_k ] ) ) : ?>
+					<input type="hidden" name="<?php echo esc_attr( $ta_k ); ?>" value="<?php echo esc_attr( $filters[ $ta_k ] ); ?>">
+				<?php endif; ?>
+			<?php endforeach; ?>
+			<span style="width:1px;height:24px;background:#e5e5ea;margin:0 4px;"></span>
+			<span style="font-size:12px;color:#646970;font-weight:500;display:flex;align-items:center;gap:5px;">📆 <?php esc_html_e( 'Pick a range', 'third-audience' ); ?></span>
+			<input type="date" name="date_from" value="<?php echo esc_attr( $ta_from ); ?>" style="border:1px solid #e5e5ea;border-radius:7px;padding:5px 8px;font-size:13px;">
+			<span>—</span>
+			<input type="date" name="date_to" value="<?php echo esc_attr( $ta_to ); ?>" style="border:1px solid #e5e5ea;border-radius:7px;padding:5px 8px;font-size:13px;">
+			<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply', 'third-audience' ); ?></button>
 		</form>
 	</div>
 
 	<!-- Hero Metrics -->
 	<div class="ta-hero-metrics">
 		<div class="ta-hero-card">
-			<div class="ta-hero-icon">
-				<span class="dashicons dashicons-admin-links"></span>
+			<div class="ta-hero-icon" style="background: linear-gradient(135deg, #007aff, #0a5fd6);">
+				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>
 			</div>
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'Total LLMs Traffic', 'third-audience' ); ?></div>
 				<div class="ta-hero-value"><?php echo number_format( $total_citations ); ?></div>
 				<div class="ta-hero-meta">
-					<?php
-					$today_diff = $citations_today - $citations_yesterday;
-					$diff_color = $today_diff >= 0 ? '#34c759' : '#ff3b30';
-					$diff_sign  = $today_diff >= 0 ? '+' : '';
-					echo number_format( $citations_today ) . ' today';
-					if ( $citations_yesterday > 0 || $citations_today > 0 ) {
-						echo ' <span style="color:' . esc_attr( $diff_color ) . ';font-weight:600;font-size:11px;">(' . esc_html( $diff_sign . $today_diff ) . ' vs yesterday)</span>';
-					}
-					?>
+					<?php echo esc_html( number_format( $citations_today ) . ' today' ); ?>
 				</div>
 			</div>
 		</div>
 
 		<div class="ta-hero-card">
-			<div class="ta-hero-icon">
-				<span class="dashicons dashicons-networking"></span>
+			<div class="ta-hero-icon" style="background: linear-gradient(135deg, #5856d6, #7a3ff0);">
+				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
 			</div>
 			<div class="ta-hero-content">
 				<div class="ta-hero-label"><?php esc_html_e( 'AI Platforms', 'third-audience' ); ?></div>
@@ -719,30 +869,50 @@ $available_dates = $wpdb->get_results(
 
 		<div class="ta-hero-card">
 			<div class="ta-hero-icon" style="background: linear-gradient(135deg, #1FB6D0, #00a3bb);">
-				<span class="dashicons dashicons-search"></span>
+				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>
 			</div>
 			<div class="ta-hero-content">
-				<div class="ta-hero-label"><?php esc_html_e( 'Search Queries', 'third-audience' ); ?></div>
-				<div class="ta-hero-value"><?php echo number_format( $perplexity_queries ); ?></div>
-				<div class="ta-hero-meta"><?php esc_html_e( 'Captured from Perplexity', 'third-audience' ); ?></div>
+				<div class="ta-hero-label"><?php esc_html_e( 'Top Country', 'third-audience' ); ?></div>
+				<?php
+				$ta_top_country = ! empty( $top_countries ) ? $top_countries[0] : null;
+				$ta_tc_pct      = ( $ta_top_country && $total_citations > 0 ) ? round( ( $ta_top_country['count'] / $total_citations ) * 100, 1 ) : 0;
+				?>
+				<div class="ta-hero-value">
+					<?php if ( $ta_top_country ) : ?>
+						<?php echo ta_get_country_flag( $ta_top_country['country_code'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> <?php echo esc_html( $ta_top_country['country_code'] ); ?>
+					<?php else : ?>
+						&mdash;
+					<?php endif; ?>
+				</div>
+				<div class="ta-hero-meta">
+					<?php
+					if ( $ta_top_country ) {
+						/* translators: 1: visit count, 2: percentage share. */
+						printf( esc_html__( '%1$s visits (%2$s%%)', 'third-audience' ), esc_html( number_format( $ta_top_country['count'] ) ), esc_html( $ta_tc_pct ) );
+					} else {
+						esc_html_e( 'No location data yet', 'third-audience' );
+					}
+					?>
+				</div>
 			</div>
 		</div>
 
 		<div class="ta-hero-card">
 			<div class="ta-hero-icon" style="background: linear-gradient(135deg, #34c759, #28a745);">
-				<span class="dashicons dashicons-chart-pie"></span>
+				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15.5A9 9 0 1 1 8.5 3"/><path d="M21 12A9 9 0 0 0 12 3v9z"/></svg>
 			</div>
 			<div class="ta-hero-content">
-				<div class="ta-hero-label"><?php esc_html_e( 'Citation Rate', 'third-audience' ); ?></div>
-				<div class="ta-hero-value"><?php echo esc_html( $overall_citation_rate ); ?>%</div>
+				<div class="ta-hero-label"><?php esc_html_e( 'Avg Citations / Day', 'third-audience' ); ?></div>
+				<?php
+				// Average LLM citations per active day — respects the current filter ($where_sql).
+				$ta_days    = max( 1, (int) $wpdb->get_var( "SELECT COUNT(DISTINCT DATE(visit_timestamp)) FROM {$table_name} WHERE {$where_sql}" ) );
+				$ta_avg_day = round( $total_citations / $ta_days, 1 );
+				?>
+				<div class="ta-hero-value"><?php echo esc_html( $ta_avg_day ); ?></div>
 				<div class="ta-hero-meta">
 					<?php
-					printf(
-						// translators: %1$s = citation clicks (humans), %2$s = bot crawls.
-						esc_html__( '%1$s human clicks vs %2$s bot crawls', 'third-audience' ),
-						'<strong>' . number_format( $total_citations ) . '</strong>',
-						'<strong>' . number_format( $total_crawls ) . '</strong>'
-					);
+					/* translators: %s = number of days with citation traffic. */
+					printf( esc_html__( 'across %s active days', 'third-audience' ), '<strong>' . esc_html( number_format( $ta_days ) ) . '</strong>' );
 					?>
 				</div>
 			</div>
@@ -752,14 +922,29 @@ $available_dates = $wpdb->get_results(
 
 	<!-- Recent LLMs Visits -->
 	<?php if ( ! empty( $recent_citations ) ) : ?>
-		<div class="ta-card" style="margin-top: 20px;">
-			<div class="ta-card-header">
-				<h2><?php esc_html_e( 'Recent LLMs Visits', 'third-audience' ); ?></h2>
-				<p class="description" style="margin-top: 8px;">
-					<?php esc_html_e( 'All recent LLM visits from AI platforms with timing and referrer details.', 'third-audience' ); ?>
+		<?php $ta_recent_collapsed = ( ! empty( $filters['date'] ) || ! empty( $filters['date_from'] ) || ! empty( $filters['date_to'] ) ); ?>
+		<style>
+			.ta-recent-head{cursor:pointer;}
+			.ta-recent-pill{margin-left:auto;font-size:12px;font-weight:600;color:#646970;background:#f2f2f7;border-radius:20px;padding:2px 10px;}
+			.ta-recent-twist{font-size:14px;color:#9b9ba0;transition:transform .18s;margin-left:8px;}
+			.ta-recent-collapsed .ta-recent-twist{transform:rotate(-90deg);}
+			.ta-recent-collapsed > *:not(.ta-card-header){display:none !important;}
+			.ta-recent-collapsed .ta-card-body{display:none !important;}
+			.ta-recent-collapsed .ta-card-header{border-bottom:none !important;padding:14px 20px !important;}
+			.ta-recent-collapsed .ta-card-header .description{display:none !important;}
+		</style>
+		<div class="ta-card ta-recent-card<?php echo $ta_recent_collapsed ? ' ta-recent-collapsed' : ''; ?>" id="ta-recent-card" style="margin-top: 20px;">
+			<div class="ta-card-header ta-recent-head" id="ta-recent-head">
+				<h2 style="display:flex;align-items:center;gap:10px;margin:0;">
+					🕒 <?php esc_html_e( 'Recent LLMs Visits', 'third-audience' ); ?>
+					<span class="ta-recent-pill"><?php echo esc_html( number_format( $total_citations ) ); ?> <?php esc_html_e( 'total', 'third-audience' ); ?></span>
+					<span class="ta-recent-twist">&#9662;</span>
+				</h2>
+				<p class="description" style="margin-top: 6px; font-size: 13px; color: #646970;">
+					<?php esc_html_e( 'Every visit from an AI platform (ChatGPT, Claude, Perplexity, Gemini, etc.) that clicked a link to your site. Google Search is tracked separately below.', 'third-audience' ); ?>
 				</p>
 			</div>
-			<div class="ta-card-body" style="overflow-x: auto;">
+			<div class="ta-card-body" style="overflow-x: auto; padding: 0;">
 				<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
 					<thead>
 						<tr>
@@ -773,7 +958,7 @@ $available_dates = $wpdb->get_results(
 							<th><?php esc_html_e( 'Referrer', 'third-audience' ); ?></th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody id="ta-llm-tbody">
 						<?php foreach ( $recent_citations as $citation ) : ?>
 							<?php
 							$ts = strtotime( $citation['visit_timestamp'] );
@@ -862,70 +1047,625 @@ $available_dates = $wpdb->get_results(
 					</tbody>
 				</table>
 			</div>
+			<div style="display:flex; align-items:center; justify-content:center; gap:14px; padding:14px 0; border-top:1px solid #f0f0f1;">
+				<button id="ta-llm-prev" class="button" disabled>&larr; <?php esc_html_e( 'Prev', 'third-audience' ); ?></button>
+				<span style="font-size:13px; color:#646970;">
+					<?php esc_html_e( 'Page', 'third-audience' ); ?> <strong id="ta-llm-current-page">1</strong> <?php esc_html_e( 'of', 'third-audience' ); ?> <strong id="ta-llm-total-pages"><?php echo esc_html( $llm_total_pages ); ?></strong>
+					<span style="color:#ccd0d4; margin:0 6px;">&middot;</span>
+					<span style="font-size:12px;"><?php echo esc_html( number_format( $total_citations ) ); ?> <?php esc_html_e( 'total', 'third-audience' ); ?></span>
+				</span>
+				<button id="ta-llm-next" class="button" <?php echo $llm_total_pages <= 1 ? 'disabled' : ''; ?>><?php esc_html_e( 'Next', 'third-audience' ); ?> &rarr;</button>
+				<span id="ta-llm-spinner" style="display:none; margin-left:4px; vertical-align:middle;"><span class="spinner is-active" style="float:none;"></span></span>
+			</div>
 		</div>
 	<?php endif; ?>
 
-	<!-- LLM Traffic -->
-	<?php if ( ! empty( $top_cited_pages ) ) : ?>
-		<div class="ta-card" style="margin-top: 20px;">
-			<div class="ta-card-header">
-				<h2><?php esc_html_e( 'LLM Traffic', 'third-audience' ); ?></h2>
+	<?php
+	// ===== Drill-down cards (click a row → modal with the exact visits) =====
+	$ta_max = function ( $items ) {
+		$m = 0;
+		foreach ( $items as $it ) {
+			$m = max( $m, (int) $it['count'] );
+		}
+		return $m ? $m : 1;
+	};
+	// Distinct palette by rank (no repeats) so platform variants don't collapse
+	// to the same brand colour; matches the doughnut, which uses $platform_colors.
+	$ta_platforms = array();
+	$ta_pal_i     = 0;
+	foreach ( $citations_by_platform as $r ) {
+		$ta_platforms[] = array(
+			'key'   => $r['ai_platform'],
+			'label' => $r['ai_platform'],
+			'count' => (int) $r['count'],
+			'color' => $platform_colors[ $ta_pal_i % count( $platform_colors ) ],
+		);
+		$ta_pal_i++;
+	}
+	$ta_countries = array();
+	foreach ( $top_countries as $r ) {
+		$ta_countries[] = array( 'key' => $r['country_code'], 'label' => trim( ta_get_country_flag( $r['country_code'] ) . ' ' . $r['country_code'] ), 'count' => (int) $r['count'], 'color' => '#007aff' );
+	}
+	$ta_browsers = array();
+	foreach ( $citations_by_browser as $r ) {
+		$ta_browsers[] = array( 'key' => $r['browser'], 'label' => $r['browser'], 'count' => (int) $r['count'], 'color' => '#007aff' );
+	}
+	$ta_pages = array();
+	foreach ( $top_cited_pages as $r ) {
+		$ta_pages[] = array( 'key' => $r['url'], 'label' => ta_page_display_title( $r['post_title'], $r['url'] ), 'count' => (int) $r['citation_count'], 'color' => '#007aff' );
+	}
+	$ta_devices = array();
+	foreach ( $citations_by_device as $r ) {
+		$ta_devices[] = array( 'key' => $r['device'], 'label' => ( 'mobile' === $r['device'] ? '📱 Mobile' : '🖥️ Desktop' ), 'count' => (int) $r['count'], 'color' => '#007aff' );
+	}
+	$ta_pagetypes = array();
+	foreach ( $citations_by_pagetype as $r ) {
+		$ta_pagetypes[] = array( 'key' => $r['pagetype'], 'label' => TA_Citation_Query::pagetype_label( $r['pagetype'] ), 'count' => (int) $r['count'], 'color' => '#007aff' );
+	}
+	$ta_psum = 0;
+	foreach ( $ta_platforms as $p ) {
+		$ta_psum += $p['count'];
+	}
+
+	// Per-card accent colours + clean SVG icon badges (match the approved demo).
+	$ta_icon_bg = array(
+		'platform' => '#5856d6',
+		'country'  => '#1FB6D0',
+		'browser'  => '#007aff',
+		'page'     => '#ff9500',
+		'device'   => '#34c759',
+		'pagetype' => '#af52de',
+	);
+	$ta_icons = array(
+		'platform' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>',
+		'country'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>',
+		'browser'  => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>',
+		'page'     => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>',
+		'device'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+		'pagetype' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2A2 2 0 0 1 2.8 11V5a2 2 0 0 1 2-2h6.2a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.6z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor"/></svg>',
+	);
+
+	$ta_render_card = function ( $title, $dim, $items, $hint ) use ( $ta_max, $total_citations, $ta_icon_bg, $ta_icons ) {
+		$max      = $ta_max( $items );
+		$accent   = isset( $ta_icon_bg[ $dim ] ) ? $ta_icon_bg[ $dim ] : '#007aff';
+		$icon_svg = isset( $ta_icons[ $dim ] ) ? $ta_icons[ $dim ] : '';
+		ob_start();
+		?>
+		<div class="ta-dd-card">
+			<h2><span class="ta-dd-ic" style="background:<?php echo esc_attr( $accent ); ?>"><?php echo $icon_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static inline SVG ?></span><?php echo esc_html( $title ); ?></h2>
+			<div class="ta-dd-rows">
+				<?php if ( empty( $items ) ) : ?>
+					<div class="ta-dd-hint"><?php esc_html_e( 'No data in this range.', 'third-audience' ); ?></div>
+				<?php else : ?>
+					<?php
+					foreach ( array_slice( $items, 0, 8 ) as $it ) :
+						$w        = $max ? round( $it['count'] / $max * 100 ) : 0;
+						$pct      = $total_citations ? round( $it['count'] / $total_citations * 100, 1 ) : 0;
+						// Platforms keep their brand colour; every other card uses its accent.
+						$rowcolor = ( 'platform' === $dim ) ? $it['color'] : $accent;
+						?>
+						<div class="ta-dd-row" data-dim="<?php echo esc_attr( $dim ); ?>" data-val="<?php echo esc_attr( $it['key'] ); ?>" data-label="<?php echo esc_attr( $it['label'] ); ?>">
+							<span class="ta-dd-dot" style="background:<?php echo esc_attr( $rowcolor ); ?>"></span>
+							<span class="ta-dd-name"><?php echo esc_html( $it['label'] ); ?></span>
+							<span class="ta-dd-bar"><span style="width:<?php echo esc_attr( $w ); ?>%;background:<?php echo esc_attr( $rowcolor ); ?>"></span></span>
+							<span class="ta-dd-num"><?php echo esc_html( number_format( $it['count'] ) ); ?></span>
+							<span class="ta-dd-pct"><?php echo esc_html( $pct ); ?>%</span>
+							<span class="ta-dd-chev">›</span>
+						</div>
+					<?php endforeach; ?>
+				<?php endif; ?>
 			</div>
-			<div class="ta-card-body" style="overflow-x: auto;">
-				<table class="wp-list-table widefat fixed striped" style="min-width: 950px;">
-					<thead>
-						<tr>
-							<th><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
-							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
-							<th style="width: 70px; text-align: center;"><?php esc_html_e( '% Total', 'third-audience' ); ?></th>
-							<th style="width: 75px; text-align: center;"><?php esc_html_e( 'Platforms', 'third-audience' ); ?></th>
-							<th style="width: 110px; text-align: center;"><?php esc_html_e( 'First Cited', 'third-audience' ); ?></th>
-							<th style="width: 110px; text-align: center;"><?php esc_html_e( 'Last Cited', 'third-audience' ); ?></th>
-							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Days', 'third-audience' ); ?></th>
-							<th style="width: 70px; text-align: center;"><?php esc_html_e( 'Avg/Day', 'third-audience' ); ?></th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $top_cited_pages as $page ) : ?>
-							<?php
-							$first_ts = strtotime( $page['first_cited'] );
-							$last_ts = strtotime( $page['last_cited'] );
-							$days_span = max( 1, ceil( ( $last_ts - $first_ts ) / 86400 ) );
-							$avg_per_day = round( $page['citation_count'] / $days_span, 1 );
-							$percent_of_total = $total_citations > 0 ? round( ( $page['citation_count'] / $total_citations ) * 100, 1 ) : 0;
-							$short_url = strlen( $page['url'] ) > 45 ? substr( $page['url'], 0, 42 ) . '...' : $page['url'];
-							?>
-							<tr>
-								<td>
-									<strong style="font-size: 13px;"><?php echo esc_html( ta_page_display_title( $page['post_title'], $page['url'] ) ); ?></strong>
-									<br><code style="font-size: 10px; color: #8e8e93;"><?php echo esc_html( $short_url ); ?></code>
-								</td>
-								<td style="text-align: center;"><strong style="font-size: 14px;"><?php echo number_format( $page['citation_count'] ); ?></strong></td>
-								<td style="text-align: center;">
-									<span style="background: rgba(0,122,255,<?php echo esc_attr( min( 0.5, $percent_of_total / 100 ) ); ?>); padding: 2px 8px; border-radius: 10px; font-size: 11px;">
-										<?php echo esc_html( $percent_of_total ); ?>%
-									</span>
-								</td>
-								<td style="text-align: center; font-weight: 500;"><?php echo number_format( $page['platforms'] ); ?></td>
-								<td style="text-align: center; font-size: 11px; color: #646970;">
-									<?php echo esc_html( gmdate( 'M j, Y', $first_ts ) ); ?>
-									<br><small><?php echo esc_html( gmdate( 'g:i A', $first_ts ) ); ?></small>
-								</td>
-								<td style="text-align: center; font-size: 11px; color: #646970;">
-									<?php echo esc_html( gmdate( 'M j, Y', $last_ts ) ); ?>
-									<br><small><?php echo esc_html( gmdate( 'g:i A', $last_ts ) ); ?></small>
-								</td>
-								<td style="text-align: center; font-size: 12px;"><?php echo esc_html( $days_span ); ?></td>
-								<td style="text-align: center; font-weight: 600; color: <?php echo $avg_per_day >= 1 ? '#34c759' : '#646970'; ?>;">
-									<?php echo esc_html( $avg_per_day ); ?>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			</div>
+			<div class="ta-dd-hint"><?php echo esc_html( $hint ); ?></div>
 		</div>
+		<?php
+		return ob_get_clean();
+	};
+	?>
+
+	<style>
+		.ta-dd-reconcile{font-size:12px;color:#11823b;background:#eafaf0;border:1px solid #c9efd6;border-radius:8px;padding:8px 12px;margin:6px 0 16px;}
+		.ta-dd-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+		.ta-dd-card{background:#fff;border:1px solid #e5e5ea;border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+		.ta-dd-card h2{font-size:14px;margin:0;padding:13px 16px;border-bottom:1px solid #e5e5ea;display:flex;align-items:center;gap:10px;}
+		.ta-dd-ic{width:27px;height:27px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;color:#fff;flex:none;}
+		.ta-dd-ic svg{width:15px;height:15px;}
+		.ta-dd-rows{padding:6px 8px;}
+		.ta-dd-row{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:8px;cursor:pointer;}
+		.ta-dd-row:hover{background:#f5f8ff;}
+		.ta-dd-dot{width:9px;height:9px;border-radius:50%;flex:none;}
+		.ta-dd-name{font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;}
+		.ta-dd-bar{flex:1;height:6px;background:#eef0f2;border-radius:4px;overflow:hidden;}
+		.ta-dd-bar>span{display:block;height:100%;border-radius:4px;}
+		.ta-dd-num{font-weight:700;width:48px;text-align:right;}
+		.ta-dd-pct{width:46px;text-align:right;color:#646970;font-size:12px;}
+		.ta-dd-chev{color:#c7c7cc;}
+		.ta-dd-hint{font-size:11px;color:#9b9ba0;padding:4px 14px 12px;}
+		.ta-dd-scrim{position:fixed;inset:0;background:rgba(15,17,21,.45);opacity:0;pointer-events:none;transition:opacity .18s;z-index:99998;display:flex;align-items:center;justify-content:center;padding:24px;}
+		.ta-dd-scrim.open{opacity:1;pointer-events:auto;}
+		.ta-dd-modal{position:relative;background:#fff;width:min(1080px,96vw);max-height:90vh;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;transform:scale(.96);transition:transform .18s;box-shadow:0 30px 80px rgba(0,0,0,.35);}
+		.ta-dd-scrim.open .ta-dd-modal{transform:scale(1);}
+		.ta-dd-mhead{padding:18px 24px 16px;border-bottom:1px solid #e5e5ea;background:linear-gradient(180deg,#f6f9ff,#fff);}
+		.ta-dd-crumb{font-size:11px;color:#646970;text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+		.ta-dd-trow{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:7px;padding-right:40px;}
+		.ta-dd-mactions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+		.ta-dd-exp{border:0;background:#007aff;color:#fff;width:36px;height:36px;border-radius:9px;padding:0;font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+		.ta-dd-exp:hover{background:#0a5fd6;}
+		.ta-dd-close{position:absolute;top:13px;right:13px;z-index:3;border:0;background:#eceef2;width:36px;height:36px;border-radius:10px;font-size:20px;cursor:pointer;color:#646970;line-height:1;}
+		.ta-dd-close:hover{background:#e1e4ea;color:#1d1d1f;}
+		.ta-dd-modal h3{margin:0;font-size:23px;}
+		.ta-dd-chips{display:flex;gap:8px;align-items:center;}
+		.ta-dd-chip{border:1px solid #e5e5ea;border-radius:9px;padding:5px 12px;text-align:center;white-space:nowrap;}
+		.ta-dd-chip .l{font-size:9.5px;text-transform:uppercase;display:block;opacity:.8;}
+		.ta-dd-chip .v{font-size:15px;font-weight:800;line-height:1.1;}
+		.ta-dd-chip:nth-child(1){background:#eaf2ff;border-color:#cfe0ff;color:#0a3a86;}
+		.ta-dd-chip:nth-child(2){background:#eafaf0;border-color:#c9efd6;color:#0a6b2d;}
+		.ta-dd-mbody{overflow:auto;}
+		.ta-dd-mbody table{width:100%;border-collapse:collapse;}
+		.ta-dd-mbody th,.ta-dd-mbody td{text-align:left;padding:11px 16px;font-size:12.5px;border-bottom:1px solid #f0f0f1;}
+		.ta-dd-mbody th{position:sticky;top:0;background:#fafafa;color:#646970;text-transform:uppercase;font-size:11px;}
+		.ta-dd-mbody tbody tr:nth-child(even){background:#fafbfd;}
+		.ta-dd-mbody tbody tr:hover{background:#f0f5ff;}
+		.ta-dd-mbody code{font-size:10px;color:#8e8e93;}
+		.ta-dd-badge{display:inline-block;border:1px solid #e5e5ea;border-radius:20px;padding:3px 11px;font-size:11px;font-weight:600;white-space:nowrap;background:#fafafa;}
+		.ta-dd-mbody td:first-child{width:150px;}
+		.ta-dd-mbody tbody td{vertical-align:middle;}
+		.ta-dd-foot{display:flex;align-items:center;justify-content:center;gap:14px;padding:13px;border-top:1px solid #e5e5ea;font-size:13px;color:#646970;}
+		.ta-dd-foot button{border:1px solid #e5e5ea;background:#fff;border-radius:7px;padding:6px 13px;cursor:pointer;}
+		.ta-dd-foot button:disabled{opacity:.4;cursor:default;}
+		@media(max-width:980px){.ta-dd-grid{grid-template-columns:repeat(2,1fr)}}
+	</style>
+
+	<div class="ta-dd-grid">
+		<?php
+		// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- card markup is escaped inside the closure.
+		echo $ta_render_card( __( 'Platforms', 'third-audience' ), 'platform', $ta_platforms, __( 'Citations grouped by AI platform. Click a row → details.', 'third-audience' ) );
+		echo $ta_render_card( __( 'Countries', 'third-audience' ), 'country', $ta_countries, __( 'Where the traffic came from.', 'third-audience' ) );
+		echo $ta_render_card( __( 'Browsers', 'third-audience' ), 'browser', $ta_browsers, __( 'Visitor browser (real navigator UA).', 'third-audience' ) );
+		echo $ta_render_card( __( 'Top Cited Pages', 'third-audience' ), 'page', $ta_pages, __( 'Most-clicked pages from AI answers.', 'third-audience' ) );
+		echo $ta_render_card( __( 'Devices', 'third-audience' ), 'device', $ta_devices, __( 'Desktop vs mobile split.', 'third-audience' ) );
+		echo $ta_render_card( __( 'Page Type', 'third-audience' ), 'pagetype', $ta_pagetypes, __( 'By post type (auto-adapts to your post types).', 'third-audience' ) );
+		// phpcs:enable
+		?>
+	</div>
+
+	<!-- Drill-down modal -->
+	<div class="ta-dd-scrim" id="ta-dd-scrim">
+		<div class="ta-dd-modal">
+			<button class="ta-dd-close" id="ta-dd-close" aria-label="Close">×</button>
+			<div class="ta-dd-mhead">
+				<span class="ta-dd-crumb" id="ta-dd-crumb"></span>
+				<div class="ta-dd-trow">
+					<h3 id="ta-dd-title"></h3>
+					<div class="ta-dd-mactions">
+						<div class="ta-dd-chips" id="ta-dd-chips"></div>
+						<button class="ta-dd-exp" id="ta-dd-export" title="<?php esc_attr_e( 'Export CSV', 'third-audience' ); ?>" aria-label="<?php esc_attr_e( 'Export CSV', 'third-audience' ); ?>">⬇</button>
+					</div>
+				</div>
+			</div>
+			<div class="ta-dd-mbody"><table><thead id="ta-dd-thead"></thead><tbody id="ta-dd-tbody"></tbody></table></div>
+			<div class="ta-dd-foot" id="ta-dd-foot"></div>
+		</div>
+	</div>
+
+	<script>
+	(function(){
+		'use strict';
+		var nonce     = <?php echo wp_json_encode( wp_create_nonce( 'ta_analytics_nonce' ) ); ?>;
+		var taFilters = <?php echo wp_json_encode( array( 'date_from' => $ta_from, 'date_to' => $ta_to, 'date' => $filters['date'] ?? '' ) ); ?>;
+		var taTotal   = <?php echo (int) $total_citations; ?>;
+		var cur = { dim:'', val:'', label:'', page:1, pages:1, total:0 };
+
+		function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+		var taDecEl = document.createElement('textarea');
+		function dec(s){ taDecEl.innerHTML = String(s==null?'':s); return taDecEl.value; } // decode HTML entities so titles aren't double-escaped (AT&amp;T → AT&T)
+		function flag(cc){ if(!cc||cc.length!==2)return ''; try{ return String.fromCodePoint(cc.toUpperCase().charCodeAt(0)+127397, cc.toUpperCase().charCodeAt(1)+127397); }catch(e){ return ''; } }
+		function uaParse(ua){ var u=(ua||'').toLowerCase(), b='Unknown', os='Unknown', dev='Desktop';
+			if(/edg/.test(u))b='Edge'; else if(/opr|opera/.test(u))b='Opera'; else if(/chrome/.test(u))b='Chrome'; else if(/firefox/.test(u))b='Firefox'; else if(/safari/.test(u))b='Safari';
+			if(/windows/.test(u))os='Windows'; else if(/mac os|macintosh/.test(u))os='macOS'; else if(/iphone|ipad|ios/.test(u))os='iOS'; else if(/android/.test(u))os='Android'; else if(/linux/.test(u))os='Linux';
+			if(/mobile|iphone|android/.test(u))dev='Mobile';
+			return {b:b,os:os,dev:dev}; }
+		function fmtDate(ts){ var d=new Date(String(ts).replace(' ','T')+'Z'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+		function fmtTime(ts){ var d=new Date(String(ts).replace(' ','T')+'Z'); return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
+
+		function ddFetch(exportAll){
+			var body=new URLSearchParams({ action:'ta_citations_drilldown', nonce:nonce, dim:cur.dim, val:cur.val, page:exportAll?1:cur.page });
+			if(exportAll) body.append('export','1');
+			Object.keys(taFilters).forEach(function(k){ if(taFilters[k]) body.append(k,taFilters[k]); });
+			return fetch(ajaxurl,{method:'POST',body:body}).then(function(r){return r.json();});
+		}
+		function rowHtml(r){
+			var ua = r.client_user_agent || r.user_agent || '';
+			var p = uaParse(ua);
+			var headless = (!r.client_user_agent && (r.content_type==='rest_api'||r.content_type==='ajax'));
+			var bd = headless ? '<strong style="color:#8b5cf6;">Headless</strong><br><span style="color:#8e8e93;font-size:10px;">Next.js server</span>'
+				: '<strong>'+esc(p.b)+'</strong> on '+esc(p.os)+'<br><span style="color:#8e8e93;font-size:10px;">'+esc(p.dev)+'</span>';
+			var title = dec( r.post_title || r.url || '—' );
+			var su = (r.url && r.url.length>34) ? r.url.substring(0,31)+'...' : (r.url||'');
+			var loc = r.country_code ? (flag(r.country_code)+' '+esc(r.country_code)) : '—';
+			return '<tr><td><span class="ta-dd-badge">'+esc(dec(r.ai_platform))+'</span></td>'
+				+'<td><strong>'+esc(title)+'</strong><br><code>'+esc(su)+'</code></td>'
+				+'<td>'+bd+'</td><td>'+loc+'</td>'
+				+'<td>'+esc(fmtDate(r.visit_timestamp))+'</td><td style="color:#646970">'+esc(fmtTime(r.visit_timestamp))+'</td></tr>';
+		}
+		function render(data){
+			cur.page=data.page; cur.pages=data.total_pages; cur.total=data.total;
+			var share = taTotal ? Math.round(data.total/taTotal*1000)/10 : 0;
+			document.getElementById('ta-dd-chips').innerHTML=
+				'<div class="ta-dd-chip"><span class="l">Visits</span><span class="v">'+data.total.toLocaleString()+'</span></div>'
+				+'<div class="ta-dd-chip"><span class="l">Share of total</span><span class="v">'+share+'%</span></div>';
+			document.getElementById('ta-dd-thead').innerHTML='<tr><th>Platform</th><th>Page</th><th>Browser &amp; device</th><th>Location</th><th>Date</th><th>Time</th></tr>';
+			document.getElementById('ta-dd-tbody').innerHTML=(data.rows||[]).map(rowHtml).join('') || '<tr><td colspan="6" style="text-align:center;color:#8e8e93;padding:24px">No visits.</td></tr>';
+			document.getElementById('ta-dd-foot').innerHTML='<button id="ta-dd-prev" '+(cur.page<=1?'disabled':'')+'>← Prev</button><span>Page <b>'+cur.page+'</b> of <b>'+cur.pages+'</b> · '+data.total.toLocaleString()+' total</span><button id="ta-dd-next" '+(cur.page>=cur.pages?'disabled':'')+'>Next →</button>';
+			document.getElementById('ta-dd-prev').addEventListener('click',function(){ if(cur.page>1){cur.page--;load();} });
+			document.getElementById('ta-dd-next').addEventListener('click',function(){ if(cur.page<cur.pages){cur.page++;load();} });
+		}
+		function load(){ ddFetch(false).then(function(res){ if(res&&res.success) render(res.data); }); }
+		function open(dim,val,label){
+			cur.dim=dim; cur.val=val; cur.label=label; cur.page=1;
+			document.getElementById('ta-dd-crumb').textContent=dim.toUpperCase()+' · DRILL-DOWN';
+			document.getElementById('ta-dd-title').textContent=label;
+			document.getElementById('ta-dd-scrim').classList.add('open');
+			load();
+		}
+		function close(){ document.getElementById('ta-dd-scrim').classList.remove('open'); }
+
+		function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+		function exportCsv(){
+			ddFetch(true).then(function(res){
+				if(!res||!res.success)return;
+				var rows=res.data.rows||[]; var head=['Platform','Page','URL','Browser','OS','Device','Location','Date','Time'];
+				var lines=[head.join(',')];
+				rows.forEach(function(r){ var p=uaParse(r.client_user_agent||r.user_agent||'');
+					lines.push([r.ai_platform,(r.post_title||''),r.url,p.b,p.os,p.dev,(r.country_code||''),fmtDate(r.visit_timestamp),fmtTime(r.visit_timestamp)].map(csvCell).join(',')); });
+				var b=new Blob([lines.join('\n')],{type:'text/csv'}); var u=URL.createObjectURL(b); var a=document.createElement('a');
+				a.href=u; a.download=(cur.dim+'-'+cur.val).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')+'.csv';
+				document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u);
+			});
+		}
+
+		document.querySelectorAll('.ta-dd-row').forEach(function(el){
+			el.addEventListener('click',function(){ open(el.getAttribute('data-dim'), el.getAttribute('data-val'), el.getAttribute('data-label')); });
+		});
+		document.getElementById('ta-dd-close').addEventListener('click',close);
+		document.getElementById('ta-dd-export').addEventListener('click',exportCsv);
+		document.getElementById('ta-dd-scrim').addEventListener('click',function(e){ if(e.target===this)close(); });
+		document.addEventListener('keydown',function(e){ if(e.key==='Escape')close(); });
+	})();
+	</script>
+
+	<!-- Organic Search Traffic -->
+	<?php if ( ! empty( $google_search_visits ) ) : ?>
+	<div class="ta-card" style="margin-top: 20px; border-left: 4px solid #4285F4;">
+		<div class="ta-card-header" style="background: #f0f4ff; display:block;">
+			<h2 style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+				<span style="font-size:20px;">&#x1F50D;</span>
+				<?php esc_html_e( 'Organic Search Traffic', 'third-audience' ); ?>
+				<span style="background:#4285F4; color:#fff; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; margin-left:4px;">
+					<?php echo esc_html( number_format( intval( $google_search_total ) ) ); ?> <?php esc_html_e( 'total', 'third-audience' ); ?>
+				</span>
+				<?php if ( intval( $google_organic_total ) > 0 ) : ?>
+				<span style="background:#e8f0fe; color:#1a73e8; font-size:11px; font-weight:500; padding:2px 8px; border-radius:10px;">
+					&#x1F50D; <?php echo esc_html( number_format( intval( $google_organic_total ) ) ); ?> <?php esc_html_e( 'Organic', 'third-audience' ); ?>
+				</span>
+				<?php endif; ?>
+				<?php if ( intval( $google_ai_mode_total ) > 0 ) : ?>
+				<span style="background:#f3e8ff; color:#7c3aed; font-size:11px; font-weight:500; padding:2px 8px; border-radius:10px;">
+					<?php echo esc_html( number_format( intval( $google_ai_mode_total ) ) ); ?> <?php esc_html_e( 'AI Mode', 'third-audience' ); ?>
+				</span>
+				<?php endif; ?>
+			</h2>
+			<p style="margin: 6px 0 0; font-size: 13px; color: #646970;">
+				<?php esc_html_e( '— Google, tracked separately from AI platforms.', 'third-audience' ); ?>
+			</p>
+		</div>
+		<div class="ta-card-body" style="overflow-x: auto; padding: 0;">
+			<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
+				<thead>
+					<tr>
+						<th style="width:160px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
+						<th style="width:200px;"><?php esc_html_e( 'Page', 'third-audience' ); ?></th>
+						<th style="width:180px;">&#x1F310; <?php esc_html_e( 'Browser & Device', 'third-audience' ); ?></th>
+						<th style="width:70px; text-align:center;">&#x1F5FA;&#xFE0F; <?php esc_html_e( 'Location', 'third-audience' ); ?></th>
+						<th style="width:90px; text-align:center;"><?php esc_html_e( 'Date', 'third-audience' ); ?></th>
+						<th style="width:75px; text-align:center;"><?php esc_html_e( 'Time', 'third-audience' ); ?></th>
+						<th style="width:65px; text-align:center;"><?php esc_html_e( 'Ago', 'third-audience' ); ?></th>
+					</tr>
+				</thead>
+				<tbody id="ta-google-tbody">
+					<?php foreach ( $google_search_visits as $gs ) : ?>
+						<?php
+						$ts            = strtotime( $gs['visit_timestamp'] );
+						$time_ago      = human_time_diff( $ts, current_time( 'timestamp' ) );
+						$short_url     = strlen( $gs['url'] ) > 30 ? substr( $gs['url'], 0, 27 ) . '...' : $gs['url'];
+						$display_title = ! empty( $gs['post_title'] ) ? $gs['post_title'] : $gs['url'];
+						$ua_string     = ! empty( $gs['client_user_agent'] ) ? $gs['client_user_agent'] : ( $gs['user_agent'] ?? '' );
+						$ua_data       = ta_parse_user_agent( $ua_string );
+						$country_flag  = ta_get_country_flag( $gs['country_code'] ?? '' );
+						?>
+						<tr>
+							<td>
+								<?php if ( 'Google AI Mode' === $gs['ai_platform'] ) : ?>
+									<span class="ta-bot-badge" style="background:#f3e8ff; color:#7c3aed; border-color:#d8b4fe; white-space:nowrap;" title="<?php esc_attr_e( 'Click from Google AI Overview (AI Mode)', 'third-audience' ); ?>">
+										<?php esc_html_e( 'Google AI Mode', 'third-audience' ); ?>
+									</span>
+								<?php else : ?>
+									<span class="ta-bot-badge" style="background:#e8f0fe; color:#1a73e8; border-color:#c5d8fd; white-space:nowrap;" title="<?php esc_attr_e( 'Traditional organic Google Search click', 'third-audience' ); ?>">
+										<?php esc_html_e( 'Google Search', 'third-audience' ); ?>
+									</span>
+								<?php endif; ?>
+							</td>
+							<td title="<?php echo esc_attr( $gs['url'] ); ?>">
+								<strong style="font-size:12px;"><?php echo esc_html( $display_title ); ?></strong>
+								<br><code style="font-size:9px; color:#8e8e93;"><?php echo esc_html( $short_url ); ?></code>
+							</td>
+							<td style="font-size:11px;">
+								<?php if ( ! empty( $gs['client_user_agent'] ) ) : ?>
+									<div style="line-height:1.4;">
+										<strong><?php echo esc_html( 'Unknown' !== $ua_data['browser'] ? $ua_data['browser'] : 'Browser' ); ?></strong>
+										on <?php echo esc_html( 'Unknown' !== $ua_data['os'] ? $ua_data['os'] : 'Unknown OS' ); ?>
+										<br><span style="color:#8e8e93; font-size:10px;"><?php echo esc_html( $ua_data['icon'] ); ?> <?php echo esc_html( ucfirst( $ua_data['device'] ) ); ?></span>
+									</div>
+								<?php else : ?>
+									<span style="color:#d1d1d6;">&#8212;</span>
+								<?php endif; ?>
+							</td>
+							<td style="text-align:center; font-size:14px;" title="<?php echo esc_attr( $gs['country_code'] ?: 'Unknown' ); ?>">
+								<?php if ( ! empty( $country_flag ) ) : ?>
+									<?php echo $country_flag; ?> <span style="font-size:11px; color:#646970;"><?php echo esc_html( $gs['country_code'] ); ?></span>
+								<?php else : ?>
+									<span style="color:#d1d1d6; font-size:11px;">&#8212;</span>
+								<?php endif; ?>
+							</td>
+							<td style="text-align:center; font-size:11px;"><?php echo esc_html( gmdate( 'M j, Y', $ts ) ); ?></td>
+							<td style="text-align:center; font-size:11px; color:#646970;"><?php echo esc_html( gmdate( 'g:i A', $ts ) ); ?></td>
+							<td style="text-align:center; font-size:10px; color:#8e8e93;"><?php echo esc_html( $time_ago ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		</div>
+		<div style="display:flex; align-items:center; justify-content:center; gap:14px; padding:14px 0; border-top:1px solid #f0f0f1;">
+			<button id="ta-google-prev" class="button" disabled>&larr; <?php esc_html_e( 'Prev', 'third-audience' ); ?></button>
+			<span style="font-size:13px; color:#646970;">
+				<?php esc_html_e( 'Page', 'third-audience' ); ?> <strong id="ta-google-current-page">1</strong> <?php esc_html_e( 'of', 'third-audience' ); ?> <strong id="ta-google-total-pages"><?php echo esc_html( $google_total_pages ); ?></strong>
+				<span style="color:#ccd0d4; margin:0 6px;">&middot;</span>
+				<span style="font-size:12px;"><?php echo esc_html( number_format( $google_search_total ) ); ?> <?php esc_html_e( 'total', 'third-audience' ); ?></span>
+			</span>
+			<button id="ta-google-next" class="button" <?php echo $google_total_pages <= 1 ? 'disabled' : ''; ?>><?php esc_html_e( 'Next', 'third-audience' ); ?> &rarr;</button>
+			<span id="ta-google-spinner" style="display:none; margin-left:4px; vertical-align:middle;"><span class="spinner is-active" style="float:none;"></span></span>
+		</div>
+	</div>
 	<?php endif; ?>
+
+	<!-- Crawl → Citation Chains -->
+	<div class="ta-card" style="margin-top: 20px; border-left: 4px solid #8b5cf6;">
+		<div class="ta-card-header" style="background: #faf5ff; display:block;">
+			<h2 style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0;">
+				<span style="font-size:20px;">&#x1F517;</span>
+				<?php esc_html_e( 'Crawl → Citation Chains', 'third-audience' ); ?>
+				<span style="background:#8b5cf6; color:#fff; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; margin-left:4px;">
+					<?php echo esc_html( number_format( count( $crawl_chains ) ) ); ?> <?php esc_html_e( 'chains', 'third-audience' ); ?>
+				</span>
+			</h2>
+			<p style="margin: 6px 0 0; font-size: 13px; color: #646970;">
+				<?php esc_html_e( 'When an AI platform\'s bot crawls your pages and a real user clicks a citation from that same platform within 30 minutes — that\'s one conversation chain. The user\'s exact prompt is never sent by any platform, but the crawled pages reveal the topic the AI researched before citing you. Works best for ChatGPT and Perplexity (live web search); Claude and Gemini often answer from older cached crawls, so chains are rarer.', 'third-audience' ); ?>
+			</p>
+		</div>
+		<div class="ta-card-body" style="overflow-x: auto; padding: 0;">
+			<?php if ( ! empty( $crawl_chains ) ) : ?>
+			<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
+				<thead>
+					<tr>
+						<th style="width:120px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
+						<th style="width:220px;"><?php esc_html_e( 'Cited Page (User Clicked)', 'third-audience' ); ?></th>
+						<th><?php esc_html_e( 'Pages Bot Crawled Before', 'third-audience' ); ?></th>
+						<th style="width:80px; text-align:center;" title="<?php esc_attr_e( 'Time between last bot crawl and the user click', 'third-audience' ); ?>"><?php esc_html_e( 'Gap', 'third-audience' ); ?></th>
+						<th style="width:100px; text-align:center;"><?php esc_html_e( 'When', 'third-audience' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $crawl_chains as $chain ) : ?>
+						<?php
+						$click_ts  = strtotime( $chain['click_time'] );
+						$crawl_ts  = strtotime( $chain['last_crawl_time'] );
+						$gap_secs  = max( 0, $click_ts - $crawl_ts );
+						if ( $gap_secs < 60 ) {
+							$gap_label = $gap_secs . 's';
+						} elseif ( $gap_secs < 3600 ) {
+							$gap_label = floor( $gap_secs / 60 ) . 'm ' . ( $gap_secs % 60 ) . 's';
+						} else {
+							$gap_label = floor( $gap_secs / 3600 ) . 'h ' . floor( ( $gap_secs % 3600 ) / 60 ) . 'm';
+						}
+						$chain_ago     = human_time_diff( $click_ts, current_time( 'timestamp' ) );
+						$cited_display = ! empty( $chain['cited_title'] ) ? $chain['cited_title'] : $chain['cited_url'];
+						$cited_short   = strlen( $cited_display ) > 45 ? substr( $cited_display, 0, 42 ) . '...' : $cited_display;
+						$crawled_list  = array_filter( explode( '||', (string) $chain['crawled_urls'] ) );
+						$crawled_show  = array_slice( $crawled_list, 0, 3 );
+						$crawled_more  = count( $crawled_list ) - count( $crawled_show );
+						?>
+						<tr>
+							<td>
+								<span class="ta-bot-badge" style="background:#f3e8ff; color:#7c3aed; border-color:#d8b4fe;">
+									<?php echo esc_html( $chain['ai_platform'] ); ?>
+								</span>
+							</td>
+							<td>
+								<a href="<?php echo esc_url( $chain['cited_url'] ); ?>" target="_blank" title="<?php echo esc_attr( $chain['cited_url'] ); ?>" style="font-weight:600;">
+									<?php echo esc_html( $cited_short ); ?>
+								</a>
+							</td>
+							<td style="font-size:12px; line-height:1.7;">
+								<?php foreach ( $crawled_show as $crawled_url ) : ?>
+									<?php
+									$cpath  = wp_parse_url( $crawled_url, PHP_URL_PATH );
+									$cpath  = $cpath ? $cpath : $crawled_url;
+									$cshort = strlen( $cpath ) > 50 ? substr( $cpath, 0, 47 ) . '...' : $cpath;
+									?>
+									<span style="display:inline-block; background:#f6f7f7; border:1px solid #dcdcde; border-radius:4px; padding:1px 7px; margin:1px 3px 1px 0; font-family:monospace; font-size:11px;" title="<?php echo esc_attr( $crawled_url ); ?>">
+										<?php echo esc_html( $cshort ); ?>
+									</span>
+								<?php endforeach; ?>
+								<?php if ( $crawled_more > 0 ) : ?>
+									<span style="color:#8e8e93; font-size:11px;">+<?php echo esc_html( $crawled_more ); ?> <?php esc_html_e( 'more', 'third-audience' ); ?></span>
+								<?php endif; ?>
+							</td>
+							<td style="text-align:center;">
+								<span style="font-weight:600; color:<?php echo $gap_secs <= 120 ? '#16a34a' : '#646970'; ?>; font-size:12px;">
+									<?php echo esc_html( $gap_label ); ?>
+								</span>
+							</td>
+							<td style="text-align:center; font-size:11px; color:#646970;">
+								<?php echo esc_html( $chain_ago ); ?> <?php esc_html_e( 'ago', 'third-audience' ); ?>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php else : ?>
+			<div style="padding: 24px; text-align: center;">
+				<p style="margin: 0 0 6px; font-size: 14px; color: #646970;">
+					<?php esc_html_e( 'No crawl-to-citation chains detected yet.', 'third-audience' ); ?>
+				</p>
+				<p style="margin: 0; font-size: 12px; color: #8e8e93;">
+					<?php esc_html_e( 'A chain appears when a platform\'s bot (e.g. ChatGPT-User, PerplexityBot) crawls a page and a citation click from that same platform lands within 30 minutes. This requires live web search by the AI — answers served from cached training data won\'t create chains.', 'third-audience' ); ?>
+				</p>
+			</div>
+			<?php endif; ?>
+		</div>
+	</div>
+
+	<script>
+	(function() {
+		'use strict';
+		var nonce   = <?php echo wp_json_encode( wp_create_nonce( 'ta_analytics_nonce' ) ); ?>;
+		var filters = <?php echo wp_json_encode( $filters ); ?>;
+
+		function taEsc(s) {
+			if (!s) return '';
+			return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+		}
+		function taParseUA(ua) {
+			if (!ua) return {browser:'Unknown',os:'Unknown',device:'desktop',icon:'🖥️'};
+			var u=ua.toLowerCase(), browser='Unknown', os='Unknown', device='desktop', icon='🖥️';
+			if (/ipad/.test(u))                  { os='iPadOS'; device='tablet'; icon='📱'; }
+			else if (/iphone|ipod/.test(u))      { os='iOS'; device='mobile'; icon='📱'; }
+			else if (/android/.test(u))          { os='Android'; device=/mobile/.test(u)?'mobile':'tablet'; icon='📱'; }
+			else if (/windows/.test(u))          { os='Windows'; }
+			else if (/macintosh|mac os/.test(u)) { os='macOS'; }
+			else if (/linux/.test(u))            { os='Linux'; }
+			if (/edg\//.test(u))                 { browser='Edge'; }
+			else if (/opr\/|opera/.test(u))      { browser='Opera'; }
+			else if (/chrome\//.test(u))         { browser='Chrome'; }
+			else if (/firefox\//.test(u))        { browser='Firefox'; }
+			else if (/safari\//.test(u))         { browser='Safari'; }
+			return {browser:browser, os:os, device:device, icon:icon};
+		}
+		function taCountryFlag(code) {
+			if (!code||code.length!==2) return '';
+			try { return String.fromCodePoint(code.toUpperCase().charCodeAt(0)+127397,code.toUpperCase().charCodeAt(1)+127397); }
+			catch(e) { return ''; }
+		}
+		function taTimeAgo(ts) {
+			var d=Math.floor((Date.now()-ts.getTime())/1000);
+			if(d<60)    return d+' secs';
+			if(d<3600)  return Math.floor(d/60)+' mins';
+			if(d<86400) return Math.floor(d/3600)+' hours';
+			return Math.floor(d/86400)+' days';
+		}
+		function taBrowserCell(c) {
+			var ua=c.client_user_agent||c.user_agent||'', p=taParseUA(ua);
+			if(c.client_user_agent) {
+				return '<div style="line-height:1.4;"><strong>'+taEsc(p.browser!=='Unknown'?p.browser:'Browser')+'</strong> on '+taEsc(p.os!=='Unknown'?p.os:'Unknown OS')+'<br><span style="color:#8e8e93;font-size:10px;">'+taEsc(p.icon)+' '+taEsc(p.device.charAt(0).toUpperCase()+p.device.slice(1))+'</span></div>';
+			} else if(c.content_type==='rest_api'||c.content_type==='ajax') {
+				return '<div style="line-height:1.4;"><strong style="color:#8b5cf6;">Headless</strong><br><span style="color:#8e8e93;font-size:10px;">🖥️ Next.js server</span></div>';
+			} else if(ua) {
+				return '<div style="line-height:1.4;"><strong>'+taEsc(p.browser)+'</strong> on '+taEsc(p.os)+'<br><span style="color:#8e8e93;font-size:10px;">'+taEsc(p.icon)+' '+taEsc(p.device.charAt(0).toUpperCase()+p.device.slice(1))+'</span></div>';
+			}
+			return '<span style="color:#d1d1d6;font-size:11px;">&#8212;</span>';
+		}
+		function taLocCell(c) {
+			var f=taCountryFlag(c.country_code);
+			return f ? f+' <span style="font-size:11px;color:#646970;">'+taEsc(c.country_code)+'</span>' : '<span style="color:#d1d1d6;font-size:11px;">&#8212;</span>';
+		}
+		function taRenderLlmRow(c) {
+			var ts=new Date(c.visit_timestamp.replace(' ','T')+'Z');
+			var su=c.url&&c.url.length>30?c.url.substring(0,27)+'...':(c.url||'—');
+			var sr=c.referer&&c.referer.length>35?c.referer.substring(0,32)+'...':(c.referer||'—');
+			var title=c.post_title||su;
+			return '<td><span class="ta-bot-badge" style="white-space:normal;word-break:break-word;">'+taEsc(c.ai_platform)+'</span></td>'
+				+'<td title="'+taEsc(c.url)+'"><strong style="font-size:12px;">'+taEsc(title)+'</strong><br><code style="font-size:9px;color:#8e8e93;">'+taEsc(su)+'</code></td>'
+				+'<td style="font-size:11px;">'+taBrowserCell(c)+'</td>'
+				+'<td style="text-align:center;font-size:14px;" title="'+taEsc(c.country_code||'Unknown')+'">'+taLocCell(c)+'</td>'
+				+'<td style="text-align:center;font-size:11px;">'+taEsc(ts.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))+'</td>'
+				+'<td style="text-align:center;font-size:11px;color:#646970;">'+taEsc(ts.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}))+'</td>'
+				+'<td style="text-align:center;font-size:10px;color:#8e8e93;">'+taEsc(taTimeAgo(ts))+'</td>'
+				+'<td style="font-size:10px;color:#8e8e93;" title="'+taEsc(c.referer||'')+'">'+taEsc(sr)+'</td>';
+		}
+		function taRenderGoogleRow(c) {
+			var ts=new Date(c.visit_timestamp.replace(' ','T')+'Z');
+			var su=c.url&&c.url.length>30?c.url.substring(0,27)+'...':(c.url||'—');
+			var title=c.post_title||c.url||'—';
+			var badge = c.ai_platform === 'Google AI Mode'
+				? '<span class="ta-bot-badge" style="background:#f3e8ff;color:#7c3aed;border-color:#d8b4fe;white-space:nowrap;" title="Google AI Overview click">Google AI Mode</span>'
+				: '<span class="ta-bot-badge" style="background:#e8f0fe;color:#1a73e8;border-color:#c5d8fd;white-space:nowrap;" title="Traditional organic search click">Google Search</span>';
+			return '<td>'+badge+'</td>'
+				+'<td title="'+taEsc(c.url)+'"><strong style="font-size:12px;">'+taEsc(title)+'</strong><br><code style="font-size:9px;color:#8e8e93;">'+taEsc(su)+'</code></td>'
+				+'<td style="font-size:11px;">'+taBrowserCell(c)+'</td>'
+				+'<td style="text-align:center;font-size:14px;" title="'+taEsc(c.country_code||'Unknown')+'">'+taLocCell(c)+'</td>'
+				+'<td style="text-align:center;font-size:11px;">'+taEsc(ts.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}))+'</td>'
+				+'<td style="text-align:center;font-size:11px;color:#646970;">'+taEsc(ts.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}))+'</td>'
+				+'<td style="text-align:center;font-size:10px;color:#8e8e93;">'+taEsc(taTimeAgo(ts))+'</td>';
+		}
+
+		function taPaginationInit(opts) {
+			var cur=1, tot=parseInt(opts.totEl.textContent,10)||1;
+			function sync() { opts.prev.disabled=(cur<=1); opts.next.disabled=(cur>=tot); }
+			function go(page) {
+				opts.prev.disabled=true; opts.next.disabled=true;
+				opts.spin.style.display='inline-block';
+				var body=new URLSearchParams({action:'ta_citations_paginate',nonce:nonce,section:opts.section,page:page});
+				if(opts.fil) Object.keys(opts.fil).forEach(function(k){ if(opts.fil[k]) body.append(k,opts.fil[k]); });
+				fetch(ajaxurl,{method:'POST',body:body})
+					.then(function(r){return r.json();})
+					.then(function(res){
+						if(!res.success){opts.spin.style.display='none';sync();return;}
+						cur=res.data.page; tot=res.data.total_pages;
+						opts.curEl.textContent=cur; opts.totEl.textContent=tot;
+						opts.tbody.innerHTML='';
+						res.data.rows.forEach(function(row){
+							var tr=document.createElement('tr');
+							tr.innerHTML=opts.render(row);
+							opts.tbody.appendChild(tr);
+						});
+						opts.spin.style.display='none'; sync();
+					})
+					.catch(function(){opts.spin.style.display='none';sync();});
+			}
+			opts.prev.addEventListener('click',function(){if(cur>1) go(cur-1);});
+			opts.next.addEventListener('click',function(){if(cur<tot) go(cur+1);});
+			sync();
+		}
+
+		// Recent LLMs Visits — collapse/expand toggle (auto-collapsed when a date filter is active).
+		var recHead=document.getElementById('ta-recent-head');
+		if(recHead) {
+			recHead.addEventListener('click',function(){
+				document.getElementById('ta-recent-card').classList.toggle('ta-recent-collapsed');
+			});
+		}
+
+		// LLM pagination
+		var llmT=document.getElementById('ta-llm-tbody'),llmPr=document.getElementById('ta-llm-prev'),llmNx=document.getElementById('ta-llm-next');
+		if(llmT&&llmPr&&llmNx) {
+			taPaginationInit({section:'llm',tbody:llmT,prev:llmPr,next:llmNx,curEl:document.getElementById('ta-llm-current-page'),totEl:document.getElementById('ta-llm-total-pages'),spin:document.getElementById('ta-llm-spinner'),render:taRenderLlmRow,fil:filters});
+		}
+		// Google Search pagination
+		var gsT=document.getElementById('ta-google-tbody'),gsPr=document.getElementById('ta-google-prev'),gsNx=document.getElementById('ta-google-next');
+		if(gsT&&gsPr&&gsNx) {
+			taPaginationInit({section:'google',tbody:gsT,prev:gsPr,next:gsNx,curEl:document.getElementById('ta-google-current-page'),totEl:document.getElementById('ta-google-total-pages'),spin:document.getElementById('ta-google-spinner'),render:taRenderGoogleRow,fil:{}});
+		}
+	})();
+	</script>
 
 	<!-- Charts Section (v3.2.1) -->
 	<div class="ta-charts-section" style="margin-top: 20px;">
@@ -955,242 +1695,12 @@ $available_dates = $wpdb->get_results(
 			</div>
 		</div>
 
-		<!-- Row 2: Daily type breakdown + Weekly HTML/MD chart -->
-		<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
-			<!-- Daily HTML / MD / Other Line Chart -->
-			<div class="ta-card">
-				<div class="ta-card-header">
-					<h2><?php esc_html_e( 'Daily Traffic by Type — HTML / MD / Other (Last 30 Days)', 'third-audience' ); ?></h2>
-				</div>
-				<div class="ta-card-body" style="padding: 20px;">
-					<canvas id="ta-daily-type-chart" height="200"></canvas>
-				</div>
-			</div>
-
-			<!-- Weekly HTML vs MD Bar Chart -->
-			<div class="ta-card">
-				<div class="ta-card-header">
-					<h2><?php esc_html_e( 'Weekly Traffic: HTML vs MD (Last 4 Weeks)', 'third-audience' ); ?></h2>
-				</div>
-				<div class="ta-card-body" style="padding: 20px;">
-					<canvas id="ta-weekly-type-chart" height="200"></canvas>
-				</div>
-			</div>
-		</div>
 
 	</div>
 
-	<!-- Filters (Collapsible) -->
-	<div class="ta-filters-section">
-		<button type="button" class="ta-filters-toggle">
-			<span class="dashicons dashicons-filter"></span>
-			<?php esc_html_e( 'Filters & Export', 'third-audience' ); ?>
-			<span class="dashicons dashicons-arrow-down-alt2"></span>
-		</button>
-		<div class="ta-filters-content" style="display: block;">
-			<form method="get" id="ta-citations-filters-form">
-				<input type="hidden" name="page" value="third-audience-ai-citations">
-				<div class="ta-filter-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px;">
-					<!-- Row 1: Date, Platform, Search -->
-					<div class="ta-filter-item">
-						<label><?php esc_html_e( 'Date Range', 'third-audience' ); ?></label>
-						<div class="ta-date-range" style="display: flex; align-items: center; gap: 8px;">
-							<input type="date" name="date_from" value="<?php echo esc_attr( $filters['date_from'] ?? '' ); ?>" style="flex: 1;">
-							<span>—</span>
-							<input type="date" name="date_to" value="<?php echo esc_attr( $filters['date_to'] ?? '' ); ?>" style="flex: 1;">
-						</div>
-					</div>
-					<div class="ta-filter-item">
-						<label><?php esc_html_e( 'AI Platform', 'third-audience' ); ?></label>
-						<select name="platform" style="width: 100%;">
-							<option value=""><?php esc_html_e( 'All Platforms', 'third-audience' ); ?></option>
-							<?php foreach ( $available_platforms as $platform ) : ?>
-								<option value="<?php echo esc_attr( $platform ); ?>" <?php selected( $filters['platform'] ?? '', $platform ); ?>>
-									<?php echo esc_html( $platform ); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-					<div class="ta-filter-item">
-						<label><?php esc_html_e( 'Search', 'third-audience' ); ?></label>
-						<input type="text" name="search" placeholder="<?php esc_attr_e( 'URL, title, or query...', 'third-audience' ); ?>" value="<?php echo esc_attr( $filters['search'] ?? '' ); ?>" style="width: 100%;">
-					</div>
 
-					<!-- Row 2: NEW - Browser, Country, Device -->
-					<div class="ta-filter-item">
-						<label>🌐 <?php esc_html_e( 'Browser', 'third-audience' ); ?></label>
-						<select name="browser" style="width: 100%;">
-							<option value=""><?php esc_html_e( 'All Browsers', 'third-audience' ); ?></option>
-							<?php foreach ( $available_browsers as $browser_row ) : ?>
-								<option value="<?php echo esc_attr( $browser_row['browser'] ); ?>" <?php selected( $filters['browser'] ?? '', $browser_row['browser'] ); ?>>
-									<?php echo esc_html( $browser_row['browser'] ); ?> (<?php echo esc_html( $browser_row['count'] ); ?>)
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-					<div class="ta-filter-item">
-						<label>🗺️ <?php esc_html_e( 'Country', 'third-audience' ); ?></label>
-						<select name="country" style="width: 100%;">
-							<option value=""><?php esc_html_e( 'All Countries', 'third-audience' ); ?></option>
-							<?php foreach ( $available_countries as $country_row ) : ?>
-								<option value="<?php echo esc_attr( $country_row['country_code'] ); ?>" <?php selected( $filters['country'] ?? '', $country_row['country_code'] ); ?>>
-									<?php echo ta_get_country_flag( $country_row['country_code'] ); ?> <?php echo esc_html( $country_row['country_code'] ); ?> (<?php echo esc_html( $country_row['count'] ); ?>)
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</div>
-					<div class="ta-filter-item">
-						<label>📱 <?php esc_html_e( 'Device Type', 'third-audience' ); ?></label>
-						<select name="device" style="width: 100%;">
-							<option value=""><?php esc_html_e( 'All Devices', 'third-audience' ); ?></option>
-							<option value="desktop" <?php selected( $filters['device'] ?? '', 'desktop' ); ?>>🖥️ <?php esc_html_e( 'Desktop', 'third-audience' ); ?></option>
-							<option value="mobile" <?php selected( $filters['device'] ?? '', 'mobile' ); ?>>📱 <?php esc_html_e( 'Mobile', 'third-audience' ); ?></option>
-						</select>
-					</div>
-
-					<!-- Row 3: Actions -->
-					<div class="ta-filter-item ta-filter-actions" style="grid-column: 1 / -1;">
-						<label>&nbsp;</label>
-						<div style="display: flex; gap: 10px; align-items: center;">
-							<button type="submit" class="button button-primary">
-								<span class="dashicons dashicons-filter" style="margin-top: 3px;"></span> <?php esc_html_e( 'Apply Filters', 'third-audience' ); ?>
-							</button>
-							<a href="<?php echo esc_url( admin_url( 'admin.php?page=third-audience-ai-citations' ) ); ?>" class="button">
-								<span class="dashicons dashicons-dismiss" style="margin-top: 3px;"></span> <?php esc_html_e( 'Reset', 'third-audience' ); ?>
-							</a>
-							<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( array_merge( $_GET, array( 'action' => 'ta_export_citations_csv', 'export_format' => 'csv' ) ) ), 'ta_export_citations' ) ); ?>" class="button button-secondary">
-								<span class="dashicons dashicons-download" style="margin-top: 3px;"></span> <?php esc_html_e( 'Export CSV', 'third-audience' ); ?>
-							</a>
-							<span style="color: #646970; font-size: 12px; margin-left: 10px;">
-								<?php
-								printf(
-									esc_html__( 'Showing %s of %s citations', 'third-audience' ),
-									'<strong>' . number_format( count( $recent_citations ) ) . '</strong>',
-									'<strong>' . number_format( $total_citations ) . '</strong>'
-								);
-								?>
-							</span>
-						</div>
-					</div>
-				</div>
-			</form>
-		</div>
-	</div>
-
-	<!-- Fix 2: Broken Citations — Redirect Helper -->
-	<?php if ( ! empty( $broken_citations ) ) : ?>
-	<div class="ta-card" style="margin-top: 20px; border-left: 4px solid #f59e0b;">
-		<div class="ta-card-header" style="background: #fffbeb;">
-			<h2 style="color: #92400e;">&#9888; Broken AI Citations — Redirect Needed (<?php echo count( $broken_citations ); ?>)</h2>
-			<p style="margin: 4px 0 0; font-size: 13px; color: #78350f;">
-				<?php esc_html_e( 'These URLs are being cited by AI platforms but have no matching page in WordPress. Add 301 redirects to recover this traffic.', 'third-audience' ); ?>
-			</p>
-		</div>
-		<div class="ta-card-body" style="overflow-x: auto; padding: 0;">
-			<table class="wp-list-table widefat fixed striped" style="min-width: 700px;">
-				<thead>
-					<tr>
-						<th style="width: 40%;"><?php esc_html_e( 'Cited URL (404 / No WP Page)', 'third-audience' ); ?></th>
-						<th style="width: 20%;"><?php esc_html_e( 'AI Platforms', 'third-audience' ); ?></th>
-						<th style="width: 10%; text-align: center;"><?php esc_html_e( 'Hits', 'third-audience' ); ?></th>
-						<th style="width: 15%; text-align: center;"><?php esc_html_e( 'Last Seen', 'third-audience' ); ?></th>
-						<th style="width: 15%;"><?php esc_html_e( 'Action', 'third-audience' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php foreach ( $broken_citations as $broken ) : ?>
-						<?php
-						$broken_slug  = basename( trim( wp_parse_url( $broken['url'], PHP_URL_PATH ), '/' ) );
-						$broken_title = ucwords( str_replace( array( '-', '_' ), ' ', $broken_slug ) ) ?: 'Unknown Page';
-						$full_url     = ta_citation_public_url( $broken['url'] );
-						$last_seen    = human_time_diff( strtotime( $broken['last_seen'] ), current_time( 'timestamp' ) );
-						?>
-						<tr>
-							<td>
-								<strong style="font-size: 12px; color: #92400e;"><?php echo esc_html( $broken_title ); ?></strong>
-								<br>
-								<a href="<?php echo esc_url( $full_url ); ?>" target="_blank" rel="noopener" style="font-size: 9px; color: #8e8e93;">
-									<?php echo esc_html( $broken['url'] ); ?>
-								</a>
-							</td>
-							<td style="font-size: 11px; color: #646970;"><?php echo esc_html( $broken['platforms'] ); ?></td>
-							<td style="text-align: center; font-weight: bold; color: #dc2626;"><?php echo esc_html( $broken['hit_count'] ); ?></td>
-							<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( $last_seen ); ?> ago</td>
-							<td>
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=ta-headless-setup#redirects' ) ); ?>"
-								   style="font-size: 11px; color: #0073aa; text-decoration: none; white-space: nowrap;">
-									&#8594; Add Redirect
-								</a>
-							</td>
-						</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-		</div>
-	</div>
-	<?php endif; ?>
-
-	<!-- Citations by Platform (Column-Dense Layout) -->
-	<div class="ta-card" style="margin-top: 20px;">
-		<div class="ta-card-header">
-			<h2><?php esc_html_e( 'LLMs by Platforms', 'third-audience' ); ?></h2>
-		</div>
-		<div class="ta-card-body" style="overflow-x: auto;">
-			<?php if ( empty( $citations_by_platform ) ) : ?>
-				<p style="text-align: center; color: #646970; padding: 40px 0;">
-					<?php esc_html_e( 'No citations detected yet. When users click citations from AI platforms, they will appear here.', 'third-audience' ); ?>
-				</p>
-			<?php else : ?>
-				<table class="wp-list-table widefat fixed striped" style="min-width: 900px;">
-					<thead>
-						<tr>
-							<th style="width: 120px;"><?php esc_html_e( 'Platform', 'third-audience' ); ?></th>
-							<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
-							<th style="width: 70px; text-align: center;"><?php esc_html_e( '% Total', 'third-audience' ); ?></th>
-							<th style="width: 140px; text-align: center;"><?php esc_html_e( 'First Seen', 'third-audience' ); ?></th>
-							<th style="width: 140px; text-align: center;"><?php esc_html_e( 'Last Seen', 'third-audience' ); ?></th>
-							<th style="width: 90px; text-align: center;"><?php esc_html_e( 'Days Active', 'third-audience' ); ?></th>
-						</tr>
-					</thead>
-					<tbody>
-						<?php foreach ( $citations_by_platform as $platform ) : ?>
-							<?php
-								$percent_of_total = $total_citations > 0 ? round( ( $platform['count'] / $total_citations ) * 100, 1 ) : 0;
-							$first_ts = strtotime( $platform['first_citation'] );
-							$last_ts = strtotime( $platform['last_citation'] );
-							$days_active = max( 1, ceil( ( $last_ts - $first_ts ) / 86400 ) );
-							?>
-							<tr>
-								<td>
-									<span class="ta-bot-badge"><?php echo esc_html( $platform['ai_platform'] ); ?></span>
-								</td>
-								<td style="text-align: center;"><strong><?php echo number_format( $platform['count'] ); ?></strong></td>
-								<td style="text-align: center;">
-									<span style="background: rgba(0,122,255,<?php echo esc_attr( min( 0.5, $percent_of_total / 100 ) ); ?>); padding: 2px 8px; border-radius: 10px; font-size: 11px;">
-										<?php echo esc_html( $percent_of_total ); ?>%
-									</span>
-								</td>
-								<td style="text-align: center; font-size: 12px; color: #646970;">
-									<?php echo esc_html( gmdate( 'M j, Y', $first_ts ) ); ?>
-									<br><small><?php echo esc_html( gmdate( 'g:i A', $first_ts ) ); ?></small>
-								</td>
-								<td style="text-align: center; font-size: 12px; color: #646970;">
-									<?php echo esc_html( gmdate( 'M j, Y', $last_ts ) ); ?>
-									<br><small><?php echo esc_html( gmdate( 'g:i A', $last_ts ) ); ?></small>
-								</td>
-								<td style="text-align: center; font-weight: 500;">
-									<?php echo esc_html( $days_active ); ?>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			<?php endif; ?>
-		</div>
-	</div>
-
-	<!-- Perplexity Search Queries + Top Countries (side by side) -->
-	<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+	<!-- Perplexity Search Queries (full width) -->
+	<div style="margin-top: 20px;">
 
 		<!-- Perplexity Search Queries -->
 		<div class="ta-card">
@@ -1234,53 +1744,6 @@ $available_dates = $wpdb->get_results(
 			</div>
 		</div>
 
-		<!-- Top Countries -->
-		<div class="ta-card">
-			<div class="ta-card-header">
-				<h2>🗺️ <?php esc_html_e( 'Top Countries', 'third-audience' ); ?></h2>
-				<p class="description" style="margin-top: 6px;"><?php esc_html_e( 'Countries your AI citation traffic is coming from.', 'third-audience' ); ?></p>
-			</div>
-			<div class="ta-card-body" style="overflow-x: auto;">
-				<?php if ( empty( $top_countries ) ) : ?>
-					<p style="text-align: center; color: #646970; padding: 30px 0;">
-						<?php esc_html_e( 'No country data yet.', 'third-audience' ); ?>
-					</p>
-				<?php else : ?>
-					<table class="wp-list-table widefat fixed striped">
-						<thead>
-							<tr>
-								<th><?php esc_html_e( 'Country', 'third-audience' ); ?></th>
-								<th style="width: 80px; text-align: center;"><?php esc_html_e( 'Citations', 'third-audience' ); ?></th>
-								<th style="width: 90px; text-align: center;"><?php esc_html_e( '% Share', 'third-audience' ); ?></th>
-								<th><?php esc_html_e( 'Bar', 'third-audience' ); ?></th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php
-							$max_country_count = ! empty( $top_countries ) ? (int) $top_countries[0]['count'] : 1;
-							foreach ( $top_countries as $country ) :
-								$flag    = ta_get_country_flag( $country['country_code'] );
-								$pct     = $total_citations > 0 ? round( ( $country['count'] / $total_citations ) * 100, 1 ) : 0;
-								$bar_pct = $max_country_count > 0 ? round( ( $country['count'] / $max_country_count ) * 100 ) : 0;
-							?>
-								<tr>
-									<td style="font-size: 14px;">
-										<?php echo $flag; ?> <strong style="font-size: 12px;"><?php echo esc_html( $country['country_code'] ); ?></strong>
-									</td>
-									<td style="text-align: center; font-weight: 600;"><?php echo number_format( $country['count'] ); ?></td>
-									<td style="text-align: center; font-size: 11px; color: #646970;"><?php echo esc_html( $pct ); ?>%</td>
-									<td>
-										<div style="background: #e5e5ea; border-radius: 3px; height: 8px; overflow: hidden;">
-											<div style="background: #007aff; width: <?php echo esc_attr( $bar_pct ); ?>%; height: 100%; border-radius: 3px;"></div>
-										</div>
-									</td>
-								</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
-				<?php endif; ?>
-			</div>
-		</div>
 	</div>
 
 
@@ -1322,6 +1785,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	var chartLabels    = <?php echo wp_json_encode( $chart_labels ); ?>;
 	var chartCitations = <?php echo wp_json_encode( $chart_citations ); ?>;
 	var chartCrawls    = <?php echo wp_json_encode( $chart_crawls ); ?>;
+	var chartGoogle    = <?php echo wp_json_encode( $chart_google ); ?>;
 	var chartHtml      = <?php echo wp_json_encode( $chart_html ); ?>;
 	var chartMd        = <?php echo wp_json_encode( $chart_md ); ?>;
 	var chartOther     = <?php echo wp_json_encode( $chart_other ); ?>;
@@ -1356,7 +1820,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				labels: chartLabels,
 				datasets: [
 					{
-						label: 'Citations',
+						label: 'LLM Citations',
 						data: chartCitations,
 						borderColor: '#007aff',
 						backgroundColor: 'rgba(0, 122, 255, 0.1)',
@@ -1364,16 +1828,6 @@ document.addEventListener('DOMContentLoaded', function() {
 						tension: 0.4,
 						pointRadius: 2,
 						pointHoverRadius: 5
-					},
-					{
-						label: 'Crawls',
-						data: chartCrawls,
-						borderColor: '#8e8e93',
-						backgroundColor: 'transparent',
-						borderDash: [5, 5],
-						tension: 0.4,
-						pointRadius: 0,
-						pointHoverRadius: 3
 					}
 				]
 			},
