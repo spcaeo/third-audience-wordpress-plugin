@@ -1563,7 +1563,7 @@ function ta_citation_public_url( $url ) {
  *
  * Many rows (especially bot crawls of the .md version) have no stored
  * post_title, so the UI was falling back to the raw URL (e.g.
- * "https://wp.textbolt.com/index.md"). This returns the real post title when
+ * "https://example.com/index.md"). This returns the real post title when
  * available — stripping a trailing ".md" and resolving the post — and otherwise
  * a readable label from the slug ("Homepage" for the front page).
  *
