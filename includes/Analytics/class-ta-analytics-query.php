@@ -153,6 +153,8 @@ class TA_Analytics_Query {
 			'ip_verified_percentage' => 0,
 			'ip_verified_count'      => 0,
 			'ip_failed_count'        => 0,
+			'md_served_rate'         => 0,
+			'error_rate'             => 0,
 		);
 
 		// Total visits.
@@ -210,6 +212,23 @@ class TA_Analytics_Query {
 		$summary['total_bandwidth'] = (int) $wpdb->get_var(
 			"SELECT SUM(response_size) FROM {$table_name} {$where} AND response_size IS NOT NULL"
 		);
+
+		// .md served rate — share of crawls served the Markdown version (the AI-format
+		// Third Audience generates) vs full HTML. Drives the ".md served" console vital.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$md_served = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$table_name} {$where} AND (content_type = 'markdown' OR request_method = 'md_url')"
+		);
+		// Error rate — share of crawls that returned an HTTP error (4xx/5xx). Lower is
+		// better; feeds the Crawl Health score alongside cache & response time.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$error_hits = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM {$table_name} {$where} AND http_status IS NOT NULL AND http_status >= 400"
+		);
+		if ( $summary['total_visits'] > 0 ) {
+			$summary['md_served_rate'] = round( ( $md_served / $summary['total_visits'] ) * 100, 1 );
+			$summary['error_rate']     = round( ( $error_hits / $summary['total_visits'] ) * 100, 1 );
+		}
 
 		// Time-based stats. visit_timestamp is stored in SITE-LOCAL time
 		// (current_time('mysql')), so compute these dates in local time too —
@@ -525,6 +544,50 @@ class TA_Analytics_Query {
 			),
 			ARRAY_A
 		);
+	}
+
+	/**
+	 * Generic single-column breakdown for the drill-down dimension cards.
+	 *
+	 * @since 3.7.0
+	 * @param string $dimension One of: format, pagetype, country, status.
+	 * @param array  $filters   Optional filters (same shape as get_summary).
+	 * @return array Rows of array{key:string,count:int}.
+	 */
+	public function get_breakdown( $dimension, $filters = array() ) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+		$where      = $this->build_where_clause( $filters );
+
+		// Whitelisted column map — the value is never user-supplied, so it is safe
+		// to interpolate into the GROUP BY directly.
+		$columns = array(
+			'format'   => 'content_type',
+			'pagetype' => 'post_type',
+			'country'  => 'country_code',
+			'status'   => 'http_status',
+		);
+		if ( ! isset( $columns[ $dimension ] ) ) {
+			return array();
+		}
+		$col = $columns[ $dimension ];
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $wpdb->get_results(
+			"SELECT {$col} AS k, COUNT(*) AS c
+			FROM {$table_name} {$where} AND {$col} IS NOT NULL AND {$col} != ''
+			GROUP BY {$col} ORDER BY c DESC LIMIT 20",
+			ARRAY_A
+		);
+
+		$out = array();
+		foreach ( (array) $rows as $r ) {
+			$out[] = array(
+				'key'   => (string) $r['k'],
+				'count' => (int) $r['c'],
+			);
+		}
+		return $out;
 	}
 
 	/**

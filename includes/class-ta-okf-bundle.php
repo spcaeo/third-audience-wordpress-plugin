@@ -39,6 +39,24 @@ class TA_OKF_Bundle {
 	const OPTION_REWRITE_VERSION = 'ta_okf_rewrite_version';
 
 	/**
+	 * Option key for the in-progress chunked build state.
+	 *
+	 * Holds the work queue (post IDs), the precomputed link map and the partial
+	 * results between AJAX batches so a large site can be built across many small
+	 * requests instead of one that times out. Cleared when the build finalizes.
+	 */
+	const OPTION_BUILD_STATE = 'ta_okf_build_state';
+
+	/**
+	 * Option-name prefix for per-concept markdown files.
+	 *
+	 * Each concept's markdown is stored in its own small option so no single DB
+	 * row ever grows large enough to be silently rejected on write. The bundle
+	 * option then only holds the lightweight graph, stats and index/log files.
+	 */
+	const FILE_OPTION_PREFIX = 'ta_okf_file_';
+
+	/**
 	 * Cache Manager instance.
 	 *
 	 * @var TA_Cache_Manager
@@ -136,7 +154,8 @@ class TA_OKF_Bundle {
 			$store = $this->build_bundle(); // Lazy build on first request.
 		}
 
-		if ( ! isset( $store['files'][ $file ] ) ) {
+		$content = $this->get_bundle_file( $store, $file );
+		if ( null === $content ) {
 			$this->send_not_found( $file );
 		}
 
@@ -148,7 +167,7 @@ class TA_OKF_Bundle {
 		header( 'Cache-Control: public, max-age=300' );
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw markdown is the response body by design (text/markdown).
-		echo $store['files'][ $file ];
+		echo $content;
 		exit;
 	}
 
@@ -165,6 +184,69 @@ class TA_OKF_Bundle {
 		header( 'X-Content-Type-Options: nosniff' );
 		echo 'Not found in OKF bundle: ' . esc_html( $file );
 		exit;
+	}
+
+	/**
+	 * Option name holding one concept's markdown. Hashed so the name stays short
+	 * and valid regardless of slug length.
+	 *
+	 * @since 3.6.0
+	 * @param string $cid The concept id.
+	 * @return string The option name.
+	 */
+	private function file_option_key( $cid ) {
+		return self::FILE_OPTION_PREFIX . md5( (string) $cid );
+	}
+
+	/**
+	 * Resolve a requested bundle file to its markdown.
+	 *
+	 * index.md/log.md (and any legacy inline concept files) live in the bundle
+	 * option; chunked builds keep the bundle light and store each concept in its
+	 * own option, so concept files are read from there on demand.
+	 *
+	 * @since 3.6.0
+	 * @param array  $store The bundle store.
+	 * @param string $file  The requested filename (e.g. "my-post.md").
+	 * @return string|null The markdown, or null if not part of the bundle.
+	 */
+	private function get_bundle_file( $store, $file ) {
+		if ( is_array( $store ) && isset( $store['files'][ $file ] ) ) {
+			return $store['files'][ $file ];
+		}
+		if ( is_array( $store ) && ! empty( $store['concept_ids'] ) && preg_match( '/^(.+)\.md$/', $file, $m ) ) {
+			$cid = $m[1];
+			if ( in_array( $cid, $store['concept_ids'], true ) ) {
+				$val = get_option( $this->file_option_key( $cid ) );
+				if ( is_string( $val ) && '' !== $val ) {
+					return $val;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Delete all per-concept file options from a previous build.
+	 *
+	 * Removes them by the previous bundle's id list (which also clears the object
+	 * cache per key) and sweeps any orphans left by an interrupted build.
+	 *
+	 * @since 3.6.0
+	 * @return void
+	 */
+	private function clear_concept_files() {
+		$prev = get_option( self::OPTION_BUNDLE );
+		if ( is_array( $prev ) && ! empty( $prev['concept_ids'] ) ) {
+			foreach ( $prev['concept_ids'] as $cid ) {
+				delete_option( $this->file_option_key( $cid ) );
+			}
+		}
+		global $wpdb;
+		$wpdb->query( $wpdb->prepare( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+			$wpdb->esc_like( self::FILE_OPTION_PREFIX ) . '%'
+		) );
 	}
 
 	/* ---------------------------------------------------------------------
@@ -313,6 +395,260 @@ class TA_OKF_Bundle {
 		);
 
 		update_option( self::OPTION_BUNDLE, $store, false ); // Do not autoload; it can be large.
+
+		return $store;
+	}
+
+	/* ---------------------------------------------------------------------
+	 * Chunked (background-free) build
+	 *
+	 * build_bundle() converts every post in a single request, which times out
+	 * or exhausts memory on large sites — the page then looks like "nothing
+	 * happened" and no bundle is saved. The three methods below split that work
+	 * across many small AJAX requests driven by the admin page: one cheap "start"
+	 * pass to enumerate posts and the link map, repeated "process" batches of a
+	 * handful of posts each, then a "finalize" that assembles and saves the
+	 * bundle. No WP-Cron required; the open admin page drives the loop. This is a
+	 * plugin-wide fix that works on any site size.
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * AJAX entry point for the chunked build. Steps: start | process | finalize.
+	 *
+	 * @since 3.6.0
+	 * @return void
+	 */
+	public function ajax_build_batch() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'third-audience' ) ), 403 );
+		}
+		check_ajax_referer( 'ta_okf_build', 'nonce' );
+
+		// Best-effort headroom; each batch is small, so this is just a safety net.
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+
+		$step = isset( $_POST['step'] ) ? sanitize_key( wp_unslash( $_POST['step'] ) ) : '';
+
+		if ( 'start' === $step ) {
+			$state = $this->start_build();
+			wp_send_json_success( array(
+				'phase'     => $state['total'] > 0 ? 'processing' : 'finalize',
+				'processed' => 0,
+				'total'     => (int) $state['total'],
+			) );
+		}
+
+		if ( 'process' === $step ) {
+			$size  = (int) apply_filters( 'ta_okf_batch_size', 20 );
+			$size  = max( 1, $size );
+			$state = $this->process_batch( $size );
+			if ( ! is_array( $state ) ) {
+				wp_send_json_error( array( 'message' => __( 'Build state was lost. Please start again.', 'third-audience' ) ), 409 );
+			}
+			$total = count( $state['post_ids'] );
+			wp_send_json_success( array(
+				'phase'     => $state['offset'] >= $total ? 'finalize' : 'processing',
+				'processed' => (int) $state['offset'],
+				'total'     => (int) $total,
+			) );
+		}
+
+		if ( 'finalize' === $step ) {
+			$store = $this->finalize_build();
+			if ( ! is_array( $store ) ) {
+				wp_send_json_error( array(
+					'message' => __( 'The bundle was built but could not be saved — it may be too large for the database (max_allowed_packet). Contact your host to raise it.', 'third-audience' ),
+				), 500 );
+			}
+			wp_send_json_success( array(
+				'phase'    => 'done',
+				'concepts' => (int) $store['stats']['concepts'],
+				'posts'    => (int) $store['stats']['posts'],
+				'edges'    => (int) $store['stats']['edges'],
+			) );
+		}
+
+		wp_send_json_error( array( 'message' => __( 'Unknown build step.', 'third-audience' ) ), 400 );
+	}
+
+	/**
+	 * Start a chunked build: enumerate posts, assign concept ids and build the
+	 * internal-link resolution map. No conversion happens here, so it is cheap
+	 * even on large sites. Saves the initial build state and returns it.
+	 *
+	 * @since 3.6.0
+	 * @return array The fresh build state.
+	 */
+	public function start_build() {
+		// Drop any concept files from a previous build so this run starts clean.
+		$this->clear_concept_files();
+
+		$enabled_types = get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
+
+		$query = new WP_Query( array(
+			'post_type'      => $enabled_types,
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'no_found_rows'  => true,
+			'fields'         => 'ids',
+		) );
+		$post_ids = array_map( 'intval', $query->posts );
+
+		// Mirror build_bundle()'s first pass: stable concept id per post + a map
+		// of every permalink form (frontend + backend, full URL + path) to that id
+		// so internal links resolve even on headless sites.
+		$used       = array( 'index' => true, 'log' => true );
+		$id_by_post = array();
+		$url_to_id  = array();
+		foreach ( $post_ids as $pid ) {
+			$post = get_post( $pid );
+			if ( ! $post ) {
+				continue;
+			}
+			$raw = $post->post_name ? $post->post_name : ( 'post-' . $pid );
+			$id  = $this->safe_id( $raw, $used );
+
+			$used[ $id ]        = true;
+			$id_by_post[ $pid ] = $id;
+
+			$backend  = get_permalink( $pid );
+			$frontend = function_exists( 'ta_frontend_permalink' ) ? ta_frontend_permalink( $pid ) : $backend;
+			foreach ( array( $frontend, $backend ) as $u ) {
+				if ( ! $u ) {
+					continue;
+				}
+				$url_to_id[ $this->normalize_link( $u ) ] = $id;
+				$path = wp_parse_url( $u, PHP_URL_PATH );
+				if ( $path ) {
+					$url_to_id[ untrailingslashit( $path ) ] = $id;
+				}
+			}
+		}
+
+		$state = array(
+			'post_ids'    => $post_ids,
+			'id_by_post'  => $id_by_post,
+			'url_to_id'   => $url_to_id,
+			'offset'      => 0,
+			'concept_ids' => array(),
+			'nodes'       => array(),
+			'edges'       => array(),
+			'entries'     => array(),
+			'total'       => count( $post_ids ),
+		);
+
+		update_option( self::OPTION_BUILD_STATE, $state, false );
+		return $state;
+	}
+
+	/**
+	 * Process the next batch of posts: convert each, rewrite its links and append
+	 * the file/node/entry to the saved state. Advances and persists the offset.
+	 *
+	 * @since 3.6.0
+	 * @param int $size Number of posts to process this call.
+	 * @return array|false The updated state, or false if no build is in progress.
+	 */
+	public function process_batch( $size ) {
+		$state = get_option( self::OPTION_BUILD_STATE );
+		if ( ! is_array( $state ) || ! isset( $state['post_ids'] ) ) {
+			return false;
+		}
+
+		$slice = array_slice( $state['post_ids'], $state['offset'], $size );
+		foreach ( $slice as $pid ) {
+			$post = get_post( $pid );
+			if ( ! $post || ! isset( $state['id_by_post'][ $pid ] ) ) {
+				continue;
+			}
+			$cid      = $state['id_by_post'][ $pid ];
+			$markdown = $this->get_concept_markdown( $pid );
+			if ( false === $markdown || '' === $markdown ) {
+				continue;
+			}
+
+			$markdown = $this->rewrite_links( $markdown, $cid, $state['url_to_id'], $state['edges'] );
+
+			// Store this concept in its own small option; the build state stays
+			// light (only graph/entry metadata) so its repeated re-save never hits
+			// the DB row-size limit that froze large builds at ~74%.
+			update_option( $this->file_option_key( $cid ), $markdown, false );
+			$state['concept_ids'][] = $cid;
+
+			$type      = ( 'post' === $post->post_type ) ? 'Article' : 'WebPage';
+			$permalink = function_exists( 'ta_frontend_permalink' ) ? ta_frontend_permalink( $pid ) : get_permalink( $pid );
+
+			$state['nodes'][]   = array(
+				'id'    => $cid,
+				'title' => get_the_title( $post ),
+				'type'  => $type,
+				'url'   => $permalink,
+			);
+			$state['entries'][] = array(
+				'id'    => $cid,
+				'title' => get_the_title( $post ),
+				'desc'  => $this->concept_description( $post ),
+				'date'  => substr( (string) get_post_modified_time( 'c', true, $post ), 0, 10 ),
+			);
+		}
+
+		$state['offset'] += count( $slice );
+		update_option( self::OPTION_BUILD_STATE, $state, false );
+		return $state;
+	}
+
+	/**
+	 * Finalize a chunked build: add index.md/log.md, assemble the bundle and save
+	 * it. Verifies the save actually persisted (a too-large bundle fails silently
+	 * in update_option) and clears the build state.
+	 *
+	 * @since 3.6.0
+	 * @return array|false The saved store, or false if the save did not persist.
+	 */
+	public function finalize_build() {
+		$state = get_option( self::OPTION_BUILD_STATE );
+		if ( ! is_array( $state ) ) {
+			return false;
+		}
+
+		// Only the lightweight index.md/log.md live in the bundle; concept files
+		// are served on demand from their per-concept options (see get_bundle_file).
+		$files               = array();
+		$files['index.md']   = $this->build_index_md( $state['entries'] );
+		$log                 = $this->build_log_md( $state['entries'] );
+		if ( '' !== $log ) {
+			$files['log.md'] = $log;
+		}
+
+		$store = array(
+			'files'       => $files,
+			'concept_ids' => $state['concept_ids'],
+			'graph'       => array( 'nodes' => $state['nodes'], 'edges' => $state['edges'] ),
+			'stats'       => array(
+				'posts'    => (int) $state['total'],
+				'concepts' => count( $state['nodes'] ),
+				'edges'    => count( $state['edges'] ),
+			),
+			'generated'   => gmdate( 'Y-m-d H:i:s' ),
+		);
+
+		update_option( self::OPTION_BUNDLE, $store, false );
+		delete_option( self::OPTION_BUILD_STATE );
+
+		// update_option() returns false both when unchanged and when the DB write
+		// fails (e.g. the row exceeds max_allowed_packet). Re-read and compare the
+		// generated stamp to tell a real save from a no-op.
+		$saved = get_option( self::OPTION_BUNDLE );
+		if ( ! is_array( $saved ) || empty( $saved['generated'] ) || $saved['generated'] !== $store['generated'] ) {
+			$this->logger->error( 'OKF: bundle build finished but failed to persist (likely too large to store).', array(
+				'concepts' => $store['stats']['concepts'],
+			) );
+			return false;
+		}
 
 		return $store;
 	}
@@ -633,10 +969,17 @@ class TA_OKF_Bundle {
 			echo '<p>' . esc_html__( 'No bundle generated yet. Use the button below to build the first one.', 'third-audience' ) . '</p>';
 		}
 
-		echo '<form method="post" style="margin:0">';
+		// The form still works without JS (synchronous build via the POST handler
+		// above). With JS, the click is intercepted and the bundle is built in
+		// small batches so large sites don't time out — see the script below.
+		echo '<form method="post" style="margin:0" id="ta-okf-generate-form">';
 		wp_nonce_field( 'ta_okf_generate' );
-		echo '<button class="button button-secondary" name="ta_okf_generate" value="1">' . esc_html__( 'Generate bundle now', 'third-audience' ) . '</button>';
+		echo '<button type="submit" class="button button-secondary" id="ta-okf-generate-btn" name="ta_okf_generate" value="1">' . esc_html__( 'Generate bundle now', 'third-audience' ) . '</button>';
 		echo '</form>';
+		echo '<div id="ta-okf-progress" style="display:none;margin-top:14px;max-width:480px">';
+		echo '<div id="ta-okf-progress-label" style="font-size:13px;color:#1d2327;margin-bottom:6px">' . esc_html__( 'Starting…', 'third-audience' ) . '</div>';
+		echo '<div style="background:#e2e4e7;border-radius:6px;height:14px;overflow:hidden"><div id="ta-okf-progress-bar" style="background:#2271b1;height:100%;width:0;transition:width .25s ease"></div></div>';
+		echo '</div>';
 		echo '</div>';
 
 		// Settings form.
@@ -676,7 +1019,91 @@ class TA_OKF_Bundle {
 			echo '</div>';
 		}
 
+		// Chunked-build driver: one click runs start → repeated process batches →
+		// finalize, updating the progress bar, then reloads to show the graph.
+		echo '<script>window.TA_OKF_BUILD=' . wp_json_encode( array(
+			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+			'nonce'   => wp_create_nonce( 'ta_okf_build' ),
+		) ) . ';</script>';
+		echo '<script>' . $this->build_js() . '</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static script.
+
 		echo '</div>'; // .wrap
+	}
+
+	/**
+	 * Browser-driven chunked-build script (vanilla JS, no dependencies).
+	 *
+	 * @since 3.6.0
+	 * @return string The script body.
+	 */
+	private function build_js() {
+		return <<<'JS'
+(function () {
+  var cfg = window.TA_OKF_BUILD || {};
+  var form = document.getElementById('ta-okf-generate-form');
+  if (!form || !cfg.ajaxUrl) { return; }
+  var btn = document.getElementById('ta-okf-generate-btn');
+  var box = document.getElementById('ta-okf-progress');
+  var bar = document.getElementById('ta-okf-progress-bar');
+  var label = document.getElementById('ta-okf-progress-label');
+
+  function post(step, cb) {
+    var body = 'action=ta_okf_build_batch&step=' + encodeURIComponent(step) +
+               '&nonce=' + encodeURIComponent(cfg.nonce);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', cfg.ajaxUrl, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+    xhr.onload = function () {
+      var res = null;
+      try { res = JSON.parse(xhr.responseText); } catch (e) {}
+      cb(res);
+    };
+    xhr.onerror = function () { cb(null); };
+    xhr.send(body);
+  }
+  function fail(msg) {
+    bar.style.background = '#d63638';
+    bar.style.width = '100%';
+    label.textContent = msg || 'Build failed. Please try again.';
+    btn.disabled = false;
+  }
+  function setProgress(done, total) {
+    var pct = total ? Math.round((done / total) * 100) : 0;
+    bar.style.width = pct + '%';
+    label.textContent = 'Generating bundle… ' + done + ' / ' + total + ' posts (' + pct + '%)';
+  }
+  function loop() {
+    post('process', function (res) {
+      if (!res || !res.success) { fail(res && res.data ? res.data.message : 'Build failed during conversion.'); return; }
+      setProgress(res.data.processed, res.data.total);
+      if (res.data.phase === 'finalize') { finalize(); } else { loop(); }
+    });
+  }
+  function finalize() {
+    label.textContent = 'Finishing…';
+    post('finalize', function (res) {
+      if (!res || !res.success) { fail(res && res.data ? res.data.message : 'Could not save the bundle.'); return; }
+      bar.style.width = '100%';
+      label.textContent = 'Done — ' + res.data.concepts + ' concepts, ' + res.data.edges + ' links. Reloading…';
+      setTimeout(function () { window.location.reload(); }, 900);
+    });
+  }
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    btn.disabled = true;
+    box.style.display = 'block';
+    bar.style.background = '#2271b1';
+    bar.style.width = '0';
+    label.textContent = 'Starting…';
+    post('start', function (res) {
+      if (!res || !res.success) { fail(res && res.data ? res.data.message : 'Could not start the build.'); return; }
+      if (!res.data.total) { fail('No published posts or pages to include.'); return; }
+      setProgress(0, res.data.total);
+      loop();
+    });
+  });
+})();
+JS;
 	}
 
 	/**

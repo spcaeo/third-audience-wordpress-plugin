@@ -103,6 +103,10 @@ class Third_Audience {
             // Phase 4: OKF page as a submenu under the main menu, just below
             // "LLM Traffic". Priority 11 runs after TA_Admin's submenus (10).
             add_action('admin_menu', array($this->okf_bundle, 'register_admin_menu'), 11);
+
+            // Chunked "Generate bundle now": builds the bundle across many small
+            // AJAX batches so large sites don't time out in one request.
+            add_action('wp_ajax_ta_okf_build_batch', array($this->okf_bundle, 'ajax_build_batch'));
         }
 
         // Content Negotiation

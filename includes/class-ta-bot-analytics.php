@@ -632,6 +632,18 @@ class TA_Bot_Analytics {
 	}
 
 	/**
+	 * Get a single-column breakdown for the drill-down dimension cards.
+	 *
+	 * @since 3.7.0
+	 * @param string $dimension One of: format, pagetype, country, status.
+	 * @param array  $filters   Optional filters.
+	 * @return array Breakdown rows.
+	 */
+	public function get_breakdown( $dimension, $filters = array() ) {
+		return $this->query->get_breakdown( $dimension, $filters );
+	}
+
+	/**
 	 * Get citation-to-crawl ratio.
 	 *
 	 * @since 2.7.0

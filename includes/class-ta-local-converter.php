@@ -187,8 +187,16 @@ class TA_Local_Converter {
 				$html_content = $this->extract_main_content( $html_content );
 			}
 
-			// Convert HTML to Markdown
-			$body_markdown = $this->converter->convert( $html_content );
+			// Convert HTML to Markdown.
+			//
+			// Empty or malformed HTML makes the underlying library throw
+			// "Invalid HTML was provided". Previously that failed the entire post,
+			// dropping it from the OKF bundle and the knowledge graph (and spamming
+			// the error log). Instead we guard empty content, and on a parse failure
+			// retry once with repaired markup before falling back to an empty body —
+			// so a single broken post never breaks the whole bundle. Applies to every
+			// site, not a one-off content fix.
+			$body_markdown = $this->convert_html_body( $html_content, $post->ID );
 
 			// Clean up the markdown
 			$body_markdown = $this->clean_markdown( $body_markdown );
@@ -220,6 +228,88 @@ class TA_Local_Converter {
 				array( 'exception' => $e->getMessage() )
 			);
 		}
+	}
+
+	/**
+	 * Convert a post's HTML body to markdown without ever throwing.
+	 *
+	 * The League HTML-to-Markdown library throws "Invalid HTML was provided"
+	 * when given empty/whitespace input or markup its parser rejects. We:
+	 *   1. Skip empty content (return an empty body).
+	 *   2. Try a straight conversion.
+	 *   3. On failure, repair the markup via DOMDocument and retry once.
+	 *   4. If it still fails, log a warning and return an empty body so the post
+	 *      is still included in the bundle with its title and metadata.
+	 *
+	 * @since 3.6.0
+	 * @param string $html    The post HTML.
+	 * @param int    $post_id The post ID (for logging).
+	 * @return string The body markdown ('' when the HTML cannot be converted).
+	 */
+	private function convert_html_body( $html, $post_id ) {
+		if ( '' === trim( (string) $html ) ) {
+			return '';
+		}
+
+		try {
+			return $this->converter->convert( $html );
+		} catch ( \Throwable $e ) {
+			$repaired = $this->repair_html( $html );
+			if ( '' !== trim( $repaired ) ) {
+				try {
+					return $this->converter->convert( $repaired );
+				} catch ( \Throwable $e2 ) {
+					$e = $e2;
+				}
+			}
+			$this->logger->warning( 'Body conversion skipped (invalid HTML); post kept without body.', array(
+				'post_id' => $post_id,
+				'error'   => $e->getMessage(),
+			) );
+			return '';
+		}
+	}
+
+	/**
+	 * Repair malformed HTML by round-tripping it through DOMDocument.
+	 *
+	 * Lets libxml fix unclosed tags and stray markup so the markdown converter
+	 * gets well-formed input. Returns '' if the document cannot be built.
+	 *
+	 * @since 3.6.0
+	 * @param string $html The HTML to repair.
+	 * @return string The repaired HTML, or '' on failure.
+	 */
+	private function repair_html( $html ) {
+		if ( '' === trim( (string) $html ) || ! class_exists( '\DOMDocument' ) ) {
+			return '';
+		}
+
+		$previous = libxml_use_internal_errors( true );
+		$doc      = new \DOMDocument();
+		// Force UTF-8 and wrap so loadHTML neither mangles encoding nor injects a
+		// stray top-level node; LIBXML_NOERROR/NOWARNING keep it quiet on bad markup.
+		$loaded = $doc->loadHTML(
+			'<?xml encoding="UTF-8"><div id="ta-repair-root">' . $html . '</div>',
+			LIBXML_NOERROR | LIBXML_NOWARNING
+		);
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+
+		if ( ! $loaded ) {
+			return '';
+		}
+
+		$root = $doc->getElementById( 'ta-repair-root' );
+		if ( ! $root ) {
+			return '';
+		}
+
+		$out = '';
+		foreach ( $root->childNodes as $child ) {
+			$out .= $doc->saveHTML( $child );
+		}
+		return $out;
 	}
 
 	/**

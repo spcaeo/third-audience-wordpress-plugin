@@ -71,6 +71,7 @@ class TA_Admin_AJAX_Analytics {
 		add_action( 'wp_ajax_ta_load_more_citations', array( $this, 'ajax_load_more_citations' ) );
 		add_action( 'wp_ajax_ta_citations_paginate', array( $this, 'ajax_citations_paginate' ) );
 		add_action( 'wp_ajax_ta_citations_drilldown', array( $this, 'ajax_citations_drilldown' ) );
+		add_action( 'wp_ajax_ta_bot_drilldown', array( $this, 'ajax_bot_drilldown' ) );
 	}
 
 	/**
@@ -318,6 +319,81 @@ class TA_Admin_AJAX_Analytics {
 			'page'        => $page,
 			'total_pages' => max( 1, (int) ceil( $total / $per ) ),
 			'per'         => $per,
+		) );
+	}
+
+	/**
+	 * AJAX drill-down for the Bot Analytics dimension cards.
+	 *
+	 * Returns the exact bot-crawl rows behind a clicked dimension value
+	 * (bot / page / format / pagetype / country / status), paginated.
+	 *
+	 * @since 3.7.0
+	 * @return void
+	 */
+	public function ajax_bot_drilldown() {
+		check_ajax_referer( 'ta_bot_analytics', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( 'Unauthorized', 403 );
+		}
+
+		global $wpdb;
+		$table  = $wpdb->prefix . 'ta_bot_analytics';
+		$dim    = sanitize_key( $_POST['dim'] ?? '' );
+		$val    = isset( $_POST['val'] ) ? wp_unslash( $_POST['val'] ) : '';
+		$page   = max( 1, intval( $_POST['page'] ?? 1 ) );
+		$per    = 15;
+		$offset = ( $page - 1 ) * $per;
+
+		// Bot crawls only — human AI-referral clicks live on the LLM Traffic page.
+		$where = array( "traffic_type = 'bot_crawl'" );
+		switch ( $dim ) {
+			case 'bot':
+				$where[] = "bot_type = '" . esc_sql( sanitize_text_field( $val ) ) . "'";
+				break;
+			case 'page':
+				$where[] = "url = '" . esc_sql( esc_url_raw( $val ) ) . "'";
+				break;
+			case 'format':
+				$where[] = "content_type = '" . esc_sql( sanitize_text_field( $val ) ) . "'";
+				break;
+			case 'pagetype':
+				$where[] = "post_type = '" . esc_sql( sanitize_text_field( $val ) ) . "'";
+				break;
+			case 'country':
+				$where[] = "country_code = '" . esc_sql( sanitize_text_field( $val ) ) . "'";
+				break;
+			case 'status':
+				$where[] = 'http_status = ' . intval( $val );
+				break;
+			default:
+				wp_send_json_error( 'Bad dimension', 400 );
+		}
+
+		$date_ops = array( 'date_from' => '>=', 'date_to' => '<=' );
+		foreach ( $date_ops as $key => $op ) {
+			if ( ! empty( $_POST[ $key ] ) ) {
+				$where[] = "DATE(visit_timestamp) {$op} '" . esc_sql( sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) ) . "'";
+			}
+		}
+
+		$where_sql = implode( ' AND ', $where );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where_sql}" );
+		$rows  = $wpdb->get_results(
+			"SELECT bot_type, bot_name, url, post_title, content_type, post_type, country_code, http_status, cache_status, response_time, visit_timestamp
+			FROM {$table} WHERE {$where_sql}
+			ORDER BY visit_timestamp DESC LIMIT {$per} OFFSET {$offset}",
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		wp_send_json_success( array(
+			'rows'        => $rows,
+			'total'       => $total,
+			'page'        => $page,
+			'total_pages' => max( 1, (int) ceil( $total / $per ) ),
 		) );
 	}
 

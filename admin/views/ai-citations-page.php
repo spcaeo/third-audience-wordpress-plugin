@@ -464,6 +464,7 @@ $daily_by_type_rows = $wpdb->get_results(
 // Build chart data arrays.
 $chart_labels      = array();
 $chart_citations   = array();
+$chart_llm         = array();
 $chart_crawls      = array();
 $chart_google      = array();
 $chart_html        = array();
@@ -503,13 +504,24 @@ foreach ( $daily_google as $row ) {
 for ( $i = 29; $i >= 0; $i-- ) {
 	$date              = gmdate( 'Y-m-d', strtotime( "-{$i} days" ) );
 	$chart_labels[]    = gmdate( 'M j', strtotime( $date ) );
-	$chart_citations[] = isset( $citations_by_date[ $date ] ) ? $citations_by_date[ $date ] : 0;
+	$day_citations     = isset( $citations_by_date[ $date ] ) ? $citations_by_date[ $date ] : 0;
+	$day_google        = isset( $google_by_date[ $date ] ) ? $google_by_date[ $date ] : 0;
+	$chart_citations[] = $day_citations;
+	$chart_google[]    = $day_google;
+	// LLM line excludes Google so it reconciles with the headline LLM count
+	// (which also excludes Google Search / Google AI Mode). max() guards against
+	// any edge case where the Google subset query out-counts the total.
+	$chart_llm[]       = max( 0, $day_citations - $day_google );
 	$chart_crawls[]    = isset( $crawls_by_date[ $date ] ) ? $crawls_by_date[ $date ] : 0;
-	$chart_google[]    = isset( $google_by_date[ $date ] ) ? $google_by_date[ $date ] : 0;
 	$chart_html[]      = isset( $html_by_date[ $date ] ) ? $html_by_date[ $date ] : 0;
 	$chart_md[]        = isset( $md_by_date[ $date ] ) ? $md_by_date[ $date ] : 0;
 	$chart_other[]     = isset( $other_by_date[ $date ] ) ? $other_by_date[ $date ] : 0;
 }
+
+// 30-day totals for the trend summary line (LLM vs Google vs combined).
+$trend_total_llm    = array_sum( $chart_llm );
+$trend_total_google = array_sum( $chart_google );
+$trend_total_all    = $trend_total_llm + $trend_total_google;
 
 // Platform chart data (for pie/doughnut chart).
 $platform_labels = array();
@@ -1676,6 +1688,16 @@ $available_dates = $wpdb->get_results(
 					<h2><?php esc_html_e( 'Traffic Trend (Last 30 Days)', 'third-audience' ); ?></h2>
 				</div>
 				<div class="ta-card-body" style="padding: 20px;">
+					<p style="margin: 0 0 14px; font-size: 13px; color: #555;">
+						<span style="color:#007aff;font-weight:600;"><?php esc_html_e( 'LLM', 'third-audience' ); ?>:</span>
+						<?php echo esc_html( number_format_i18n( $trend_total_llm ) ); ?>
+						&nbsp;·&nbsp;
+						<span style="color:#ff9500;font-weight:600;"><?php esc_html_e( 'Google', 'third-audience' ); ?>:</span>
+						<?php echo esc_html( number_format_i18n( $trend_total_google ) ); ?>
+						&nbsp;·&nbsp;
+						<strong><?php esc_html_e( 'Total', 'third-audience' ); ?>:</strong>
+						<?php echo esc_html( number_format_i18n( $trend_total_all ) ); ?>
+					</p>
 					<canvas id="ta-citations-trend-chart" height="200"></canvas>
 				</div>
 			</div>
@@ -1784,6 +1806,7 @@ document.addEventListener('DOMContentLoaded', function() {
 	// Chart data from PHP
 	var chartLabels    = <?php echo wp_json_encode( $chart_labels ); ?>;
 	var chartCitations = <?php echo wp_json_encode( $chart_citations ); ?>;
+	var chartLlm       = <?php echo wp_json_encode( $chart_llm ); ?>;
 	var chartCrawls    = <?php echo wp_json_encode( $chart_crawls ); ?>;
 	var chartGoogle    = <?php echo wp_json_encode( $chart_google ); ?>;
 	var chartHtml      = <?php echo wp_json_encode( $chart_html ); ?>;
@@ -1820,10 +1843,20 @@ document.addEventListener('DOMContentLoaded', function() {
 				labels: chartLabels,
 				datasets: [
 					{
-						label: 'LLM Citations',
-						data: chartCitations,
+						label: 'LLM Traffic',
+						data: chartLlm,
 						borderColor: '#007aff',
 						backgroundColor: 'rgba(0, 122, 255, 0.1)',
+						fill: true,
+						tension: 0.4,
+						pointRadius: 2,
+						pointHoverRadius: 5
+					},
+					{
+						label: 'Google',
+						data: chartGoogle,
+						borderColor: '#ff9500',
+						backgroundColor: 'rgba(255, 149, 0, 0.08)',
 						fill: true,
 						tension: 0.4,
 						pointRadius: 2,
@@ -1849,7 +1882,19 @@ document.addEventListener('DOMContentLoaded', function() {
 				interaction: {
 					intersect: false,
 					mode: 'index'
-				}
+				},
+				plugins: Object.assign({}, commonOptions.plugins, {
+					tooltip: {
+						callbacks: {
+							// Show LLM + Google for the day, plus a combined total.
+							footer: function (items) {
+								var total = 0;
+								items.forEach(function (it) { total += (it.parsed.y || 0); });
+								return 'Total: ' + total;
+							}
+						}
+					}
+				})
 			})
 		});
 	}
