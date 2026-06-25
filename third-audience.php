@@ -3,7 +3,7 @@
  * Plugin Name: Third Audience
  * Plugin URI: https://third-audience.dev
  * Description: Serve AI-optimized Markdown versions of your content to AI crawlers (ClaudeBot, GPTBot, PerplexityBot). Now with an Open Knowledge Format (OKF) bundle at /okf/, Zero-Configuration Auto-Deployment, Google Analytics 4 integration, Competitor Benchmarking, and comprehensive bot tracking!
- * Version: 3.6.0
+ * Version: 3.6.1
  * Author: Third Audience
  * Author URI: https://third-audience.dev
  * License: GPL v2 or later
@@ -27,14 +27,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @since 1.0.0
  */
-define( 'TA_VERSION', '3.6.0' );
+define( 'TA_VERSION', '3.6.1' );
 
 /**
  * Database version for migrations.
  *
  * @since 1.1.0
  */
-define( 'TA_DB_VERSION', '3.5.0' );
+define( 'TA_DB_VERSION', '3.6.1' );
 
 /**
  * Minimum PHP version required.
@@ -205,6 +205,12 @@ function ta_run_migrations() {
 		if ( version_compare( $current_db_version, '3.3.10', '<' ) ) {
 			require_once TA_PLUGIN_DIR . 'includes/migrations/class-ta-migration-3-3-10.php';
 			TA_Migration_3_3_10::migrate();
+		}
+
+		// Run migration for 3.6.1 (reclassify legacy "Bing AI" rows to organic "Bing").
+		if ( version_compare( $current_db_version, '3.6.1', '<' ) ) {
+			require_once TA_PLUGIN_DIR . 'includes/migrations/class-ta-migration-3-6-1.php';
+			TA_Migration_3_6_1::migrate();
 		}
 
 		// Update database version to current.
@@ -1813,7 +1819,7 @@ function ta_track_citation_callback( $request ) {
 		'Google Search'      => '#4285F4',
 		'Google AI Mode'     => '#1A73E8',
 		'Copilot'            => '#00BCF2',
-		'Bing AI'            => '#008373',
+		'Bing'               => '#008373',
 	);
 	$platform_color = isset( $platform_colors[ $platform ] ) ? $platform_colors[ $platform ] : '#8B5CF6';
 

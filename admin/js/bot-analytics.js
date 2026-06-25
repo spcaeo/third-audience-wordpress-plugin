@@ -29,6 +29,7 @@
 			// Always initialize toggle and clear button, even if no chart data
 			this.initCacheHelpToggle();
 			this.initClearAllVisits();
+			this.initClearScoped();
 			this.initExportDropdown();
 			this.initLiveFeed();
 
@@ -130,6 +131,60 @@
 						window.location.reload();
 					} else {
 						alert('Error: ' + (response.data.message || 'Failed to clear visits'));
+						$button.prop('disabled', false).text(originalText);
+					}
+				},
+				error: function() {
+					alert('Error: Failed to communicate with server');
+					$button.prop('disabled', false).text(originalText);
+				}
+			});
+		},
+
+		/**
+		 * Initialize the scoped clear buttons (bot crawls / LLM traffic only).
+		 * Each clears just its own traffic_type, leaving the other intact.
+		 */
+		initClearScoped: function() {
+			var self = this;
+
+			$('.ta-clear-bot-crawls').on('click', function(e) {
+				e.preventDefault();
+				self.handleClearScoped($(this), 'ta_clear_bot_crawls',
+					'Are you sure you want to clear ALL bot crawl records? This action cannot be undone.');
+			});
+
+			$('.ta-clear-citations').on('click', function(e) {
+				e.preventDefault();
+				self.handleClearScoped($(this), 'ta_clear_citations',
+					'Are you sure you want to clear ALL LLM traffic records? This action cannot be undone.');
+			});
+		},
+
+		/**
+		 * Shared handler for scoped clears.
+		 */
+		handleClearScoped: function($button, action, confirmMsg) {
+			if (!confirm(confirmMsg)) {
+				return;
+			}
+
+			var originalText = $button.text();
+			$button.prop('disabled', true).text('Clearing...');
+
+			$.ajax({
+				url: ajaxurl,
+				type: 'POST',
+				data: {
+					action: action,
+					nonce: (typeof taAnalyticsData !== 'undefined' && taAnalyticsData.nonce) ? taAnalyticsData.nonce : ''
+				},
+				success: function(response) {
+					if (response.success) {
+						alert(response.data.message);
+						window.location.reload();
+					} else {
+						alert('Error: ' + (response.data.message || 'Failed to clear data'));
 						$button.prop('disabled', false).text(originalText);
 					}
 				},
@@ -540,16 +595,30 @@
 		toggleFeedPause: function () {
 			var $btn = $('.ta-feed-toggle-btn');
 			this.feedPaused = !this.feedPaused;
+			var label = this.feedPaused ? 'Resume' : 'Pause';
+
+			$btn.attr('data-paused', this.feedPaused ? 'true' : 'false');
+
+			// Toggle the icon only if one exists in the markup.
+			var $icon = $btn.find('.dashicons');
+			if ($icon.length) {
+				$icon.toggleClass('dashicons-media-pause', !this.feedPaused)
+				     .toggleClass('dashicons-controls-play', this.feedPaused);
+			}
+
+			// Update the label. Use a dedicated text span if present; otherwise set
+			// the button's own text (the current markup is a plain-text button, so
+			// find('span') was matching nothing and the label never changed).
+			var $label = $btn.find('span').not('.dashicons');
+			if ($label.length) {
+				$label.text(label);
+			} else {
+				$btn.text(label);
+			}
 
 			if (this.feedPaused) {
-				$btn.attr('data-paused', 'true');
-				$btn.find('.dashicons').removeClass('dashicons-media-pause').addClass('dashicons-controls-play');
-				$btn.find('span').text('Resume');
 				$('.ta-live-feed-widget').addClass('ta-feed-paused');
 			} else {
-				$btn.attr('data-paused', 'false');
-				$btn.find('.dashicons').removeClass('dashicons-controls-play').addClass('dashicons-media-pause');
-				$btn.find('span').text('Pause');
 				$('.ta-live-feed-widget').removeClass('ta-feed-paused');
 				// Load fresh data when resuming
 				this.loadLiveFeedData();

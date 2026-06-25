@@ -2,6 +2,25 @@
 
 All notable changes to Third Audience plugin will be documented in this file.
 
+## [3.6.1] - 2026-06-25
+
+### Fixed
+- **Bing no longer counted as AI traffic.** Plain `www.bing.com` clicks were mislabelled as "Bing AI" and counted as LLM traffic. Ordinary Bing is now treated as organic search ("Bing") and shown alongside Google under Organic Search; only Bing Copilot (the `&form=MA…` referrer signature) is detected as AI ("Copilot"). Fixed in the server tracker, the public citation-tracker JS, and the headless middleware snippets.
+- **OKF bundle no longer freezes post/menu saves on large sites.** Saving a post used to rebuild the whole bundle synchronously. Saves now just mark the bundle stale and a debounced background WP-Cron event rebuilds it, so every save returns instantly. Saves of post types not in the bundle (nav menus, attachments, etc.) no longer trigger a rebuild at all.
+- **OKF "Generate bundle now" no longer fails on certain shortcodes.** Page-builder widgets that echo HTML directly (testimonial/video modals, etc.) could corrupt the build's AJAX response ("Build failed during conversion"). Content rendering is now output-buffered so stray output can't leak.
+- Live Feed **Pause/Resume** button label now updates correctly.
+- Admin update notices no longer break the title/button row on the Bot Analytics and LLM Traffic pages.
+
+### Added
+- **Hidden-referrer (Claude) detection on direct WordPress.** Claude and some AI platforms strip the Referer header. Cross-site top-level navigations to content pages (via `Sec-Fetch-Site`/`Sec-Fetch-Mode`) are now recorded as low-confidence AI citations ("Hidden Referrer (Claude)"), mirroring the headless middleware. Controlled by a new setting, on by default.
+- **Scoped clear buttons.** "Clear LLM Traffic Data" (LLM Traffic page) and "Clear Bot Crawl Data" (Bot Analytics page) each delete only their own records, leaving the other intact. The bot-crawl clear also resets fingerprint-based Crawl Depth / Crawl Health metrics.
+
+### Notes
+- New option: `ta_detect_hidden_referrer` (default on) — disable if hidden-referrer detection adds noise.
+- DB version bumped to **3.6.1**; a migration reclassifies historical "Bing AI" rows to organic "Bing" automatically on update.
+
+---
+
 ## [3.6.0] - 2026-06-16
 
 ### Added

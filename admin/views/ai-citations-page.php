@@ -56,8 +56,8 @@ $where_clauses = array(
 	"url NOT LIKE '%admin-ajax.php%'",
 	"url NOT LIKE '%/wp-cron%'",
 	"url NOT LIKE '%/xmlrpc%'",
-	// Google Search and Google AI Mode are shown separately — not in LLM/AI citation counts.
-	"ai_platform NOT IN ('Google Search', 'Google AI Mode')",
+	// Google Search, Google AI Mode and Bing (organic) are shown separately — not in LLM/AI citation counts.
+	"ai_platform NOT IN ('Google Search', 'Google AI Mode', 'Bing')",
 );
 
 if ( ! empty( $filters['platform'] ) ) {
@@ -299,13 +299,32 @@ $recent_citations = $wpdb->get_results(
 );
 
 // Organic Search Traffic — Google Search visits (separate from AI citations).
+// Honour the same date-range filters as the rest of the page so this section
+// reacts to the date picker, mirroring the "Recent LLMs Visits" behaviour.
+// The AJAX paginate handler already applies these to the 'google' section, so
+// the initial render and the paginated pages stay in sync.
+$google_date_clauses = array();
+if ( ! empty( $filters['date_from'] ) ) {
+	$google_date_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) >= %s', $filters['date_from'] );
+}
+if ( ! empty( $filters['date_to'] ) ) {
+	$google_date_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) <= %s', $filters['date_to'] );
+}
+if ( ! empty( $filters['date'] ) ) {
+	$google_date_clauses[] = $wpdb->prepare( 'DATE(visit_timestamp) = %s', $filters['date'] );
+}
+$google_date_sql = empty( $google_date_clauses ) ? '' : ' AND ' . implode( ' AND ', $google_date_clauses );
+
 $google_search_base = array(
 	"traffic_type = 'citation_click'",
-	"ai_platform IN ('Google Search', 'Google AI Mode')",
+	"ai_platform IN ('Google Search', 'Google AI Mode', 'Bing')",
 	"(client_user_agent IS NOT NULL OR content_type IN ('rest_api', 'ajax') OR user_agent NOT LIKE 'Headless%')",
 	"url NOT LIKE '%/wp-admin%'",
 	"url NOT LIKE '%/wp-login%'",
 );
+foreach ( $google_date_clauses as $google_date_clause ) {
+	$google_search_base[] = $google_date_clause;
+}
 $google_search_sql = implode( ' AND ', $google_search_base );
 
 $google_search_total = $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name} WHERE {$google_search_sql}" );
@@ -318,10 +337,10 @@ $google_search_today = $wpdb->get_var(
 );
 
 $google_ai_mode_total = $wpdb->get_var(
-	"SELECT COUNT(*) FROM {$table_name} WHERE traffic_type = 'citation_click' AND ai_platform = 'Google AI Mode'"
+	"SELECT COUNT(*) FROM {$table_name} WHERE traffic_type = 'citation_click' AND ai_platform = 'Google AI Mode'" . $google_date_sql
 );
 $google_organic_total = $wpdb->get_var(
-	"SELECT COUNT(*) FROM {$table_name} WHERE traffic_type = 'citation_click' AND ai_platform = 'Google Search'"
+	"SELECT COUNT(*) FROM {$table_name} WHERE traffic_type = 'citation_click' AND ai_platform = 'Google Search'" . $google_date_sql
 );
 
 $google_search_visits = $wpdb->get_results(
@@ -361,10 +380,10 @@ $crawl_chains = $wpdb->get_results(
 			OR ( c.ai_platform = 'Perplexity' AND b.bot_type = 'PerplexityBot' )
 			OR ( c.ai_platform = 'Claude' AND b.bot_type IN ('ClaudeBot', 'anthropic-ai') )
 			OR ( c.ai_platform IN ('Gemini', 'Bard (Gemini)') AND b.bot_type = 'Google-Extended' )
-			OR ( c.ai_platform IN ('Copilot', 'Bing AI') AND b.bot_type LIKE '%bing%' )
+			OR ( c.ai_platform = 'Copilot' AND b.bot_type LIKE '%bing%' )
 		)
 	WHERE c.traffic_type = 'citation_click'
-		AND c.ai_platform NOT IN ('Google Search', 'Google AI Mode')
+		AND c.ai_platform NOT IN ('Google Search', 'Google AI Mode', 'Bing')
 		AND c.visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
 		AND c.url NOT LIKE '%/wp-admin%'
 		AND c.url NOT LIKE '%admin-ajax.php%'
@@ -429,12 +448,12 @@ $daily_crawls = $wpdb->get_results(
 	ARRAY_A
 );
 
-// Daily Google (organic + AI Mode) for last 30 days — for the trend chart line.
+// Daily organic search (Google + AI Mode + Bing) for last 30 days — for the trend chart line.
 $daily_google = $wpdb->get_results(
 	"SELECT DATE(visit_timestamp) as date, COUNT(*) as google
 	FROM {$table_name}
 	WHERE traffic_type = 'citation_click'
-		AND ai_platform IN ('Google Search', 'Google AI Mode')
+		AND ai_platform IN ('Google Search', 'Google AI Mode', 'Bing')
 		AND visit_timestamp >= DATE_SUB(NOW(), INTERVAL 30 DAY)
 	GROUP BY DATE(visit_timestamp)
 	ORDER BY date ASC",
@@ -761,11 +780,28 @@ $available_dates = $wpdb->get_results(
 ?>
 
 <div class="wrap ta-bot-analytics">
-	<h1 class="wp-heading-inline">
-		<?php esc_html_e( 'LLM Traffic', 'third-audience' ); ?>
-		<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
-	</h1>
+	<?php // Place WP admin notices ABOVE our heading (this marker tells core where the header ends), so update notices don't break the title/button row. ?>
+	<hr class="wp-header-end" style="margin:0;border:0;height:0;">
+	<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+		<h1 class="wp-heading-inline">
+			<?php esc_html_e( 'LLM Traffic', 'third-audience' ); ?>
+			<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
+		</h1>
+		<button type="button" class="ta-clear-citations" style="display:inline-flex;align-items:center;gap:6px;background:#d63638;color:#fff;border:0;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;line-height:1;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(214,54,56,.35);" onmouseover="this.style.background='#b32d2e'" onmouseout="this.style.background='#d63638'">
+			<span class="dashicons dashicons-trash" style="font-size:16px;width:16px;height:16px;"></span>
+			<?php esc_html_e( 'Clear LLM Traffic Data', 'third-audience' ); ?>
+		</button>
+	</div>
 	<p class="description"><?php esc_html_e( 'Track citation clicks from ChatGPT, Perplexity, Claude, and other AI platforms', 'third-audience' ); ?></p>
+	<?php // Nonce for the shared bot-analytics.js clear handler (this page has no taAnalyticsData of its own). ?>
+	<script>
+		if (typeof window.taAnalyticsData === 'undefined') {
+			window.taAnalyticsData = {
+				ajaxUrl: <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
+				nonce: <?php echo wp_json_encode( wp_create_nonce( 'ta_bot_analytics' ) ); ?>
+			};
+		}
+	</script>
 
 	<?php if ( 0 === (int) $total_citations ) : ?>
 	<!-- Getting Started / Debug Card -->
@@ -1367,7 +1403,7 @@ $available_dates = $wpdb->get_results(
 				<?php endif; ?>
 			</h2>
 			<p style="margin: 6px 0 0; font-size: 13px; color: #646970;">
-				<?php esc_html_e( '— Google, tracked separately from AI platforms.', 'third-audience' ); ?>
+				<?php esc_html_e( '— Google & Bing, tracked separately from AI platforms.', 'third-audience' ); ?>
 			</p>
 		</div>
 		<div class="ta-card-body" style="overflow-x: auto; padding: 0;">
@@ -1399,6 +1435,10 @@ $available_dates = $wpdb->get_results(
 								<?php if ( 'Google AI Mode' === $gs['ai_platform'] ) : ?>
 									<span class="ta-bot-badge" style="background:#f3e8ff; color:#7c3aed; border-color:#d8b4fe; white-space:nowrap;" title="<?php esc_attr_e( 'Click from Google AI Overview (AI Mode)', 'third-audience' ); ?>">
 										<?php esc_html_e( 'Google AI Mode', 'third-audience' ); ?>
+									</span>
+								<?php elseif ( 'Bing' === $gs['ai_platform'] ) : ?>
+									<span class="ta-bot-badge" style="background:#e0f2f0; color:#008373; border-color:#a3d9d2; white-space:nowrap;" title="<?php esc_attr_e( 'Traditional organic Bing Search click', 'third-audience' ); ?>">
+										<?php esc_html_e( 'Bing', 'third-audience' ); ?>
 									</span>
 								<?php else : ?>
 									<span class="ta-bot-badge" style="background:#e8f0fe; color:#1a73e8; border-color:#c5d8fd; white-space:nowrap;" title="<?php esc_attr_e( 'Traditional organic Google Search click', 'third-audience' ); ?>">
@@ -1619,6 +1659,8 @@ $available_dates = $wpdb->get_results(
 			var title=c.post_title||c.url||'—';
 			var badge = c.ai_platform === 'Google AI Mode'
 				? '<span class="ta-bot-badge" style="background:#f3e8ff;color:#7c3aed;border-color:#d8b4fe;white-space:nowrap;" title="Google AI Overview click">Google AI Mode</span>'
+				: c.ai_platform === 'Bing'
+				? '<span class="ta-bot-badge" style="background:#e0f2f0;color:#008373;border-color:#a3d9d2;white-space:nowrap;" title="Traditional organic Bing Search click">Bing</span>'
 				: '<span class="ta-bot-badge" style="background:#e8f0fe;color:#1a73e8;border-color:#c5d8fd;white-space:nowrap;" title="Traditional organic search click">Google Search</span>';
 			return '<td>'+badge+'</td>'
 				+'<td title="'+taEsc(c.url)+'"><strong style="font-size:12px;">'+taEsc(title)+'</strong><br><code style="font-size:9px;color:#8e8e93;">'+taEsc(su)+'</code></td>'
@@ -1674,7 +1716,7 @@ $available_dates = $wpdb->get_results(
 		// Google Search pagination
 		var gsT=document.getElementById('ta-google-tbody'),gsPr=document.getElementById('ta-google-prev'),gsNx=document.getElementById('ta-google-next');
 		if(gsT&&gsPr&&gsNx) {
-			taPaginationInit({section:'google',tbody:gsT,prev:gsPr,next:gsNx,curEl:document.getElementById('ta-google-current-page'),totEl:document.getElementById('ta-google-total-pages'),spin:document.getElementById('ta-google-spinner'),render:taRenderGoogleRow,fil:{}});
+			taPaginationInit({section:'google',tbody:gsT,prev:gsPr,next:gsNx,curEl:document.getElementById('ta-google-current-page'),totEl:document.getElementById('ta-google-total-pages'),spin:document.getElementById('ta-google-spinner'),render:taRenderGoogleRow,fil:filters});
 		}
 	})();
 	</script>
@@ -1692,7 +1734,7 @@ $available_dates = $wpdb->get_results(
 						<span style="color:#007aff;font-weight:600;"><?php esc_html_e( 'LLM', 'third-audience' ); ?>:</span>
 						<?php echo esc_html( number_format_i18n( $trend_total_llm ) ); ?>
 						&nbsp;·&nbsp;
-						<span style="color:#ff9500;font-weight:600;"><?php esc_html_e( 'Google', 'third-audience' ); ?>:</span>
+						<span style="color:#ff9500;font-weight:600;"><?php esc_html_e( 'Google + Bing', 'third-audience' ); ?>:</span>
 						<?php echo esc_html( number_format_i18n( $trend_total_google ) ); ?>
 						&nbsp;·&nbsp;
 						<strong><?php esc_html_e( 'Total', 'third-audience' ); ?>:</strong>
@@ -1853,7 +1895,7 @@ document.addEventListener('DOMContentLoaded', function() {
 						pointHoverRadius: 5
 					},
 					{
-						label: 'Google',
+						label: 'Google + Bing',
 						data: chartGoogle,
 						borderColor: '#ff9500',
 						backgroundColor: 'rgba(255, 149, 0, 0.08)',

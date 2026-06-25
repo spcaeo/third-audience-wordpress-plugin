@@ -97,6 +97,8 @@ class TA_Admin {
 		// Core AJAX handlers that remain in this class.
 		add_action( 'wp_ajax_ta_test_smtp', array( $this, 'ajax_test_smtp' ) );
 		add_action( 'wp_ajax_ta_clear_all_visits', array( $this, 'ajax_clear_all_visits' ) );
+		add_action( 'wp_ajax_ta_clear_citations', array( $this, 'ajax_clear_citations' ) );
+		add_action( 'wp_ajax_ta_clear_bot_crawls', array( $this, 'ajax_clear_bot_crawls' ) );
 		add_action( 'wp_ajax_ta_get_recent_errors', array( $this, 'ajax_get_recent_errors' ) );
 		add_action( 'wp_ajax_ta_update_robots_txt', array( $this, 'ajax_update_robots_txt' ) );
 		add_action( 'wp_ajax_ta_dismiss_alert', array( $this, 'ajax_dismiss_alert' ) );
@@ -435,6 +437,7 @@ class TA_Admin {
 		register_setting( 'ta_settings', 'ta_cache_ttl', array( 'type' => 'integer', 'sanitize_callback' => 'absint', 'default' => 86400 ) );
 		register_setting( 'ta_settings', 'ta_enabled_post_types', array( 'type' => 'array', 'sanitize_callback' => array( $this->security, 'sanitize_post_types' ), 'default' => array( 'post', 'page' ) ) );
 		register_setting( 'ta_settings', 'ta_enable_content_negotiation', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
+		register_setting( 'ta_settings', 'ta_detect_hidden_referrer', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
 		register_setting( 'ta_settings', 'ta_enable_discovery_tags', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
 		register_setting( 'ta_settings', 'ta_enable_pre_generation', array( 'type' => 'boolean', 'sanitize_callback' => 'rest_sanitize_boolean', 'default' => true ) );
 		register_setting( 'ta_settings', 'ta_homepage_md_pattern', array( 'type' => 'string', 'sanitize_callback' => array( $this->security, 'sanitize_text' ), 'default' => 'index.md' ) );
@@ -954,6 +957,48 @@ class TA_Admin {
 
 		wp_send_json_success( array(
 			'message' => sprintf( __( 'Cleared %d bot visit records.', 'third-audience' ), $deleted ),
+			'count'   => $deleted,
+		) );
+	}
+
+	/**
+	 * AJAX handler to clear only LLM/AI citation (LLM Traffic) records.
+	 *
+	 * @since 3.6.0
+	 * @return void
+	 */
+	public function ajax_clear_citations() {
+		$this->security->verify_ajax_request( 'bot_analytics' );
+
+		$bot_analytics = TA_Bot_Analytics::get_instance();
+		$deleted       = $bot_analytics->clear_citations();
+
+		$this->logger->info( 'LLM traffic data cleared (AJAX).', array( 'count' => $deleted ) );
+
+		wp_send_json_success( array(
+			/* translators: %d: number of records deleted */
+			'message' => sprintf( __( 'Cleared %d LLM traffic records.', 'third-audience' ), $deleted ),
+			'count'   => $deleted,
+		) );
+	}
+
+	/**
+	 * AJAX handler to clear only bot-crawl records.
+	 *
+	 * @since 3.6.0
+	 * @return void
+	 */
+	public function ajax_clear_bot_crawls() {
+		$this->security->verify_ajax_request( 'bot_analytics' );
+
+		$bot_analytics = TA_Bot_Analytics::get_instance();
+		$deleted       = $bot_analytics->clear_bot_crawls();
+
+		$this->logger->info( 'Bot crawl data cleared (AJAX).', array( 'count' => $deleted ) );
+
+		wp_send_json_success( array(
+			/* translators: %d: number of records deleted */
+			'message' => sprintf( __( 'Cleared %d bot crawl records.', 'third-audience' ), $deleted ),
 			'count'   => $deleted,
 		) );
 	}

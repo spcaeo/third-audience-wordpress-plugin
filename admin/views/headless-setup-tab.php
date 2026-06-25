@@ -288,7 +288,9 @@ const AI_CITATION_SOURCES = [
   { pattern: /claude/i, name: 'Claude' },
   { pattern: /gemini/i, name: 'Gemini' },
   { pattern: /copilot/i, name: 'Copilot' },
-  { pattern: /bing/i, name: 'Bing AI' },
+  // NOTE: plain Bing (www.bing.com) is an ordinary search engine, NOT AI — it is
+  // detected as organic "Bing" below. Only Bing Copilot (the &form=MA… signature)
+  // counts as AI. So Bing is intentionally NOT listed as an AI citation source here.
 ];
 
 /**
@@ -328,12 +330,21 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
     }
   }
 
-  // Google Search / AI Mode — srsltid in the landing URL signals AI-assisted results.
+  // Google / Bing search — both are ordinary search engines, tracked separately
+  // from AI. Google: srsltid in the landing URL signals AI-assisted results (AI Mode).
+  // Bing: only the &form=MA… signature (Bing Copilot) counts as AI; everything else
+  // is organic "Bing" search, NOT "Bing AI".
   if (referer) {
     try {
-      const refHost = new URL(referer).hostname.toLowerCase();
+      const refUrl = new URL(referer);
+      const refHost = refUrl.hostname.toLowerCase();
       if (refHost === 'www.google.com' || refHost === 'google.com') {
         const platform = url.searchParams.has('srsltid') ? 'Google AI Mode' : 'Google Search';
+        return { platform, detection_type: 'referer' };
+      }
+      if (refHost === 'www.bing.com' || refHost === 'bing.com') {
+        const form = refUrl.searchParams.get('form') || '';
+        const platform = form.startsWith('MA') ? 'Copilot' : 'Bing';
         return { platform, detection_type: 'referer' };
       }
     } catch {}
@@ -773,7 +784,9 @@ const AI_CITATION_SOURCES = [
   { pattern: /claude/i, name: 'Claude' },
   { pattern: /gemini/i, name: 'Gemini' },
   { pattern: /copilot/i, name: 'Copilot' },
-  { pattern: /bing/i, name: 'Bing AI' },
+  // NOTE: plain Bing (www.bing.com) is an ordinary search engine, NOT AI — it is
+  // detected as organic "Bing" below. Only Bing Copilot (the &form=MA… signature)
+  // counts as AI. So Bing is intentionally NOT listed as an AI citation source here.
 ];
 
 function detectAICitation(request: NextRequest): { platform: string; query?: string; detection_type: string } | null {
@@ -801,12 +814,21 @@ function detectAICitation(request: NextRequest): { platform: string; query?: str
     }
   }
 
-  // Google Search / AI Mode — srsltid in the landing URL signals AI-assisted results.
+  // Google / Bing search — both are ordinary search engines, tracked separately
+  // from AI. Google: srsltid in the landing URL signals AI-assisted results (AI Mode).
+  // Bing: only the &form=MA… signature (Bing Copilot) counts as AI; everything else
+  // is organic "Bing" search, NOT "Bing AI".
   if (referer) {
     try {
-      const refHost = new URL(referer).hostname.toLowerCase();
+      const refUrl = new URL(referer);
+      const refHost = refUrl.hostname.toLowerCase();
       if (refHost === 'www.google.com' || refHost === 'google.com') {
         const platform = url.searchParams.has('srsltid') ? 'Google AI Mode' : 'Google Search';
+        return { platform, detection_type: 'referer' };
+      }
+      if (refHost === 'www.bing.com' || refHost === 'bing.com') {
+        const form = refUrl.searchParams.get('form') || '';
+        const platform = form.startsWith('MA') ? 'Copilot' : 'Bing';
         return { platform, detection_type: 'referer' };
       }
     } catch {}

@@ -908,6 +908,53 @@ class TA_Bot_Analytics {
 		return false !== $result;
 	}
 
+	/**
+	 * Clear only LLM/AI citation-click records (leaves bot crawls intact).
+	 *
+	 * @since 3.6.0
+	 * @return int Number of rows deleted.
+	 */
+	public function clear_citations() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE traffic_type = %s", 'citation_click' ) );
+
+		$this->logger->info( 'LLM traffic (citation) data cleared.', array( 'count' => (int) $deleted ) );
+
+		return (int) $deleted;
+	}
+
+	/**
+	 * Clear only bot-crawl records (leaves LLM/citation traffic intact).
+	 *
+	 * @since 3.6.0
+	 * @return int Number of rows deleted.
+	 */
+	public function clear_bot_crawls() {
+		global $wpdb;
+		$table_name = $wpdb->prefix . self::TABLE_NAME;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE traffic_type = %s", 'bot_crawl' ) );
+
+		// Crawl Depth and the Crawl Health score are computed from the fingerprints
+		// table (pages_per_session etc.), so clear it too — otherwise those metrics
+		// keep showing stale values after a bot-crawl clear.
+		$fingerprints_table = $wpdb->prefix . 'ta_bot_fingerprints';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$table_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $fingerprints_table ) );
+		if ( $table_exists === $fingerprints_table ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( "TRUNCATE TABLE {$fingerprints_table}" );
+		}
+
+		$this->logger->info( 'Bot crawl data cleared (visits + fingerprints).', array( 'count' => (int) $deleted ) );
+
+		return (int) $deleted;
+	}
+
 	// =========================================================================
 	// DATABASE SCHEMA
 	// =========================================================================

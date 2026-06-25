@@ -57,6 +57,17 @@ class TA_OKF_Bundle {
 	const FILE_OPTION_PREFIX = 'ta_okf_file_';
 
 	/**
+	 * Option flag: content changed since the last build (bundle is stale).
+	 * Set on save/enable; a background WP-Cron event rebuilds and clears it.
+	 */
+	const OPTION_DIRTY = 'ta_okf_dirty';
+
+	/**
+	 * WP-Cron hook that runs the background rebuild.
+	 */
+	const CRON_HOOK = 'ta_okf_rebuild_event';
+
+	/**
 	 * Cache Manager instance.
 	 *
 	 * @var TA_Cache_Manager
@@ -151,7 +162,12 @@ class TA_OKF_Bundle {
 
 		$store = get_option( self::OPTION_BUNDLE );
 		if ( ! is_array( $store ) || empty( $store['files'] ) ) {
-			$store = $this->build_bundle(); // Lazy build on first request.
+			// Not built yet. Schedule a background build instead of building inline:
+			// a synchronous build on a public request is slow on large sites and was
+			// the source of the earlier request-time rebuild loop. The crawler can
+			// retry once the background build finishes.
+			$this->schedule_rebuild();
+			$this->send_not_found( $file );
 		}
 
 		$content = $this->get_bundle_file( $store, $file );
@@ -271,7 +287,91 @@ class TA_OKF_Bundle {
 		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
 		}
-		$this->build_bundle();
+
+		// Only react to post types that are actually in the bundle. Saving a nav
+		// menu fires save_post for each nav_menu_item; attachments, custom types,
+		// etc. are also irrelevant. Triggering a rebuild for those was making menu
+		// saves fail on large sites. (On deletion the type is unknown — get_post_type
+		// returns false — so we fall through and rebuild, which is correct.)
+		if ( $post_id ) {
+			$type    = get_post_type( $post_id );
+			$enabled = (array) get_option( 'ta_enabled_post_types', array( 'post', 'page' ) );
+			if ( $type && ! in_array( $type, $enabled, true ) ) {
+				return;
+			}
+		}
+
+		// Never rebuild synchronously on save — that froze post/menu updates on
+		// large sites. Just mark the bundle stale and let a debounced background
+		// WP-Cron event rebuild it. Keeps every post type's save instant.
+		$this->schedule_rebuild();
+	}
+
+	/**
+	 * Mark the bundle stale and schedule a single background rebuild.
+	 *
+	 * Debounced: a burst of saves collapses into one rebuild (~90s out), so the
+	 * save request returns instantly and the bundle refreshes in the background.
+	 *
+	 * @since 3.6.0
+	 * @return void
+	 */
+	public function schedule_rebuild() {
+		update_option( self::OPTION_DIRTY, 1, false );
+		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+			wp_schedule_single_event( time() + 90, self::CRON_HOOK );
+		}
+	}
+
+	/**
+	 * WP-Cron callback: rebuild the bundle in the background if it is stale.
+	 *
+	 * Runs the chunked per-concept build (large-site safe). Because it runs in a
+	 * cron/background request — not on a public /okf/ request — it cannot cause the
+	 * request-time loop the earlier lazy rebuild did.
+	 *
+	 * @since 3.6.0
+	 * @return void
+	 */
+	public function run_scheduled_rebuild() {
+		if ( ! get_option( 'ta_enable_okf', true ) ) {
+			delete_option( self::OPTION_DIRTY );
+			return;
+		}
+		if ( ! get_option( self::OPTION_DIRTY ) ) {
+			return; // Nothing changed since the last build.
+		}
+		$this->rebuild_now(); // finalize_build() clears the dirty flag on success.
+	}
+
+	/**
+	 * Rebuild the whole bundle in one (background) request via the chunked path.
+	 *
+	 * Reuses start/process/finalize so storage stays per-concept (small writes,
+	 * no single-giant-row failure). Best-effort lifts the time limit since it may
+	 * be slow on large sites; only ever called from cron / the manual button, never
+	 * on a public request.
+	 *
+	 * @since 3.6.0
+	 * @return array|false The saved store, or false if it did not persist.
+	 */
+	public function rebuild_now() {
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 0 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+
+		$state = $this->start_build();
+		$total = (int) $state['total'];
+		$guard = 0; // Hard stop against any pathological loop.
+		while ( $state['offset'] < $total && $guard < 10000 ) {
+			$state = $this->process_batch( 50 );
+			if ( ! is_array( $state ) ) {
+				break;
+			}
+			$guard++;
+		}
+
+		return $this->finalize_build();
 	}
 
 	/**
@@ -650,6 +750,10 @@ class TA_OKF_Bundle {
 			return false;
 		}
 
+		// Fresh bundle stored — clear the stale flag so the background cron and
+		// /okf/ serving don't trigger another rebuild.
+		delete_option( self::OPTION_DIRTY );
+
 		return $store;
 	}
 
@@ -894,13 +998,18 @@ class TA_OKF_Bundle {
 			update_option( 'ta_okf_bundle_title', sanitize_text_field( wp_unslash( isset( $_POST['ta_okf_bundle_title'] ) ? $_POST['ta_okf_bundle_title'] : '' ) ) );
 			update_option( 'ta_okf_bundle_desc', sanitize_text_field( wp_unslash( isset( $_POST['ta_okf_bundle_desc'] ) ? $_POST['ta_okf_bundle_desc'] : '' ) ) );
 			if ( get_option( 'ta_enable_okf', true ) ) {
-				$this->build_bundle();
+				// Background rebuild (no heavy inline build here); ensures /okf/ gets
+				// built shortly after enabling without blocking this request.
+				$this->schedule_rebuild();
 			}
-			$notice = __( 'Settings saved and bundle regenerated.', 'third-audience' );
+			$notice = __( 'Settings saved. The bundle will rebuild in the background shortly (or use “Generate bundle now”).', 'third-audience' );
 		}
 
 		if ( isset( $_POST['ta_okf_generate'] ) && check_admin_referer( 'ta_okf_generate' ) ) {
-			$this->build_bundle();
+			// No-JS fallback for "Generate bundle now". Use the chunked rebuild
+			// (per-concept storage, raised time limit) instead of the legacy inline
+			// build so it doesn't time out or fail to save on large sites.
+			$this->rebuild_now();
 			$notice = __( 'Bundle regenerated.', 'third-audience' );
 		}
 

@@ -111,6 +111,17 @@ $security = TA_Security::get_instance();
 										</td>
 									</tr>
 									<tr>
+										<th scope="row"><?php esc_html_e( 'Detect Hidden-Referrer AI Clicks', 'third-audience' ); ?></th>
+										<td>
+											<label class="ta-checkbox-label">
+												<input type="checkbox" name="ta_detect_hidden_referrer" value="1"
+													   <?php checked( get_option( 'ta_detect_hidden_referrer', true ) ); ?> />
+												<?php esc_html_e( 'Track clicks from AI platforms that hide the referrer (e.g. Claude)', 'third-audience' ); ?>
+											</label>
+											<p class="description"><?php esc_html_e( 'On direct (non-headless) sites, counts a cross-site page visit with no referrer as a low-confidence AI citation ("Hidden Referrer (Claude)"). Turn off if it adds noise. Headless sites handle this via the frontend middleware.', 'third-audience' ); ?></p>
+										</td>
+									</tr>
+									<tr>
 										<th scope="row"><?php esc_html_e( 'Discovery Tags', 'third-audience' ); ?></th>
 										<td>
 											<label class="ta-checkbox-label">

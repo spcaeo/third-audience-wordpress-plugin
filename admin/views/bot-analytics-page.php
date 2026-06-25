@@ -81,10 +81,18 @@ $recent_violations = $rate_limiter->get_rate_limit_violations( 10 );
 ?>
 
 <div class="wrap ta-bot-analytics">
-	<h1 class="wp-heading-inline">
-		<?php esc_html_e( 'Bot Analytics', 'third-audience' ); ?>
-		<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
-	</h1>
+	<?php // Place WP admin notices ABOVE our heading (this marker tells core where the header ends), so update notices don't break the title/button row. ?>
+	<hr class="wp-header-end" style="margin:0;border:0;height:0;">
+	<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+		<h1 class="wp-heading-inline">
+			<?php esc_html_e( 'Bot Analytics', 'third-audience' ); ?>
+			<span style="font-size: 0.6em; color: #646970; font-weight: 400;">v<?php echo esc_html( TA_VERSION ); ?></span>
+		</h1>
+		<button type="button" class="ta-clear-bot-crawls" style="display:inline-flex;align-items:center;gap:6px;background:#d63638;color:#fff;border:0;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;line-height:1;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(214,54,56,.35);" onmouseover="this.style.background='#b32d2e'" onmouseout="this.style.background='#d63638'">
+			<span class="dashicons dashicons-trash" style="font-size:16px;width:16px;height:16px;"></span>
+			<?php esc_html_e( 'Clear Bot Crawl Data', 'third-audience' ); ?>
+		</button>
+	</div>
 	<p class="description"><?php esc_html_e( 'Track which AI bots are crawling your site, how deeply they read your content, and how often that crawling turns into real user traffic from AI platforms.', 'third-audience' ); ?></p>
 
 	<!-- Date range bar (presets + custom) — matches LLM Traffic -->

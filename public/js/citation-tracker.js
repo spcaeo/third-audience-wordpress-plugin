@@ -30,8 +30,11 @@
 			'gemini.google.com': { name: 'Gemini', color: '#4285F4' },
 			'copilot.microsoft.com': { name: 'Copilot', color: '#00BCF2' },
 			'you.com': { name: 'You.com', color: '#8B5CF6', queryParam: 'q' },
-			'www.bing.com': { name: 'Bing AI', color: '#008373' },
-			'bing.com': { name: 'Bing AI', color: '#008373' }
+			// Plain Bing is an ordinary search engine, not AI — tracked as organic
+			// "Bing". Only Bing Copilot (the &form=MA… signature) is upgraded to AI
+			// ("Copilot") below in detectFromReferrer().
+			'www.bing.com': { name: 'Bing', color: '#008373', queryParam: 'q' },
+			'bing.com': { name: 'Bing', color: '#008373', queryParam: 'q' }
 		}
 	};
 
@@ -91,8 +94,18 @@
 					searchQuery = refParams.get(config.queryParam);
 				}
 
+				// Bing: a plain www.bing.com referrer is organic search, NOT AI.
+				// Only Bing Copilot's &form=MA… signature is treated as AI (Copilot).
+				var platformName = config.name;
+				if (config.name === 'Bing') {
+					var formParam = new URLSearchParams(referrerUrl.search).get('form') || '';
+					if (formParam.indexOf('MA') === 0) {
+						platformName = 'Copilot';
+					}
+				}
+
 				return {
-					platform: config.name,
+					platform: platformName,
 					method: 'http_referrer',
 					referrer: referrer,
 					searchQuery: searchQuery

@@ -179,8 +179,21 @@ class TA_Local_Converter {
 				$markdown .= '> ' . $this->security->sanitize_text( $post->post_excerpt ) . "\n\n";
 			}
 
-			// Get post content
+			// Get post content. Wrap the_content in an output buffer: some shortcodes /
+			// page-builder widgets (e.g. testimonial or video modals) echo HTML
+			// directly instead of returning it. That stray output would otherwise leak
+			// into the response and corrupt the OKF build's AJAX JSON (the chunked
+			// "Generate bundle now" then fails with "Build failed during conversion").
+			// The markdown is built from the RETURNED value, so discarding the buffer
+			// changes nothing in the output — it only stops the leak. The level guard
+			// also closes any buffer a misbehaving shortcode left open, without
+			// touching buffers that existed before this call.
+			$ta_ob_level  = ob_get_level();
+			ob_start();
 			$html_content = apply_filters( 'the_content', $post->post_content );
+			while ( ob_get_level() > $ta_ob_level ) {
+				ob_end_clean();
+			}
 
 			// Extract main content if requested
 			if ( $options['extract_main_content'] ) {

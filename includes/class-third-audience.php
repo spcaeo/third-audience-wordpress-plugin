@@ -107,6 +107,10 @@ class Third_Audience {
             // Chunked "Generate bundle now": builds the bundle across many small
             // AJAX batches so large sites don't time out in one request.
             add_action('wp_ajax_ta_okf_build_batch', array($this->okf_bundle, 'ajax_build_batch'));
+
+            // Background (debounced) rebuild: post saves only mark the bundle stale
+            // and schedule this cron event, so a save never blocks on a full rebuild.
+            add_action('ta_okf_rebuild_event', array($this->okf_bundle, 'run_scheduled_rebuild'));
         }
 
         // Content Negotiation

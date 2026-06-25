@@ -91,10 +91,9 @@ class TA_AI_Citation_Tracker {
 			'color'       => '#00BCF2',
 		),
 		'www.bing.com'     => array(
-			'name'        => 'Bing AI',
+			'name'        => 'Bing',
 			'query_param' => 'q',
 			'color'       => '#008373',
-			'heuristic'   => true, // Bing Copilot
 		),
 
 		// Other AI platforms
@@ -191,29 +190,46 @@ class TA_AI_Citation_Tracker {
 			$referer = isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : null;
 
 			if ( empty( $referer ) ) {
-				return false; // No UTM, no referer = not AI traffic.
+				// METHOD 3: Hidden-referrer detection. Claude (and some other AI
+				// platforms) strip the Referer, so a cross-site top-level navigation
+				// with no Referer and no UTM is very likely a referrer-hiding AI click.
+				// This mirrors the headless middleware's "Hidden Referrer (Claude)"
+				// signal so direct-WordPress installs catch these clicks too. Gated by
+				// a setting; on headless installs the server-side path is skipped
+				// upstream (the middleware handles it), so this only runs on direct WP.
+				$hidden = self::detect_hidden_referrer();
+				if ( ! $hidden ) {
+					return false; // No UTM, no referer, not a hidden-referrer click.
+				}
+				$platform_config  = array(
+					'name'  => $hidden['name'],
+					'color' => $hidden['color'],
+				);
+				$detection_method = $hidden['detection_method'];
+				$confidence_score = $hidden['confidence_score'];
+				// $search_query stays null; falls through to the common return below.
+			} else {
+				// Parse referrer URL.
+				$parsed_url = wp_parse_url( $referer );
+				if ( ! isset( $parsed_url['host'] ) ) {
+					return false;
+				}
+
+				$host = strtolower( $parsed_url['host'] );
+
+				// Check if referrer matches known AI platform.
+				$platform_config = self::identify_ai_platform( $host );
+				if ( ! $platform_config ) {
+					return false;
+				}
+
+				// Extract search query if available from referer.
+				$search_query = self::extract_search_query( $parsed_url, $platform_config );
+				$detection_method = 'http_referer';
+
+				// Direct platform match — confidence 0.95 for all known platforms.
+				$confidence_score = 0.95;
 			}
-
-			// Parse referrer URL.
-			$parsed_url = wp_parse_url( $referer );
-			if ( ! isset( $parsed_url['host'] ) ) {
-				return false;
-			}
-
-			$host = strtolower( $parsed_url['host'] );
-
-			// Check if referrer matches known AI platform.
-			$platform_config = self::identify_ai_platform( $host );
-			if ( ! $platform_config ) {
-				return false;
-			}
-
-			// Extract search query if available from referer.
-			$search_query = self::extract_search_query( $parsed_url, $platform_config );
-			$detection_method = 'http_referer';
-
-			// Direct platform match — confidence 0.95 for all known platforms.
-			$confidence_score = 0.95;
 		}
 
 		// For Google Search: upgrade to "Google AI Mode" when srsltid is present in the
@@ -224,6 +240,18 @@ class TA_AI_Citation_Tracker {
 			$referer_query = isset( $parsed_url['query'] ) ? $parsed_url['query'] : '';
 			if ( ! empty( $srsltid ) || false !== strpos( $referer_query, 'udm=50' ) ) {
 				$platform_config['name'] = 'Google AI Mode';
+			}
+		}
+
+		// For Bing: a plain www.bing.com referrer is ordinary organic search — NOT AI.
+		// Only treat it as AI (Copilot) when Bing Copilot's signature &form=MA… param
+		// is present on the referer. Otherwise it stays "Bing" and is reported under
+		// Organic Search, not LLM traffic. (This is what fixes ordinary Bing searches
+		// being mislabelled as "Bing AI".)
+		if ( 'Bing' === $platform_config['name'] && isset( $parsed_url['query'] ) ) {
+			parse_str( $parsed_url['query'], $bing_params );
+			if ( isset( $bing_params['form'] ) && 0 === strpos( (string) $bing_params['form'], 'MA' ) ) {
+				$platform_config['name'] = 'Copilot';
 			}
 		}
 
@@ -244,6 +272,53 @@ class TA_AI_Citation_Tracker {
 			'traffic_type'     => 'citation_click',
 			'detection_method' => $detection_method,
 			'confidence_score' => $confidence_score, // 0.0 to 1.0
+		);
+	}
+
+	/**
+	 * Detect a "hidden referrer" AI click on direct WordPress.
+	 *
+	 * Claude and some other AI platforms strip the Referer header, so their clicks
+	 * arrive with no Referer and no UTM. The browser still sends Fetch Metadata
+	 * headers: a real top-level navigation from another origin is Sec-Fetch-Site:
+	 * cross-site + Sec-Fetch-Mode: navigate. We treat that as a low-confidence
+	 * AI citation, labelled the same as the headless middleware so the data merges.
+	 *
+	 * Returns false (so the caller bails) unless every guard passes, to keep
+	 * false positives — bookmarks, app links, no-referrer sites — out.
+	 *
+	 * @since 3.6.0
+	 * @return array|false Platform config + detection meta, or false.
+	 */
+	private static function detect_hidden_referrer() {
+		// Feature toggle (on by default; admins can disable if it's too noisy).
+		if ( ! get_option( 'ta_detect_hidden_referrer', true ) ) {
+			return false;
+		}
+
+		$site = isset( $_SERVER['HTTP_SEC_FETCH_SITE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_FETCH_SITE'] ) ) : '';
+		$mode = isset( $_SERVER['HTTP_SEC_FETCH_MODE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_FETCH_MODE'] ) ) : '';
+		$dest = isset( $_SERVER['HTTP_SEC_FETCH_DEST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_FETCH_DEST'] ) ) : '';
+
+		// Must be a real top-level page navigation that originated on another site.
+		if ( 'cross-site' !== $site || 'navigate' !== $mode ) {
+			return false;
+		}
+		// When Sec-Fetch-Dest is present it must be a document (not image/script/etc.).
+		if ( '' !== $dest && 'document' !== $dest ) {
+			return false;
+		}
+
+		// Only count actual content pages — not the home page, archives, feeds, etc.
+		if ( ! function_exists( 'is_singular' ) || ! is_singular() ) {
+			return false;
+		}
+
+		return array(
+			'name'             => 'Hidden Referrer (Claude)',
+			'color'            => '#D97757',
+			'detection_method' => 'sec_fetch_site',
+			'confidence_score' => 0.5, // Heuristic — can't confirm the exact platform.
 		);
 	}
 

@@ -163,10 +163,10 @@ class TA_Admin_AJAX_Analytics {
 		$values      = array();
 
 		if ( 'google' === $section ) {
-			$base_where = "traffic_type = 'citation_click' AND ai_platform IN ('Google Search', 'Google AI Mode') AND (client_user_agent IS NOT NULL OR content_type IN ('rest_api','ajax') OR user_agent NOT LIKE 'Headless%') AND url NOT LIKE '%/wp-admin%' AND url NOT LIKE '%/wp-login%'";
+			$base_where = "traffic_type = 'citation_click' AND ai_platform IN ('Google Search', 'Google AI Mode', 'Bing') AND (client_user_agent IS NOT NULL OR content_type IN ('rest_api','ajax') OR user_agent NOT LIKE 'Headless%') AND url NOT LIKE '%/wp-admin%' AND url NOT LIKE '%/wp-login%'";
 			$select     = 'ai_platform, url, post_title, referer, user_agent, client_user_agent, country_code, content_type, visit_timestamp';
 		} else {
-			$base_where = "traffic_type = 'citation_click' AND (client_user_agent IS NOT NULL OR content_type IN ('rest_api','ajax') OR user_agent NOT LIKE 'Headless%') AND ai_platform NOT IN ('Google Search', 'Google AI Mode') AND url NOT LIKE '%/wp-admin%' AND url NOT LIKE '%/wp-login%' AND url NOT LIKE '%admin-ajax.php%' AND url NOT LIKE '%/wp-cron%' AND url NOT LIKE '%/xmlrpc%'";
+			$base_where = "traffic_type = 'citation_click' AND (client_user_agent IS NOT NULL OR content_type IN ('rest_api','ajax') OR user_agent NOT LIKE 'Headless%') AND ai_platform NOT IN ('Google Search', 'Google AI Mode', 'Bing') AND url NOT LIKE '%/wp-admin%' AND url NOT LIKE '%/wp-login%' AND url NOT LIKE '%admin-ajax.php%' AND url NOT LIKE '%/wp-cron%' AND url NOT LIKE '%/xmlrpc%'";
 			$select     = 'ai_platform, url, post_title, search_query, referer, user_agent, client_user_agent, ip_address, country_code, content_type, detection_method, visit_timestamp';
 
 			if ( ! empty( $_POST['platform'] ) ) {

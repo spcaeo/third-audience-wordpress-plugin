@@ -43,7 +43,7 @@ class TA_Citation_Query {
 			"url NOT LIKE '%admin-ajax.php%'",
 			"url NOT LIKE '%/wp-cron%'",
 			"url NOT LIKE '%/xmlrpc%'",
-			"ai_platform NOT IN ('Google Search', 'Google AI Mode')",
+			"ai_platform NOT IN ('Google Search', 'Google AI Mode', 'Bing')",
 		);
 	}
 

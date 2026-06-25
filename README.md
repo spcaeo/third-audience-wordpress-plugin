@@ -2,7 +2,7 @@
 
 **Serve AI-optimized Markdown to LLM crawlers. Track who's citing your content. Get discovered by ChatGPT, Perplexity, Claude, and Gemini.**
 
-![Version](https://img.shields.io/badge/version-3.6.0-blue)
+![Version](https://img.shields.io/badge/version-3.6.1-blue)
 ![WordPress](https://img.shields.io/badge/WordPress-5.8%2B-blue)
 ![PHP](https://img.shields.io/badge/PHP-7.4%2B-blue)
 ![License](https://img.shields.io/badge/license-GPL%20v2-green)
@@ -297,7 +297,12 @@ Test files are in the `tests/` directory. See [TESTING-GUIDE.md](third-audience/
 
 See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
 
-**Latest: v3.6.0**
+**Latest: v3.6.1**
+- **Bing fixed** — plain Bing is now tracked as organic search, not "Bing AI"; only Bing Copilot counts as AI (with an automatic migration for old data)
+- **Hidden-referrer (Claude) detection** on direct WordPress, plus scoped "Clear LLM Traffic / Bot Crawl" buttons
+- **OKF rebuilds in the background** — post and menu saves no longer freeze on large sites
+
+**v3.6.0**
 - **OKF (Open Knowledge Format) bundle** served at `/okf/` — a self-contained Markdown bundle of your whole site for AI agents
 - **`.txt` URL support** — every page is also served at `/<path>.txt` (same content as `.md`, as `text/plain`)
 - **Redesigned LLM Traffic dashboard** — drill-down cards (platform, country, browser, device, page type) → modal with the exact visits + CSV export, date-range filter
