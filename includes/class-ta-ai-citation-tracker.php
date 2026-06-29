@@ -232,13 +232,23 @@ class TA_AI_Citation_Tracker {
 			}
 		}
 
-		// For Google Search: upgrade to "Google AI Mode" when srsltid is present in the
-		// landing URL (most reliable signal), OR when the referer contains udm=50
-		// (Google's internal parameter for AI Mode searches — not present on regular organic).
+		// For Google Search: upgrade to "Google AI Mode" ONLY when the udm=50 signal is
+		// present — Google's parameter for AI Mode searches (not present on regular organic).
+		// Checked both in the referer query string AND the landing URL ($_GET['udm']),
+		// since the param can survive on either depending on how Google forwards the click.
+		//
+		// NOTE: srsltid is deliberately NOT used here. It is Google Merchant Center's
+		// Shopping click-tracking ID (auto-tagging), not an AI signal, so it must never
+		// flag a click as AI Mode — doing so mislabelled ordinary product/shopping clicks.
+		//
+		// NOTE: Google AI Overview clicks cannot be separated out. Google sends them with
+		// the exact same google/organic referer as a normal organic result click, so they
+		// stay under "Google Search". This is a Google-side limitation (even GA4 cannot
+		// distinguish AI Overview clicks from regular organic clicks).
 		if ( 'Google Search' === $platform_config['name'] ) {
-			$srsltid       = isset( $_GET['srsltid'] ) ? sanitize_text_field( wp_unslash( $_GET['srsltid'] ) ) : '';
 			$referer_query = isset( $parsed_url['query'] ) ? $parsed_url['query'] : '';
-			if ( ! empty( $srsltid ) || false !== strpos( $referer_query, 'udm=50' ) ) {
+			$udm_landing   = isset( $_GET['udm'] ) ? sanitize_text_field( wp_unslash( $_GET['udm'] ) ) : '';
+			if ( '50' === $udm_landing || false !== strpos( $referer_query, 'udm=50' ) ) {
 				$platform_config['name'] = 'Google AI Mode';
 			}
 		}

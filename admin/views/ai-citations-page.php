@@ -950,7 +950,7 @@ $available_dates = $wpdb->get_results(
 				<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15.5A9 9 0 1 1 8.5 3"/><path d="M21 12A9 9 0 0 0 12 3v9z"/></svg>
 			</div>
 			<div class="ta-hero-content">
-				<div class="ta-hero-label"><?php esc_html_e( 'Avg Citations / Day', 'third-audience' ); ?></div>
+				<div class="ta-hero-label"><?php esc_html_e( 'Avg Visits / Day', 'third-audience' ); ?></div>
 				<?php
 				// Average LLM citations per active day — respects the current filter ($where_sql).
 				$ta_days    = max( 1, (int) $wpdb->get_var( "SELECT COUNT(DISTINCT DATE(visit_timestamp)) FROM {$table_name} WHERE {$where_sql}" ) );
