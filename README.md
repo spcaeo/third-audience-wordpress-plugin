@@ -124,13 +124,13 @@ Visit recorded in analytics dashboard
 > from GitHub's Code button. GitHub exports add a wrapper folder that breaks
 > WordPress's plugin installer. The release ZIP extracts correctly as `third-audience/`.
 >
-> For troubleshooting and detailed setup see [INSTALLATION.md](third-audience/INSTALLATION.md).
+> For troubleshooting and detailed setup see [INSTALLATION.md](INSTALLATION.md).
 
 ### Option 2 — Composer
 ```bash
 cd wp-content/plugins/
 git clone https://github.com/spcaeo/third-audience-wordpress-plugin.git third-audience
-cd third-audience/third-audience
+cd third-audience
 composer install --no-dev
 ```
 Then activate the plugin from **WordPress Admin → Plugins**.
@@ -139,7 +139,7 @@ Then activate the plugin from **WordPress Admin → Plugins**.
 ```bash
 cd wp-content/plugins/
 git clone https://github.com/spcaeo/third-audience-wordpress-plugin.git third-audience
-cd third-audience/third-audience
+cd third-audience
 composer install
 ```
 
@@ -160,7 +160,7 @@ After activation, visit **Bot Analytics → System Health** to verify everything
 If you run a headless frontend (Next.js, Gatsby, etc.):
 1. Go to **Bot Analytics → Settings → Headless Setup**
 2. The plugin auto-detects your environment
-3. Add the citation tracker script to your frontend — see [HEADLESS-SETUP.md](third-audience/HEADLESS-SETUP.md)
+3. Add the citation tracker script to your frontend — see [HEADLESS-SETUP.md](HEADLESS-SETUP.md)
 
 ### Google Analytics 4 (Optional)
 1. Go to **Bot Analytics → Settings → GA4 Integration**
@@ -275,9 +275,9 @@ Contributions are welcome. To get started:
 
 1. Fork the repository
 2. Clone your fork locally
-3. Install dependencies: `composer install` inside the `third-audience/` folder
+3. Install dependencies: `composer install` inside the project root
 4. Make your changes on a new branch
-5. Run tests: `vendor/bin/phpunit` inside the `third-audience/` folder
+5. Run tests: `vendor/bin/phpunit` inside the project root
 6. Submit a pull request
 
 Please follow WordPress coding standards. For major changes, open an issue first to discuss what you would like to change.
@@ -289,13 +289,13 @@ cd third-audience
 vendor/bin/phpunit
 ```
 
-Test files are in the `tests/` directory. See [TESTING-GUIDE.md](third-audience/TESTING-GUIDE.md) for the full testing guide.
+Test files are in the `tests/` directory. See [TESTING-GUIDE.md](TESTING-GUIDE.md) for the full testing guide.
 
 ---
 
 ## Changelog
 
-See [CHANGELOG.md](third-audience/CHANGELOG.md) for the full version history.
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 **Latest: v3.6.1**
 - **Bing fixed** — plain Bing is now tracked as organic search, not "Bing AI"; only Bing Copilot counts as AI (with an automatic migration for old data)
